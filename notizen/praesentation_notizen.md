@@ -1,0 +1,21 @@
+- einleitungsfolie
+- motivation:
+    - herausforderung des onboardings hervorheben
+    - "jeder kennt das problem bla bla"
+    - kurz problem beschreiben
+- Vision / Ziel darstellen
+- Wie kommen wir zu diesem Ziel?
+- Key Components
+    - Agent
+    - LLM
+    - Frontend
+    - Tools
+    - Sonstiges (System Prompts, Guardrails)
+- Agent Workflow vorstellen
+- Wie sieht unser MVP aus?
+- Tech Stack
+- Umsetzung / Roadmap
+    - Bis Weihnachten sollte MVP stehen
+    - Januar für Erweiterungen
+- Potenzielle Erweiterungen
+- Risiken & Gegenmaßnahmen
