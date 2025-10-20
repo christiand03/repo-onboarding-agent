@@ -19,20 +19,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-4. create .gitignore
-```bash
-# Virtuelle Umgebung ignorieren
-venv/
-__pycache__/
-
-# Datei für Umgebungsvariablen (für später)
-.env
-
-# VS Code spezifische Dateien
-.vscode/
-```
-
-5. create .env
+4. create .env
 ```bash
 GOOGLE_API_KEY='XXX'
 ```
