@@ -21,9 +21,9 @@ Unsere Vision ist es, die mühsame Einarbeitung in unbekannte Repositories in ei
 - Gemini API / OpenAI API / Anthropic API / lokal open source für development um Kosten zu sparen
 - Huggingface
 - Ollama
-- LangChain
-- Mermaid.js für Diagramme? https://github.com/mermaid-js/mermaid
-    - Alternativ: Graphviz oder PlantUML
+- LangChain mit vorkonfiguriertem Agent starten + LLM konfigurieren  
+- Mermaid.js für Diagramme? https://github.com/mermaid-js/mermaid (eher nicht)
+    - Alternativ: Graphviz oder PlantUML -> lieber PlantUML 
 
 
 
@@ -37,8 +37,8 @@ Unsere Vision ist es, die mühsame Einarbeitung in unbekannte Repositories in ei
     - Repo structure analysieren
     - Abstract Syntax Tree & Tree View erstellen
     - Report abspeichern
-- UI / Frontend
-- System Prompts
+- UI / Frontend -> Streamlit
+- System Prompts -> Langfuse 
 - Guardrails -> Guardrail Agent Stichwort Multi Agent System?
 
 # Agent
@@ -84,6 +84,10 @@ Unsere Vision ist es, die mühsame Einarbeitung in unbekannte Repositories in ei
     - Weitere Modularitäten einfügen wenn noch Zeit vorhanden 
     - Fragen zu dem Repo beantworten?
     - Code Qualität überprüfen und Verbesserungen vorschlagen?
+    - Datenbank anbinden wo genererierte Docs gespeichert werden
+    - Bewertungsfeature einführen, positiv = in Datenbank speichern, negativ = speichern + neu generieren -> Erstellt gleichzeitig Labels für einen Datensatz von guten und schlechten Outputs
+    - Guardrail Agent
+    - Code embedden um semantisch ähnliche Bereiche als Kontext bei der Doc Erstellung hinzuzufügen
 
 
 # Warum brauchen wir einen AI Agent?
