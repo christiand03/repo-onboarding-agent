@@ -1,0 +1,9 @@
+# Virtuelle Umgebung ignorieren
+venv/
+__pycache__/
+
+# Datei für Umgebungsvariablen (für später)
+.env
+
+# VS Code spezifische Dateien
+.vscode/
