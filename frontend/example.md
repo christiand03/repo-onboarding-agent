@@ -1,0 +1,1 @@
+# Freitag Frontend initialisieren

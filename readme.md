@@ -5,21 +5,10 @@
 git clone https://github.com/yourusername/repo-onboarding-agent.git
 ```
 
-2. Create and activate a virtual environment
-```bash
-python -m venv venv
-# On Windows:
-venv\Scripts\activate
-# On macOS/Linux:
-source venv/bin/activate
-```
+2. For the virtual environment we use UV
+   Please [download UV](https://docs.astral.sh/uv/getting-started/installation) first.
+    Weitere Schritte folgen...
 
-3. Install dependencies
-```bash
-pip install -r requirements.txt
-```
 
-4. create .env
-```bash
-GOOGLE_API_KEY='XXX'
-```
+3. Copy .env.example as .env 
+   Weitere Schritte folgen...
