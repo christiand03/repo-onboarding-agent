@@ -24,3 +24,6 @@ dependencies = [
     "tree-sitter>=0.25.2",
     "uvicorn>=0.38.0",
 ]
+
+[tool.fastapi]
+app = "src.api:app"
