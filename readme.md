@@ -11,4 +11,8 @@ git clone https://github.com/yourusername/repo-onboarding-agent.git
 
 
 3. Copy .env.example as .env 
-   Weitere Schritte folgen...
+   ```bash
+   cp .env.example .env
+   ```
+   After copying the .env-file you'll need the Langfuse-Keys for tracing
+   Weiter Schritte folgen...
