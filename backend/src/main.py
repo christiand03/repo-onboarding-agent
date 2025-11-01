@@ -2,11 +2,16 @@ import logging
 import os
 # import sys
 # from pathlib import Path
+# from typing import Union
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
+# from pydantic import BaseModel
+
 from fastapi.middleware.cors import CORSMiddleware
 from langfuse import Langfuse
+
+from framework.api.router import router
 
 load_dotenv()
 app = FastAPI()
@@ -29,7 +34,4 @@ langfuse = Langfuse(
     host=os.getenv('LANGFUSE_HOST'),
 )
 
-# Beispiel, wie man mit fastAPI Endpunkte für ein Programm setzen kann
-# @app.post("/prompt")
-# def register_prompt(Objekt : Klasse):
-#     return method(prompt)
+app.include_router(router=router)
