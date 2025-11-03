@@ -112,35 +112,3 @@ class GitRepository:
         self.close()
 
 
-# --- Beispiel für die Verwendung der Klassen ---
-if __name__ == "__main__":
-    repo_url = "https://github.com/christiand03/repo-onboarding-agent"
-
-    try:
-        with GitRepository(repo_url) as repository:
-            all_file_objects = repository.get_all_files()
-            
-            print(f"\nInsgesamt {len(all_file_objects)} Dateien im Repository gefunden.\n")
-            
-            # Jetzt iterieren wir über die RepoFile-OBJEKTE
-            for file_obj in all_file_objects[:5]: # Nehmen wir wieder die ersten 5 als Beispiel
-                print(f"--- Analyse von Objekt: {file_obj} ---")
-                
-                # Greife auf die Properties zu (löst Lazy Loading aus)
-                print(f"Pfad: {file_obj.path}")
-                print(f"Größe: {file_obj.size} Bytes")
-                
-                # Führe eine spezifische Analyse-Methode auf dem Objekt aus
-                word_count = file_obj.analyze_word_count()
-                print(f"Anzahl der Wörter: {word_count}")
-
-                # Zeige einen Vorschau des Inhalts
-                print("Inhalts-Vorschau:")
-                print(file_obj.content[:150].strip())
-                print("-" * 30 + "\n")
-                
-    except RuntimeError as e:
-        print(e)
-
-for file in repository.files:
-    print(file.path)
