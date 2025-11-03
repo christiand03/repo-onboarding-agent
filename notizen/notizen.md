@@ -55,7 +55,13 @@ Unsere Vision ist es, die mühsame Einarbeitung in unbekannte Repositories in ei
 
 # Werkzeuge
 - GitPython für git clone Befehl
-- ast Modul oder slimit für AST Erstellung
+- Tool um Metadaten auszulesen
+- ast Modul oder slimit für AST Erstellung von jeder Datei
+    - ast.ClassDef, ast.FunctionDef, ast.Import, ast.ImportFrom extrahieren
+    - Call Graph erstellen für jede Function mit ast.Call -> Welche Funktionen werden von anderen Funktionen aufgerufen (ast + pycg + networkx)
+    - Klassenstruktur und Vererbung mit ast.ClassDef "bases" Attribut und FunctionDef für jede Funktion der Klasse
+    - mit ast.get_docstring() die Docstrings aus den Methoden auslesen
+    -  
 
 # Frontend
 - Wird benötigt damit der Nutzer seinen Prompt eingeben kann und den fertigen Report angezeigt bekommen 
