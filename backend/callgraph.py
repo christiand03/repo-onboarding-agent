@@ -113,3 +113,26 @@ def build_callGraph(tree: ast.AST, filename: str | None = None) -> nx.DiGraph:
             graph.add_edge(caller, callee)
 
     return graph
+
+# --- NEUE FUNKTION HINZUGEFÜGT ---
+def graph_to_adj_list(graph: nx.DiGraph) -> Dict[str, list[str]]:
+    """
+    Konvertiert einen networkx.DiGraph in eine Adjazenzliste (Dict),
+    die JSON-serialisierbar ist.
+
+    Args:
+        graph (nx.DiGraph): Der zu konvertierende Call-Graph.
+
+    Returns:
+        Dict[str, List[str]]: Eine Adjazenzliste, bei der jeder Schlüssel
+                              ein aufrufender Knoten (caller) und der Wert
+                              eine Liste der aufgerufenen Knoten (callees) ist.
+    """
+    adj_list = {}
+    # Wir sortieren die Knoten für eine konsistente Ausgabe
+    for node in sorted(list(graph.nodes())):
+        # Wir holen alle Nachfolger (aufgerufene Funktionen) und sortieren sie ebenfalls
+        successors = sorted(list(graph.successors(node)))
+        if successors:  # Nur Knoten aufnehmen, die auch wirklich andere aufrufen
+            adj_list[node] = successors
+    return adj_list
