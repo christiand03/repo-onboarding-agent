@@ -52,7 +52,24 @@ If any part of the standard structure is missing in the input, for example a fun
 {
   "identifier": "<The name of the class, e.g., 'ShoppingCart'>",
   "description": {
-    "overall": "<A detailed description (can be more than five sentences if needed, but no more than ten.) of the class's role, responsibility, and how it uses its methods to manage its state or achieve its purpose. The overall description should have slightly focus more on 'what' the class does. So 60% 'what' and 40% 'how'. 
+    "overall": "<A detailed description (can be more than five sentences if needed, but no more than ten.) of the class's role, responsibility, and how it uses its methods to manage its state or achieve its purpose. The overall description should have slightly focus more on 'what' the class does. So 60% 'what' and 40% 'how'., 
+
+    "parameters": [
+      {
+        "name": "<param_name_1>",
+        "type": "<inferred_type_str>",
+        "description": "<A one-sentence description of this parameter's purpose.>"
+      },
+      {
+        "name": "<param_name_2>",
+        "type": "<inferred_type_str>",
+        "description": "<A one-sentence description of this parameter's purpose.>"
+      }
+    ],
+    "usage_context": {
+      "calls": "<A human-readable sentence describing what other functions this function calls. e.g., 'This function calls `get_price` and `apply_tax`.'>",
+      "called_by": "<A human-readable sentence describing what other functions call this function. e.g., 'This function is called by `checkout_process`.'>"
+    }
   },
   "error": "<Null if successful. If the analysis fails, provide an error string similar in structure to the one specified in the function_analysis Schema.>"
 }
