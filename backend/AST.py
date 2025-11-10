@@ -1,107 +1,119 @@
+# AST.py
+
 import ast
 
 class PythonASTVisitor(ast.NodeVisitor):
     def __init__(self):
+        # Das Schema speichert jetzt die vollen Knoten statt nur Dictionaries mit Metadaten.
+        # Dies ist entscheidend für die spätere Extraktion des Quellcodes.
         self.schema = {"imports": [], "functions": {}, "classes": {}}
         self._current_class = None
 
-    # Besuch von Import-Anweisungen
     def visit_Import(self, node):
-        # Besucht alle Alias-Namen der Import-Anweisung
+        # Sammelt 'import module' Anweisungen
         for alias in node.names: self.schema["imports"].append(alias.name)
-        # besucht alle untergeordneten Knoten
         self.generic_visit(node)
 
-    # Besuch von From ... Import ... Anweisungen
     def visit_ImportFrom(self, node):
+        # Sammelt 'from module import name' Anweisungen
         for alias in node.names: self.schema["imports"].append(f"{node.module}.{alias.name}")
         self.generic_visit(node)
 
-    # Besuch von Klassendefinitionen
     def visit_ClassDef(self, node):
-        # Setzt den aktuellen Klassennamen
+        # Beginnt die Verarbeitung einer Klasse
         self._current_class = node.name
-        # Initialisiert den Eintrag für die Klasse im Schema
-        self.schema["classes"][node.name] = {"methods": {}, "docstring": ast.get_docstring(node)}
-        # Besucht alle untergeordneten Knoten
-        self.generic_visit(node)
-        # Setzt den aktuellen Klassennamen zurück
+        
+        # Speichert den gesamten AST-Knoten der Klasse
+        self.schema["classes"][node.name] = {
+            "node": node,
+            "methods": {}
+        }
+        
+        # Durchläuft nur die direkten Kinderknoten, um die Methoden zu finden
+        for child in ast.iter_child_nodes(node):
+            if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                # Speichert den gesamten AST-Knoten der Methode innerhalb der Klasse
+                self.schema["classes"][node.name]["methods"][child.name] = child
+        
+        # Wichtig: generic_visit() wird hier absichtlich NICHT aufgerufen.
+        # Andernfalls würde visit_FunctionDef für die Methoden erneut getriggert
+        # und sie würden fälschlicherweise als globale Funktionen registriert.
+        
+        # Beendet die Verarbeitung der Klasse
         self._current_class = None
 
-    # Besuch von Funktionsdefinitionen        
     def visit_FunctionDef(self, node):
-        # Sammelt Informationen über die Funktion
-        info = {"args": [arg.arg for arg in node.args.args], "docstring": ast.get_docstring(node)}
-        # Fügt die Funktion entweder zur aktuellen Klasse oder zum globalen Funktionsschema hinzu
-        if self._current_class:
-            self.schema["classes"][self._current_class]["methods"][node.name] = info
-        else:
-            self.schema["functions"][node.name] = info
-        self.generic_visit(node)
+        # Verarbeitet nur globale Funktionen.
+        # Methoden werden bereits in visit_ClassDef behandelt.
+        if self._current_class is None:
+            # Speichert den gesamten AST-Knoten der Funktion
+            self.schema["functions"][node.name] = node
+        
+        # Kein generic_visit() nötig, da wir nur die Definition selbst sammeln.
+
+    def visit_AsyncFunctionDef(self, node):
+        # Funktioniert identisch zu visit_FunctionDef für asynchrone Funktionen.
+        if self._current_class is None:
+            self.schema["functions"][node.name] = node
+
 
 class ASTAnalyzer:
+    """
+    Analysiert Python-Dateien eines Repositories und extrahiert eine
+    strukturierte Übersicht über deren Klassen, Funktionen und Imports
+    basierend auf dem Abstract Syntax Tree (AST).
+    """
     
     def __init__(self):
         pass
 
     def analyze_repository(self, files: list, repo_url: str) -> dict:
         """
-        Orchestriert die Analyse für eine ganze Liste von Dateien.
+        Orchestriert die AST-Analyse für eine ganze Liste von Dateien.
 
         Args:
             files (list): Eine Liste von Objekten, die mindestens die
                           Attribute `.path` (str) und `.content` (str) haben.
-                          In unserem Fall sind das RepoFile-Objekte.
-            repo_url (str): Die URL des Repositories, wird in die Metadaten
-                            des Schemas aufgenommen.
+            repo_url (str): Die URL des Repositories für die Metadaten.
 
         Returns:
             dict: Das vollständige, hierarchische AST-Schema für das Repository.
         """
         print("\nStarte AST-Analyse...")
         
-        # 1. Das leere Gesamtschema initialisieren
         full_schema = {
             "repository_url": repo_url,
             "files": {}
         }
 
-        # 2. Über jede gelieferte Datei iterieren
         for file_obj in files:
-            
-            # 3. Filtern: Uninteressante Dateien sofort überspringen
+            # Nur Python-Dateien analysieren
             if not file_obj.path.endswith('.py'):
                 continue
             
-            # 4. Daten abrufen (Lazy Loading wird hier durch den Zugriff auf .content ausgelöst)
             file_content = file_obj.content
-            if not file_content.strip(): # Leere Dateien auch überspringen
+            # Leere Dateien überspringen
+            if not file_content.strip():
                 continue
 
-            # 5. Die Kern-Analyse für eine einzelne Datei durchführen
             try:
-                # 5a. Das Spezialwerkzeug: Code-Text in einen AST-Baum umwandeln
+                # Den Quellcode in einen AST umwandeln
                 tree = ast.parse(file_content)
                 
-                # 5b. Den Assistenten (Visitor) für diese eine Datei erstellen
+                # Den Visitor erstellen, der den Baum durchläuft
                 visitor = PythonASTVisitor()
-                
-                # 5c. Den Assistenten auf die Reise durch den Baum schicken
                 visitor.visit(tree)
                 
-                # 5d. Das Ergebnis vom Assistenten abholen
+                # Das gesammelte Schema vom Visitor abholen
                 file_schema = visitor.schema
 
-                # 6. Das Ergebnis der Datei dem Gesamtschema hinzufügen
-                #    (Nur wenn auch wirklich etwas gefunden wurde)
+                # Das Schema der Datei nur hinzufügen, wenn es relevante Informationen enthält
                 if file_schema["imports"] or file_schema["functions"] or file_schema["classes"]:
                     full_schema["files"][file_obj.path] = file_schema
 
             except (SyntaxError, ValueError) as e:
-                # Falls eine Datei ungültigen Python-Code enthält, stürzt das
-                # Programm nicht ab, sondern gibt eine Warnung aus und macht weiter.
+                # Fehlerbehandlung für ungültigen Python-Code
                 print(f"Warnung: Konnte Datei '{file_obj.path}' nicht parsen. Fehler: {e}")
         
         print("AST-Analyse abgeschlossen.")
         return full_schema
-
