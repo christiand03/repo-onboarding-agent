@@ -39,7 +39,8 @@ def print_tree_view(node, indent=""):
 # MAIN-AUSFÜHRUNG
 # ==============================================================================
 if __name__ == "__main__":
-    repo_url = "https://github.com/christiand03/repo-onboarding-agent"
+    #repo_url = "https://github.com/christiand03/repo-onboarding-agent"
+    repo_url = "https://github.com/pallets/flask"    
 
     try:
         with GitRepository(repo_url) as repository:
@@ -96,7 +97,7 @@ if __name__ == "__main__":
             
             # Ausgabe der Call-Graphs
             print("\n--- Call-Graphen als Adjazenzlisten (JSON) ---")
-            print(json.dumps(json_call_graphs, indent=2))
+            #print(json.dumps(json_call_graphs, indent=2))
                 
     except RuntimeError as e:
         print(f"Ein Fehler ist aufgetreten: {e}")
