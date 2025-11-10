@@ -1,105 +1,141 @@
-from typing import TypedDict, List, Optional, Literal
+from typing import List, Optional, Literal
+from pydantic import BaseModel, ValidationError
 
 # --------- Helper LLM FUNCTION OUTPUT Schema ----------
-class ParameterDescription(TypedDict):
+
+class ParameterDescription(BaseModel):
     """Describes a single parameter of a function."""
     name: str
     type: str
     description: str
 
-class ReturnDescription(TypedDict):
+class ReturnDescription(BaseModel):
     """Describes the return value of a function."""
     name: str
     type: str
     description: str
 
-class UsageContext(TypedDict):
+class UsageContext(BaseModel):
     """Describes the calling context of a function."""
     calls: List[str]
     called_by: List[str]
 
-class FunctionDescription(TypedDict):
+class FunctionDescription(BaseModel):
     """Contains the detailed analysis of a function's purpose and signature."""
     overall: str
     parameters: List[ParameterDescription]
     returns: List[ReturnDescription]
     usage_context: UsageContext
 
-class FunctionAnalysis(TypedDict):
-    """The main TypedDict representing the entire JSON schema for a function."""
+class FunctionAnalysis(BaseModel):
+    """The main model representing the entire JSON schema for a function."""
     identifier: str
     description: FunctionDescription
-    error: Optional[str]
+    error: Optional[str] = None
 
 
 # -------- Helper LLM CLASS OUTPUT Schema ----------
-class ConstructorDescription(TypedDict):
+
+class ConstructorDescription(BaseModel):
     """Describes the __init__ method of a class."""
     description: str
     parameters: List[ParameterDescription]
 
-class ClassContext(TypedDict):
+class ClassContext(BaseModel):
     """Describes the class's external dependencies and primary points of instantiation."""
-    dependencies: str    
-    instantiated_by: str   
+    dependencies: str
+    instantiated_by: str
 
-class ClassDescription(TypedDict):
+class ClassDescription(BaseModel):
     """Contains the detailed analysis of a class's purpose, constructor, and methods."""
     overall: str
     init_method: ConstructorDescription
     methods: List[FunctionAnalysis]
     usage_context: ClassContext
 
-class ClassAnalysis(TypedDict):
-    """The main TypedDict for the entire JSON schema for a class."""
+class ClassAnalysis(BaseModel):
+    """The main model for the entire JSON schema for a class."""
     identifier: str
     description: ClassDescription
-    error: Optional[str]
+    error: Optional[str] = None
 
 
 # -------- Helper LLM FUNCTION INPUT Schema --------
-class FunctionContextInput(TypedDict):
-    """Structured context for analyzing a function."""
-    calls: List[str]      
-    called_by: List[str]  
 
-class FunctionAnalysisInput(TypedDict):
+class FunctionContextInput(BaseModel):
+    """Structured context for analyzing a function."""
+    calls: List[str]
+    called_by: List[str]
+
+class FunctionAnalysisInput(BaseModel):
     """The required input to generate a FunctionAnalysis object."""
     mode: Literal["function_analysis"]
+    identifier: str
     source_code: str
     imports: List[str]
     context: FunctionContextInput
 
 
-# --- Helper LLM CLASS INPUT Schema ---
-class ClassContextInput(TypedDict):
-    """Structured context for analyzing a class."""
-    dependencies: List[str]      
-    instantiated_by: List[str]   
-    methods_analysis: List[FunctionAnalysis] 
+# ------ Helper LLM CLASS INPUT Schema  ------
 
-class ClassAnalysisInput(TypedDict):
+class ClassContextInput(BaseModel):
+    """Structured context for analyzing a class."""
+    dependencies: List[str]
+    instantiated_by: List[str]
+    methods_analysis: List[FunctionAnalysis]
+
+class ClassAnalysisInput(BaseModel):
     """The required input to generate a ClassAnalysis object."""
     mode: Literal["class_analysis"]
+    identifier: str
     source_code: str
     imports: List[str]
     context: ClassContextInput
 
 
+# Example Dictionary Structure FunctionAnalysis Output
+valid_function_data = {
+    "identifier": "my_module.utils.calculate_sum",
+    "description": {
+        "overall": "This function takes two integers and returns their sum.",
+        
+        "parameters": [
+            {
+                "name": "x",
+                "type": "int",
+                "description": "The first integer operand."
+            },
+            {
+                "name": "y",
+                "type": "int",
+                "description": "The second integer operand."
+            }
+        ],
+        
+        "returns": [
+            {
+                "name": "total",
+                "type": "int",
+                "description": "The sum of x and y."
+            }
+        ],
+        
+        "usage_context": {
+            "calls": ["logging.info"],
+            "called_by": ["api.v1.endpoints.add_numbers", "scripts.run_daily_job"]
+        }
+    },
+    # The 'error' field is optional. We can omit it, and it will default to None.
+    # Or we can explicitly set it to None.
+    "error": None 
+}
 
+# How to Validate and Access Dictionary
+try:
+    # Pydantic will recursively parse the nested dictionaries into the correct model instances.
+    function_analysis_instance = FunctionAnalysis.model_validate(valid_function_data)
+    print(f"Overall Description: {function_analysis_instance.description.overall}")
 
-
-
-# How to access a Schema in another File
-"""
-from your_project.schemas.types import FunctionAnalysis # Clear and explicit import
-
-def process_analysis_data(data: dict) -> None:
-    # Cast the incoming dict to your TypedDict for static analysis
-    analysis_result: FunctionAnalysis = data
-    
-    # Now your IDE and type checkers know the structure
-    print(f"Analyzing function: {analysis_result['identifier']}")
-    if analysis_result['error']:
-        print(f"An error occurred: {analysis_result['error']}")
-"""
+except ValidationError as e:
+    print("Validation failed!")
+    print(e)
