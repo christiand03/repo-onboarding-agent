@@ -1,4 +1,5 @@
 import streamlit as st
+import time
 
 # chats initialisierung 
 if "chats" not in st.session_state:
@@ -37,11 +38,18 @@ for message in chat["messages"]:
 # React to user input
 if prompt := st.chat_input("Put in Link of Repository"):
     #print message and store it in chats
+    st.chat_message("user").write(prompt)
     chat["messages"].append({"role":"user", "content":prompt})
-    response = f"Echo: {prompt}" #platzhalter
-    # print response and store it in chats
-    chat["messages"].append({"role":"assistant", "content":prompt})
+    
+    # Statusanzeige
+    status= st.status("⏳ Generiere Antwort...", expanded=True)
+    time.sleep(2)  # Delay simulieren
+    
+    response = f"Echo: {prompt}"
+    st.chat_message("assistant").write(response)
+    chat["messages"].append({"role":"assistant", "content":response})
+
     st.rerun()
 
-"st.session_state object:", st.session_state
+#"session_state" , st.session_state
 

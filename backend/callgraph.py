@@ -2,7 +2,7 @@ import ast
 import networkx as nx
 from typing import Dict
 
-def build_callGraph(tree: ast.AST, filename: str | None = None) -> nx.DiGraph:
+def build_callGraph(tree: ast.AST, filename: str | None = None, file_content: str | None = None) -> nx.DiGraph:
     """ 
     Erstellt einen Call-Graphen aus einem gegebenen Python-AST.
 
@@ -57,33 +57,53 @@ def build_callGraph(tree: ast.AST, filename: str | None = None) -> nx.DiGraph:
 
         def visit_Call(self, node):
             """
-            Besucht einen Funktions- oder Methodenaufruf.
-
-            Fügt eine Kante im Call-Graphen von `self.current_function` (oder
-            <module>/<main_block> für globalen Scope) zum aufgerufenen Funktionsnamen hinzu.
+            Besucht einen Funktions- oder Methodenaufruf und behandelt komplexe Fälle
+            mit einer detaillierten Warnung, anstatt abzustürzen.
             """             
             caller = self.current_function or (f"<{filename}>" if filename else "<global-scope>")
             try:
-                if isinstance(node.func, ast.Name):
-                    # ast.Name sind einfache Funktionsausdrücke, wie z.B. print()
-                    # die "id" wäre dann print
-                    call_name = node.func.id
-                elif isinstance(node.func, ast.Attribute):
-                    # ast.Attribute sind Methodenaufrufe oder Attributzugriffe, wie z.B. obj.method()
-                    # das "attr" wäre dann method
-                    call_name = node.func.attr
+                # Iterativ durch verschachtelte Calls navigieren, um den Basis-Namen zu finden
+                callee_node = node.func
+                while isinstance(callee_node, ast.Call):
+                    callee_node = callee_node.func
+
+                call_name = None
+                if isinstance(callee_node, ast.Name):
+                    call_name = callee_node.id
+                elif isinstance(callee_node, ast.Attribute):
+                    call_name = callee_node.attr
                 else:
-                    raise TypeError(f"Unerwarteter Funktionsaufruf-Typ: {type(node.func).__name__}"
-                                    f"in Zeile {getattr(node, 'lineno', '?')}")
-                # graph.add_edge(self.current_function, call_name)
-            
-                if caller not in edges:
-                    edges[caller] = {call_name}
-                else:
-                    edges[caller].add(call_name)
+                    # --- NEUE, VERBESSERTE WARNUNG ---
+                    
+                    # 1. Versuche, das exakte Code-Snippet zu extrahieren
+                    source_segment = "N/A (benötigt Python 3.8+ und file_content)"
+                    # ast.get_source_segment ist die "magische" Funktion dafür
+                    if file_content and hasattr(ast, 'get_source_segment'):
+                        try:
+                            source_segment = ast.get_source_segment(file_content, node)
+                        except Exception:
+                            source_segment = "(Konnte Quellcode-Segment nicht extrahieren)"
+                    
+                    # 2. Gib eine strukturierte, mehrzeilige Warnung aus
+                    print(
+                        f"\n--- WARNUNG: Komplexer Funktionsaufruf übersprungen ---\n"
+                        f"| Problem:  Der Typ des aufgerufenen Objekts ('{type(callee_node).__name__}') wird nicht unterstützt.\n"
+                        f"| Ort:      Datei '{filename}', Zeile {getattr(node, 'lineno', '?')}\n"
+                        f"| Code:     {source_segment}\n"
+                        f"| AST-Dump: {ast.dump(callee_node)}\n"
+                        f"----------------------------------------------------------"
+                    )
+                    # Der Aufruf wird bewusst übersprungen, anstatt das Programm abstürzen zu lassen.
+
+                if call_name:
+                    if caller not in edges:
+                        edges[caller] = {call_name}
+                    else:
+                        edges[caller].add(call_name)
             
             except Exception as e:
-                raise RuntimeError(f"Fehler bei der Verarbeitung eines Funktionsaufrufs: {e}")
+                print(f"Unerwarteter Fehler bei der Verarbeitung eines Funktionsaufrufs: {e} in Datei {filename}")
+            
             self.generic_visit(node)
 
         def visit_If(self, node):
