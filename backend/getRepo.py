@@ -111,4 +111,48 @@ class GitRepository:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
+    def get_file_tree(self):
+        """
+        Extrahiert die Verzeichnisstruktur (Tree View) des Repositories als
+        verschachteltes Dictionary.
+        
+        Die Schlüssel sind Datei- oder Verzeichnisnamen.
+        Die Werte für Dateien sind RepoFile-Objekte.
+        Die Werte für Verzeichnisse sind weitere Dictionaries.
+
+        Returns:
+            dict: Eine verschachtelte Dictionary-Repräsentation der Dateistruktur.
+        """
+        if not self.commit_tree:
+            return {}
+        return self._traverse_tree(self.commit_tree, "")
+
+    def _traverse_tree(self, tree, current_path):
+        """
+        Rekursive Hilfsfunktion, die ein git.Tree-Objekt durchläuft und
+        eine Dictionary-Struktur aufbaut.
+
+        Args:
+            tree (git.Tree): Das aktuell zu durchlaufende Tree-Objekt.
+            current_path (str): Der Pfad zum aktuellen Tree vom Repository-Root aus.
+
+        Returns:
+            dict: Die Dictionary-Struktur für den aktuellen Tree.
+        """
+        file_structure = {}
+        
+        # 1. Dateien (Blobs) auf der aktuellen Ebene verarbeiten
+        for blob in tree.blobs:
+            # Den vollständigen Pfad für das RepoFile-Objekt erstellen
+            full_path = f"{current_path}/{blob.name}" if current_path else blob.name
+            file_structure[blob.name] = RepoFile(full_path, self.commit_tree)
+
+        # 2. Unterverzeichnisse (Trees) rekursiv verarbeiten
+        for subtree in tree.trees:
+            # Den Pfad für die nächste Rekursionsstufe erweitern
+            full_path = f"{current_path}/{subtree.name}" if current_path else subtree.name
+            # Rekursiver Aufruf für das Unterverzeichnis
+            file_structure[subtree.name] = self._traverse_tree(subtree, full_path)
+            
+        return file_structure
 
