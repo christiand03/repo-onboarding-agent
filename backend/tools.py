@@ -1,8 +1,12 @@
+# tools.py
+
 import ast
 import json
 import os
 from typing import Tuple, Dict, Any, Optional
 from langchain.tools import tool
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # --- GEÄNDERTE IMPORTS ---
 # Relative Imports für Module im selben "backend"-Paket
@@ -77,9 +81,6 @@ def analyze_repository(repo_url: str) -> Tuple[Optional[Dict[str, Any]], Dict[st
             
             # 2. Verzeichnisstruktur
             file_tree_structure = repository.get_file_tree()
-            # Hinweis: Die Baumstruktur enthält RepoFile-Objekte, die nicht direkt JSON-serialisierbar sind.
-            # Für eine reine Datenstruktur müsste man dies umwandeln. Hier behalten wir es für die Logik.
-            # Für den Output fügen wir eine vereinfachte Version hinzu.
             repo_name = os.path.basename(repo_url.removesuffix('.git'))
             def simplify_tree(node):
                 simple_node = {}
@@ -94,10 +95,21 @@ def analyze_repository(repo_url: str) -> Tuple[Optional[Dict[str, Any]], Dict[st
 
             # 3. Detaillierte Code-Analyse (AST)
             analyzer = ASTAnalyzer()
-            repo_ast_schema = analyzer.analyze_repository(all_file_objects, repository.repo_url)
-            # Hinweis: Das AST-Schema enthält AST-Knoten, die nicht JSON-serialisierbar sind.
-            # Für einen reinen Daten-Output wäre eine Konvertierung notwendig.
-            analysis_results['ast_schema'] = "AST schema generated (complex object not shown)"
+            full_ast_analysis = analyzer.analyze_repository(all_file_objects, repository.repo_url)
+            
+            # --- START DER ÄNDERUNG ---
+            # Extrahiere nur den JSON-kompatiblen Teil für den Output.
+            # Die `ast_nodes` bleiben ungenutzt, könnten aber für zukünftige,
+            # komplexere Analysen innerhalb dieser Funktion verwendet werden.
+            json_ast_schema = {
+                "repository_url": full_ast_analysis["repository_url"],
+                "files": {
+                    file_path: data["json_serializable"]
+                    for file_path, data in full_ast_analysis.get("files", {}).items()
+                }
+            }
+            analysis_results['ast_schema'] = json_ast_schema
+            # --- ENDE DER ÄNDERUNG ---
 
 
             # 4. Call-Graphen erstellen
@@ -127,7 +139,8 @@ import json
 from pydantic import ValidationError
 
 # --- GEÄNDERTE IMPORTS ---
-# Absoluter Import vom Projekt-Root aus
+# Annahme: tools.py liegt im selben Verzeichnis oder im Python-Pfad
+from tools import analyze_repository
 from schemas.types import FunctionAnalysis
 
 # ==============================================================================
@@ -148,6 +161,18 @@ if __name__ == "__main__":
         # Gib einen Teil der Ergebnisse als Beispiel aus
         print("\n--- Basis-Informationen zum Projekt ---")
         print(json.dumps(analysis_results.get("basic_info"), indent=2, ensure_ascii=False))
+
+        # --- START DER ÄNDERUNG ---
+        print("\n--- AST-Analyse (Auszug) ---")
+        # Zeige das AST-Schema für eine der ersten gefundenen Dateien
+        ast_files = analysis_results.get("ast_schema", {}).get("files", {})
+        first_file_with_ast = next(iter(ast_files), None)
+        if first_file_with_ast:
+            print(f"AST-Schema für: {first_file_with_ast}")
+            print(json.dumps(ast_files[first_file_with_ast], indent=2))
+        else:
+            print("Keine AST-Schemata generiert.")
+        # --- ENDE DER ÄNDERUNG ---
         
         print("\n--- Call-Graphen (Auszug) ---")
         # Zeige den Call-Graphen für eine der ersten gefundenen Dateien
