@@ -43,14 +43,14 @@ class ConstructorDescription(BaseModel):
 
 class ClassContext(BaseModel):
     """Describes the class's external dependencies and primary points of instantiation."""
-    dependencies: str
-    instantiated_by: str
+    dependencies: List[str]
+    instantiated_by: List[str]
 
 class ClassDescription(BaseModel):
     """Contains the detailed analysis of a class's purpose, constructor, and methods."""
     overall: str
     init_method: ConstructorDescription
-    methods: List[FunctionAnalysis]
+    methods: List[FunctionAnalysis] # Könnte auch nächträglich hinzugefügt werden um Tokens zu sparen
     usage_context: ClassContext
 
 class ClassAnalysis(BaseModel):
@@ -92,50 +92,141 @@ class ClassAnalysisInput(BaseModel):
     imports: List[str]
     context: ClassContextInput
 
-
-# Example Dictionary Structure FunctionAnalysis Output
-valid_function_data = {
-    "identifier": "my_module.utils.calculate_sum",
-    "description": {
-        "overall": "This function takes two integers and returns their sum.",
+# ----------------------- Example Dictionaries --------------------------
+if __name__ == "__main__":
+    # Example Dictionary Structure FunctionAnalysis Output
+    valid_function_output = {
+        "identifier": "my_module.utils.calculate_sum",
+        "description": {
+            "overall": "This function takes two integers and returns their sum.",
         
-        "parameters": [
-            {
-                "name": "x",
-                "type": "int",
-                "description": "The first integer operand."
+            "parameters": [
+                {
+                    "name": "x",
+                    "type": "int",
+                    "description": "The first integer operand."
+                },
+                {
+                    "name": "y",
+                    "type": "int",
+                    "description": "The second integer operand."
+                }
+            ],
+        
+            "returns": [
+                {
+                    "name": "total",
+                    "type": "int",
+                    "description": "The sum of x and y."
+                }
+            ],
+        
+            "usage_context": {
+                "calls": ["logging.info"],
+                "called_by": ["api.v1.endpoints.add_numbers", "scripts.run_daily_job"]
+            }
+        },
+        # The 'error' field is optional. We can omit it, and it will default to None.
+        # Or we can explicitly set it to None.
+        "error": None 
+    }
+
+    # How to Validate and Access Dictionary
+    try:
+        # Pydantic will recursively parse the nested dictionaries into the correct model instances.
+        function_analysis_output = FunctionAnalysis.model_validate(valid_function_output)
+        print("Function Analysis validated.")
+        print(f"Overall Description: {function_analysis_output.description.overall}")
+
+    except ValidationError as e:
+        print("Validation failed!")
+        print(e)
+
+    valid_class_output = {
+        "identifier": "AST_Analyser",
+        "description": {
+            "overall": "Class to create the AST",
+            "init_method": {
+                "description": "Bla",
+                "parameters": [
+                    {
+                        "name": "Parameter 1",
+                        "type": "I dont know",
+                        "description": "Here to do stuff"
+                    },
+                    {
+                        "name": "Parameter 2",
+                        "type": "still dont know",
+                        "description": "doesnt do stuff"
+                    }
+                ]
             },
-            {
-                "name": "y",
-                "type": "int",
-                "description": "The second integer operand."
+            "methods": [
+                function_analysis_output,
+                function_analysis_output
+            ],
+            "usage_context": {
+                "dependencies": [
+                    "A",
+                    "B"
+                ],
+                "instantiated_by": [
+                    "A",
+                    "B"
+                ]
             }
-        ],
-        
-        "returns": [
-            {
-                "name": "total",
-                "type": "int",
-                "description": "The sum of x and y."
-            }
-        ],
-        
-        "usage_context": {
-            "calls": ["logging.info"],
-            "called_by": ["api.v1.endpoints.add_numbers", "scripts.run_daily_job"]
+        },
+        "error": "None"
+    }
+
+    try:
+        # Pydantic will recursively parse the nested dictionaries into the correct model instances.
+        class_analysis_output = ClassAnalysis.model_validate(valid_class_output)
+        print("Class Analysis validated.")
+
+    except ValidationError as e:
+        print("Validation failed!")
+        print(e)
+
+
+    valid_function_input = {
+        "mode": "function_analysis",
+        "identifier": "A",
+        "source_code": "ABC",
+        "imports": ["pandas", "numpy"],
+        "context": {
+            "calls": ["function1", "function2"],
+            "called_by": ["functionA", "functionB"]
         }
-    },
-    # The 'error' field is optional. We can omit it, and it will default to None.
-    # Or we can explicitly set it to None.
-    "error": None 
-}
+    }
 
-# How to Validate and Access Dictionary
-try:
-    # Pydantic will recursively parse the nested dictionaries into the correct model instances.
-    function_analysis_instance = FunctionAnalysis.model_validate(valid_function_data)
-    print(f"Overall Description: {function_analysis_instance.description.overall}")
+    try:
+        function_analysis_input = FunctionAnalysisInput.model_validate(valid_function_input)
+        print("Function Input validated.")
 
-except ValidationError as e:
-    print("Validation failed!")
-    print(e)
+    except ValidationError as e:
+        print("Validation failed!")
+        print(e)
+
+    valid_class_input = {
+        "mode": "class_analysis",
+        "identifier": "A",
+        "source_code": "ABC",
+        "imports": ["pandas", "numpy"],
+        "context": {
+            "dependencies": ["function1", "function2"],
+            "instantiated_by": ["functionA", "functionB"],
+            "methods_analysis": [
+                valid_function_output,
+                valid_function_output
+            ]
+        }    
+    }
+
+    try:
+        class_analysis_input = ClassAnalysisInput.model_validate(valid_class_input)
+        print("Class Input validated.")
+
+    except ValidationError as e:
+        print("Validation failed!")
+        print(e)
