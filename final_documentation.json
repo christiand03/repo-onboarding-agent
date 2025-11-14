@@ -1,0 +1,1931 @@
+{
+  "repository_url": "https://github.com/christiand03/repo-onboarding-agent",
+  "functions": {
+    "backend/HelperLLM.py::main_orchestrator": {
+      "identifier": "backend/HelperLLM.py::main_orchestrator",
+      "description": {
+        "overall": "This function simulates the core orchestration logic for generating structured documentation from a repository analysis. It initializes mock input data containing definitions for functions and classes that require analysis. An `LLMHelper` instance is configured to handle the documentation generation process using a specified system prompt file and API key. The process is executed in two sequential phases: first, generating documentation for all individual functions and methods, and second, generating documentation for classes by incorporating the results of their respective methods. The function logs the progress of both phases and concludes by printing the final, aggregated documentation structure as a JSON dump.",
+        "parameters": [],
+        "returns": [],
+        "usage_context": {
+          "calls": [
+            "ClassContextInput",
+            "FunctionContextInput",
+            "LLMHelper",
+            "dumps",
+            "generate_for_class",
+            "generate_for_function",
+            "info",
+            "print",
+            "warning"
+          ],
+          "called_by": [
+            "backend/HelperLLM.py::<main_block>"
+          ]
+        }
+      },
+      "error": null
+    },
+    "backend/MainLLM.py::extract_json_from_response": {
+      "identifier": "backend/MainLLM.py::extract_json_from_response",
+      "description": {
+        "overall": "This function is designed to robustly extract a pure JSON string from a raw text response, typically originating from a Large Language Model. It primarily uses a regular expression to search for content enclosed within Markdown code blocks, which may optionally be tagged with the 'json' language identifier. If the regex successfully finds a match, the captured content (the JSON object) is returned, ensuring the surrounding code fences are removed. If no Markdown code block is detected, the function falls back to returning the original input string after stripping any leading or trailing whitespace.",
+        "parameters": [
+          {
+            "name": "response_text",
+            "type": "str",
+            "description": "This parameter holds the raw text response, typically received from a Large Language Model."
+          }
+        ],
+        "returns": [
+          {
+            "name": "return_value",
+            "type": "str",
+            "description": "The function returns the extracted JSON string, or the original stripped text if no JSON block was found."
+          }
+        ],
+        "usage_context": {
+          "calls": [
+            "group",
+            "search",
+            "strip"
+          ],
+          "called_by": [
+            "backend/MainLLM.py::main_workflow"
+          ]
+        }
+      },
+      "error": null
+    },
+    "backend/MainLLM.py::main_workflow": {
+      "identifier": "backend/MainLLM.py::main_workflow",
+      "description": {
+        "overall": "This function executes the core autonomous workflow, simulating the process from a user request to a final report generation using a large language model (LLM). It begins by ensuring the necessary API key is available and initializing the `MainLLM` instance with its system prompt. The workflow proceeds through a Command Stage, where the LLM generates a structured command containing the repository URL, which is then parsed and validated. Next, the Agent Simulation Stage calls the external `analyze_repository` tool using the extracted URL to gather detailed data. Finally, the Synthesis Stage sends the comprehensive analysis results back to the LLM for final report generation, saving the resulting markdown output to a timestamped file.",
+        "parameters": [],
+        "returns": [],
+        "usage_context": {
+          "calls": [
+            "MainLLM",
+            "ValueError",
+            "analyze_repository",
+            "debug",
+            "dirname",
+            "dumps",
+            "error",
+            "extract_json_from_response",
+            "fatal",
+            "get",
+            "info",
+            "isinstance",
+            "join",
+            "loads",
+            "makedirs",
+            "now",
+            "open",
+            "print",
+            "process_request",
+            "strftime",
+            "write"
+          ],
+          "called_by": [
+            "backend/MainLLM.py::<main_block>"
+          ]
+        }
+      },
+      "error": null
+    },
+    "backend/callgraph.py::build_callGraph": {
+      "identifier": "backend/callgraph.py::build_callGraph",
+      "description": {
+        "overall": "This function constructs a directed call graph (`networkx.DiGraph`) by analyzing a provided Python Abstract Syntax Tree (AST). It utilizes an internal `ast.NodeVisitor` subclass, `CallGraph`, to traverse the tree and identify function definitions and calls. The visitor registers functions and methods as nodes and records calls between them, handling both synchronous and asynchronous definitions. Special logic is included to identify and separate calls originating from the global scope, including those within `if __name__ == \"__main__\"` blocks, which are labeled as `<main_block>`. Finally, it converts the collected call relationships into edges in the NetworkX graph structure, providing detailed warnings for complex or unsupported call structures.",
+        "parameters": [
+          {
+            "name": "tree",
+            "type": "ast.AST",
+            "description": "The Abstract Syntax Tree object representing the Python file to be analyzed."
+          },
+          {
+            "name": "filename",
+            "type": "str | None",
+            "description": "The optional name of the analyzed file, used for labeling global scope nodes and error reporting."
+          },
+          {
+            "name": "file_content",
+            "type": "str | None",
+            "description": "The optional raw content of the file, used to extract source code segments for detailed warning messages on complex function calls."
+          }
+        ],
+        "returns": [
+          {
+            "name": "call_graph",
+            "type": "nx.DiGraph",
+            "description": "The complete directed graph where nodes represent functions/scopes and edges represent function calls."
+          }
+        ],
+        "usage_context": {
+          "calls": [
+            "DiGraph"
+          ],
+          "called_by": [
+            "backend/main.py::<main_block>",
+            "backend/tools.py::<backend/tools.py>"
+          ]
+        }
+      },
+      "error": null
+    },
+    "backend/callgraph.py::graph_to_adj_list": {
+      "identifier": "backend/callgraph.py::graph_to_adj_list",
+      "description": {
+        "overall": "This function converts a NetworkX directed graph (DiGraph), typically used to represent a call graph, into a standard dictionary-based adjacency list format. It initializes an empty dictionary to store the resulting structure. The function iterates through all nodes present in the graph, ensuring the nodes are processed in alphabetical order. For each node, it retrieves its successors, which represent the functions or modules called by that node. If a node has outgoing edges, the function maps the node identifier to a sorted list of its successors, making the final dictionary suitable for JSON serialization.",
+        "parameters": [
+          {
+            "name": "graph",
+            "type": "nx.DiGraph",
+            "description": "The NetworkX directed graph object that represents the call structure to be converted."
+          }
+        ],
+        "returns": [
+          {
+            "name": "adj_list",
+            "type": "Dict[str, list[str]]",
+            "description": "A dictionary representing the adjacency list, where keys are calling nodes (callers) and values are lists of called nodes (callees)."
+          }
+        ],
+        "usage_context": {
+          "calls": [
+            "list",
+            "nodes",
+            "sorted",
+            "successors"
+          ],
+          "called_by": [
+            "backend/main.py::<main_block>",
+            "backend/tools.py::<backend/tools.py>"
+          ]
+        }
+      },
+      "error": null
+    },
+    "backend/main.py::print_tree_view": {
+      "identifier": "backend/main.py::print_tree_view",
+      "description": {
+        "overall": "The function recursively prints a nested dictionary structure, typically representing a file system tree, as a human-readable directory view in the console. It iterates through the items of the current node, sorting directories (dictionaries) before files (RepoFile objects) to maintain a logical structure. For each item, it calculates the appropriate Unicode prefix and indentation string to visually represent the hierarchy using box-drawing characters. If the item is a directory, it prints the name and calls itself recursively to process the contents, adjusting the indentation based on whether it is the last item in the current list.",
+        "parameters": [
+          {
+            "name": "node",
+            "type": "dict | object_with_items",
+            "description": "The current node in the file tree structure, expected to be a dictionary or a similar object supporting the .items() method."
+          },
+          {
+            "name": "indent",
+            "type": "str",
+            "description": "The string used to maintain the visual indentation level for the current node, defaulting to an empty string."
+          }
+        ],
+        "returns": [],
+        "usage_context": {
+          "calls": [
+            "enumerate",
+            "isinstance",
+            "items",
+            "len",
+            "print",
+            "print_tree_view",
+            "sorted"
+          ],
+          "called_by": [
+            "backend/main.py::<main_block>",
+            "backend/main.py::print_tree_view"
+          ]
+        }
+      },
+      "error": null
+    },
+    "backend/main.py::print_basic_info": {
+      "identifier": "backend/main.py::print_basic_info",
+      "description": {
+        "overall": "This function is responsible for formatting and printing core project information to the standard output. It accepts a dictionary, `info`, which is expected to contain structured data about a project, typically extracted from documentation. The function accesses two main sections: 'projekt_uebersicht' and 'installation'. It safely retrieves nested fields like title, description, status, features, tech stack, dependencies, and setup guides using dictionary `.get()` methods. The extracted data is then presented to the user in a clearly formatted, multi-section console output.",
+        "parameters": [
+          {
+            "name": "info",
+            "type": "dict",
+            "description": "A dictionary containing structured project data, including nested sections for project overview and installation details."
+          }
+        ],
+        "returns": [],
+        "usage_context": {
+          "calls": [
+            "get",
+            "print"
+          ],
+          "called_by": [
+            "backend/main.py::<main_block>"
+          ]
+        }
+      },
+      "error": null
+    },
+    "backend/tools.py::analyze_repository": {
+      "identifier": "backend/tools.py::analyze_repository",
+      "description": {
+        "overall": "This function performs a comprehensive analysis of a specified Git repository URL. It begins by cloning the repository using a `GitRepository` context manager to ensure proper cleanup. Once cloned, it extracts basic project information, determines the file tree structure, and then iterates through Python files to perform deep analysis. This deep analysis includes generating AST schemas and building function call graphs, consolidating all results into a single dictionary. The function is wrapped in a `try...except` block to handle critical errors during cloning or analysis, returning the results dictionary alongside a self-descriptive metadata dictionary.",
+        "parameters": [
+          {
+            "name": "repo_url",
+            "type": "str",
+            "description": "The URL of the Git repository that needs to be cloned and analyzed."
+          }
+        ],
+        "returns": [
+          {
+            "name": "analysis_tuple",
+            "type": "Tuple[Optional[Dict[str, Any]], Dict[str, Any]]",
+            "description": "A tuple where the first element contains the consolidated analysis results (or None on failure), and the second element is a self-descriptive metadata dictionary for this function."
+          }
+        ],
+        "usage_context": {
+          "calls": [
+            "GitRepository",
+            "ProjektInfoExtractor",
+            "basename",
+            "extrahiere_info",
+            "get_all_files",
+            "get_file_tree",
+            "print",
+            "removesuffix"
+          ],
+          "called_by": [
+            "backend/MainLLM.py::main_workflow",
+            "backend/main.py::<main_block>",
+            "backend/tools.py::<backend/tools.py>",
+            "backend/tools.py::<main_block>"
+          ]
+        }
+      },
+      "error": null
+    }
+  },
+  "classes": {
+    "backend/AST.py::PythonASTVisitor": {
+      "identifier": "backend/AST.py::PythonASTVisitor",
+      "description": {
+        "overall": "This class, inheriting from `ast.NodeVisitor`, is designed to traverse a Python Abstract Syntax Tree (AST) to systematically extract structural metadata about the analyzed source file. It maintains two internal schema dictionaries (`schema` and `json_schema`) to store information regarding top-level imports, functions, and classes found during the traversal. The visitor implements specific `visit_` methods for handling imports (`Import`, `ImportFrom`), class definitions (`ClassDef`), and function definitions (`FunctionDef`, `AsyncFunctionDef`). It uses a helper method, `_extract_function_info`, to standardize the metadata collected for functions and methods before storing it in the schema.",
+        "init_method": {
+          "description": "Initializes the internal state of the visitor by setting up the `schema` and `json_schema` dictionaries, which are used to accumulate the extracted AST information, and initializes the `_current_class` tracker.",
+          "parameters": []
+        },
+        "methods": [
+          {
+            "identifier": "backend/AST.py::__init__",
+            "description": {
+              "overall": "Initializes the visitor by setting up two internal dictionaries, `self.schema` and `self.json_schema`, which are used to store the extracted AST structure (imports, functions, classes). It also initializes `_current_class` to track the context during traversal.",
+              "parameters": [],
+              "returns": [],
+              "usage_context": {
+                "calls": [],
+                "called_by": []
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "backend/AST.py::_extract_function_info",
+            "description": {
+              "overall": "This private helper method extracts essential metadata from an AST function node, including its name, docstring, arguments, line numbers, decorators, and return type annotation. The extracted information is formatted into a dictionary suitable for JSON serialization.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.FunctionDef | ast.AsyncFunctionDef",
+                  "description": "The AST node representing the function or asynchronous function definition."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "function_info",
+                  "type": "dict",
+                  "description": "A dictionary containing structured information about the function node."
+                }
+              ],
+              "usage_context": {
+                "calls": [
+                  "ast.get_docstring",
+                  "getattr",
+                  "ast.unparse"
+                ],
+                "called_by": [
+                  "backend/AST.py::visit_ClassDef",
+                  "backend/AST.py::visit_FunctionDef",
+                  "backend/AST.py::visit_AsyncFunctionDef"
+                ]
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "backend/AST.py::visit_Import",
+            "description": {
+              "overall": "Handles `ast.Import` nodes by iterating through all imported names (aliases) within the statement. Each imported name is appended directly to the 'imports' list in both the raw schema and the JSON schema dictionaries.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.Import",
+                  "description": "The AST node representing a standard import statement."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": [
+                  "self.generic_visit"
+                ],
+                "called_by": []
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "backend/AST.py::visit_ImportFrom",
+            "description": {
+              "overall": "Handles `ast.ImportFrom` nodes by constructing the fully qualified import name (e.g., `module.name`) for each alias. This fully qualified name is then appended to the 'imports' list in both internal schema dictionaries.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.ImportFrom",
+                  "description": "The AST node representing a 'from X import Y' statement."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": [
+                  "self.generic_visit"
+                ],
+                "called_by": []
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "backend/AST.py::visit_ClassDef",
+            "description": {
+              "overall": "Processes `ast.ClassDef` nodes by setting the current class context and initializing entries for the class in both schema dictionaries. It then iterates over the class's children to identify and extract information about its methods using `_extract_function_info`, storing the results under the class entry.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.ClassDef",
+                  "description": "The AST node representing the class definition."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": [
+                  "ast.iter_child_nodes",
+                  "ast.get_docstring",
+                  "self._extract_function_info"
+                ],
+                "called_by": []
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "backend/AST.py::visit_FunctionDef",
+            "description": {
+              "overall": "Handles synchronous function definitions (`ast.FunctionDef`), processing them only if they are top-level functions (i.e., not methods of a class). If top-level, the function node and its extracted information are stored in the respective schema dictionaries.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.FunctionDef",
+                  "description": "The AST node representing the synchronous function definition."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": [
+                  "self._extract_function_info"
+                ],
+                "called_by": []
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "backend/AST.py::visit_AsyncFunctionDef",
+            "description": {
+              "overall": "Handles asynchronous function definitions (`ast.AsyncFunctionDef`), processing them only if they are top-level functions (i.e., not methods of a class). If top-level, the function node and its extracted information are stored in the respective schema dictionaries.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.AsyncFunctionDef",
+                  "description": "The AST node representing the asynchronous function definition."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": [
+                  "self._extract_function_info"
+                ],
+                "called_by": []
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": [
+            "ast"
+          ],
+          "instantiated_by": [
+            "backend/AST.py::visit_AsyncFunctionDef",
+            "backend/AST.py::visit_FunctionDef",
+            "backend/AST.py::visit_ClassDef"
+          ]
+        }
+      },
+      "error": null
+    },
+    "backend/AST.py::ASTAnalyzer": {
+      "identifier": "backend/AST.py::ASTAnalyzer",
+      "description": {
+        "overall": "This class is designed to perform static analysis on Python code within a repository by leveraging the Abstract Syntax Tree (AST). Its primary role is to process a list of files, parse their content into ASTs, and extract structured metadata about the defined classes, functions, and imports using an internal visitor pattern (`PythonASTVisitor`). The class orchestrates this process via the `analyze_repository` method, compiling the results into a comprehensive, hierarchical schema. This schema includes both AST node representations and JSON-serializable data, making the output suitable for subsequent documentation or analysis steps.",
+        "init_method": {
+          "description": "The constructor initializes the ASTAnalyzer instance but requires no specific parameters, indicating that the state is managed entirely within the analysis methods.",
+          "parameters": []
+        },
+        "methods": [
+          {
+            "identifier": "backend/AST.py::analyze_repository",
+            "description": {
+              "overall": "This method orchestrates the Abstract Syntax Tree (AST) analysis for a collection of Python files within a repository. It iterates through the provided file objects, parses the content using the `ast.parse` function, and applies a `PythonASTVisitor` to extract structured information about imports, functions, and classes. It handles potential parsing errors (SyntaxError, ValueError) and compiles the results into a hierarchical dictionary containing both AST node representations and JSON-serializable schemas for each successfully analyzed file.",
+              "parameters": [
+                {
+                  "name": "files",
+                  "type": "list",
+                  "description": "A list of objects, each expected to have `.path` (str) and `.content` (str) attributes, representing the files to be analyzed."
+                },
+                {
+                  "name": "repo_url",
+                  "type": "str",
+                  "description": "The URL of the repository, used for metadata inclusion in the final schema."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "full_schema",
+                  "type": "dict",
+                  "description": "A dictionary containing the repository URL and a mapping of file paths to their structured AST analysis results (AST nodes and JSON schemas)."
+                }
+              ],
+              "usage_context": {
+                "calls": [
+                  "ast.parse",
+                  "PythonASTVisitor",
+                  "visitor.visit"
+                ],
+                "called_by": []
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": [
+            "ast"
+          ],
+          "instantiated_by": [
+            "backend/tools.py::<backend/tools.py>",
+            "backend/main.py::<main_block>",
+            "backend/tools.py::<main_block>",
+            "backend/MainLLM.py::main_workflow"
+          ]
+        }
+      },
+      "error": null
+    },
+    "backend/HelperLLM.py::LLMHelper": {
+      "identifier": "backend/HelperLLM.py::LLMHelper",
+      "description": {
+        "overall": "The LLMHelper class is designed to manage interactions with the Google Gemini API for the specific purpose of generating structured documentation analyses of Python code. It centralizes the complexity of API communication, ensuring all requests are formatted correctly using a predefined system prompt loaded during initialization. The class enforces strict data integrity by utilizing Pydantic models for input serialization and validating the LLM's JSON responses against corresponding output schemas. This architecture ensures reliable, machine-readable output while abstracting away low-level API calls, JSON parsing, and robust error handling for both function and class analysis tasks.",
+        "init_method": {
+          "description": "Initializes the LLM client, validates the required API key, and loads the necessary system prompt from a specified file path.",
+          "parameters": [
+            {
+              "name": "api_key",
+              "type": "str",
+              "description": "The secret key required for authenticating with the Gemini API."
+            },
+            {
+              "name": "prompt_file_path",
+              "type": "str",
+              "description": "The file path pointing to the text file containing the system prompt for the LLM."
+            },
+            {
+              "name": "model_name",
+              "type": "str",
+              "description": "Specifies the name of the Google Gemini model to be used for generation, defaulting to 'gemini-flash-latest'."
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "backend/HelperLLM.py::_call_llm_and_parse",
+            "description": {
+              "overall": "This private method acts as the core communication layer, sending the structured input to the LLM and returning the parsed JSON response. It constructs the conversation using the system prompt and the user payload, invokes the LLM, and attempts to deserialize the raw response content. The method includes robust error handling for API failures and JSON decoding errors, returning None upon failure.",
+              "parameters": [
+                {
+                  "name": "user_json_payload",
+                  "type": "str",
+                  "description": "The JSON string containing the analysis request payload to be sent to the LLM."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "return_value",
+                  "type": "Optional[Dict[str, Any]]",
+                  "description": "The parsed JSON response from the LLM, or None if an error occurred during the API call or JSON decoding."
+                }
+              ],
+              "usage_context": {
+                "calls": [
+                  "logging.info",
+                  "logging.error",
+                  "logging.debug",
+                  "json.loads",
+                  "self.llm.invoke"
+                ],
+                "called_by": [
+                  "backend/HelperLLM.py::generate_for_function",
+                  "backend/HelperLLM.py::generate_for_class"
+                ]
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "backend/HelperLLM.py::generate_for_function",
+            "description": {
+              "overall": "Orchestrates the documentation generation process for a single function by handling input serialization, LLM invocation, and output validation. It converts the Pydantic input model into a JSON payload and calls the core LLM communication method. The resulting generic response is then rigorously validated against the expected FunctionAnalysis Pydantic schema, logging warnings if the LLM reports an internal error or logging errors if validation fails.",
+              "parameters": [
+                {
+                  "name": "function_input",
+                  "type": "FunctionAnalysisInput",
+                  "description": "The Pydantic model containing the context and code snippet for the function to be analyzed."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "return_value",
+                  "type": "Optional[FunctionAnalysis]",
+                  "description": "The validated Pydantic object representing the function analysis, or None if the LLM call failed or validation failed."
+                }
+              ],
+              "usage_context": {
+                "calls": [
+                  "function_input.model_dump",
+                  "json.dumps",
+                  "self._call_llm_and_parse",
+                  "FunctionAnalysis.model_validate",
+                  "logging.warning",
+                  "logging.error"
+                ],
+                "called_by": []
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "backend/HelperLLM.py::generate_for_class",
+            "description": {
+              "overall": "Manages the documentation generation for an entire class by handling input serialization, LLM invocation, and output validation. It converts the ClassAnalysisInput Pydantic model into a JSON payload and calls the core LLM communication method. The resulting generic response is then rigorously validated against the expected ClassAnalysis Pydantic schema, logging warnings if the LLM reports an internal error or logging errors if validation fails.",
+              "parameters": [
+                {
+                  "name": "class_input",
+                  "type": "ClassAnalysisInput",
+                  "description": "The Pydantic model containing the context and method analyses for the class to be analyzed."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "return_value",
+                  "type": "Optional[ClassAnalysis]",
+                  "description": "The validated Pydantic object representing the class analysis, or None if the LLM call failed or validation failed."
+                }
+              ],
+              "usage_context": {
+                "calls": [
+                  "class_input.model_dump",
+                  "json.dumps",
+                  "self._call_llm_and_parse",
+                  "ClassAnalysis.model_validate",
+                  "logging.warning",
+                  "logging.error"
+                ],
+                "called_by": []
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": [
+            "os",
+            "json",
+            "logging",
+            "typing.List",
+            "typing.Dict",
+            "typing.Any",
+            "typing.Optional",
+            "typing.Union",
+            "dotenv.load_dotenv",
+            "langchain_google_genai.ChatGoogleGenerativeAI",
+            "langchain.messages.HumanMessage",
+            "langchain.messages.SystemMessage",
+            "langchain.messages.AIMessage",
+            "pydantic.ValidationError",
+            "schemas.types.FunctionAnalysis",
+            "schemas.types.ClassAnalysis",
+            "schemas.types.FunctionAnalysisInput",
+            "schemas.types.FunctionContextInput",
+            "schemas.types.ClassAnalysisInput",
+            "schemas.types.ClassContextInput"
+          ],
+          "instantiated_by": [
+            "backend/HelperLLM.py::generate_for_function",
+            "backend/HelperLLM.py::generate_for_class",
+            "backend/HelperLLM.py::main_orchestrator"
+          ]
+        }
+      },
+      "error": null
+    },
+    "backend/MainLLM.py::LLMClient": {
+      "identifier": "backend/MainLLM.py::LLMClient",
+      "description": {
+        "overall": "The LLMClient class is designed to encapsulate the configuration and initialization logic for interacting with a Large Language Model, specifically the Google Gemini service via the LangChain framework. It ensures that the required API key is provided upon instantiation and stores essential parameters such as the model name and temperature. The class uses a private helper method to create and store the actual `ChatGoogleGenerativeAI` instance, centralizing the setup process and making the configured LLM object readily available for subsequent operations within the application.",
+        "init_method": {
+          "description": "Initializes the LLM client configuration, validates the presence of the API key, and instantiates the underlying LLM object using the provided parameters.",
+          "parameters": [
+            {
+              "name": "api_key",
+              "type": "str",
+              "description": "The required API key for authenticating with the Gemini service."
+            },
+            {
+              "name": "model_name",
+              "type": "str",
+              "description": "Specifies the name of the generative model to be used, defaulting to 'gemini-flash-latest'."
+            },
+            {
+              "name": "temperature",
+              "type": "float",
+              "description": "Controls the randomness of the model's output, defaulting to 1."
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "backend/MainLLM.py::__init__",
+            "description": {
+              "overall": "Initializes the LLM client configuration, setting the API key, model name, and temperature. It validates the API key presence and then calls `_create_llm_instance` to set up the actual LLM object, logging the successful initialization.",
+              "parameters": [
+                {
+                  "name": "api_key",
+                  "type": "str",
+                  "description": "The required API key for authenticating with the Gemini service."
+                },
+                {
+                  "name": "model_name",
+                  "type": "str",
+                  "description": "Specifies the name of the generative model to be used, defaulting to 'gemini-flash-latest'."
+                },
+                {
+                  "name": "temperature",
+                  "type": "float",
+                  "description": "Controls the randomness of the model's output, defaulting to 1."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": [
+                  "_create_llm_instance",
+                  "logging.info"
+                ],
+                "called_by": []
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "backend/MainLLM.py::_create_llm_instance",
+            "description": {
+              "overall": "A private helper method responsible for instantiating the `ChatGoogleGenerativeAI` object from the `langchain_google_genai` library. It uses the configuration attributes (`model_name`, `api_key`, `temperature`) stored on the instance during initialization.",
+              "parameters": [],
+              "returns": [
+                {
+                  "name": "llm_instance",
+                  "type": "ChatGoogleGenerativeAI",
+                  "description": "Returns the configured instance of the LangChain Google Generative AI chat client."
+                }
+              ],
+              "usage_context": {
+                "calls": [
+                  "ChatGoogleGenerativeAI"
+                ],
+                "called_by": [
+                  "__init__"
+                ]
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": [
+            "os",
+            "logging",
+            "sys",
+            "json",
+            "dotenv.load_dotenv",
+            "datetime.datetime",
+            "re",
+            "langchain_google_genai.ChatGoogleGenerativeAI",
+            "langchain.messages.HumanMessage",
+            "langchain.messages.SystemMessage",
+            "tools.analyze_repository"
+          ],
+          "instantiated_by": [
+            "backend/MainLLM.py::__init__",
+            "backend/agent.py::__init__"
+          ]
+        }
+      },
+      "error": null
+    },
+    "backend/MainLLM.py::MainLLM": {
+      "identifier": "backend/MainLLM.py::MainLLM",
+      "description": {
+        "overall": "The MainLLM class is designed to orchestrate the interaction with a large language model (LLM), specifically managing a two-stage workflow involving command creation and synthesis. It acts as a dedicated interface to the underlying LLM service, requiring an API key and a path to a system prompt file for initialization. The class ensures that the system prompt is loaded securely and handles potential file access errors during setup. Its primary function is to process user requests by formatting the input alongside the system prompt and reliably extracting the final text content from the LLM's potentially complex response structure, providing robust error handling for API invocation failures.",
+        "init_method": {
+          "description": "The constructor initializes the internal LLM client using the provided API key and attempts to load the system prompt text from the specified file path, raising an error if the file is not found.",
+          "parameters": [
+            {
+              "name": "api_key",
+              "type": "str",
+              "description": "The API key required for authenticating with the underlying LLM service client."
+            },
+            {
+              "name": "system_prompt_path",
+              "type": "str",
+              "description": "The file path used to locate and load the necessary system prompt text for the LLM."
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "backend/MainLLM.py::__init__",
+            "description": {
+              "overall": "Initializes the MainLLM client by creating an instance of LLMClient using the provided API key. It then attempts to load the system prompt from the specified file path, logging success or failure, and raising a FileNotFoundError if the prompt file is missing.",
+              "parameters": [
+                {
+                  "name": "api_key",
+                  "type": "str",
+                  "description": "The API key used for authenticating the underlying LLM service client."
+                },
+                {
+                  "name": "system_prompt_path",
+                  "type": "str",
+                  "description": "The file path pointing to the text file containing the system prompt."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": [
+                  "LLMClient",
+                  "open",
+                  "logging.info",
+                  "logging.error"
+                ],
+                "called_by": [
+                  "backend/MainLLM.py::main_workflow"
+                ]
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "backend/MainLLM.py::process_request",
+            "description": {
+              "overall": "Processes an input request by constructing a message list containing the stored system prompt and the user input. It invokes the LLM client and handles the response structure, attempting to reliably extract the pure text content, even if the response is complex or list-based. If the LLM invocation fails, it catches the exception and returns a detailed error string.",
+              "parameters": [
+                {
+                  "name": "input_data",
+                  "type": "str",
+                  "description": "The user input or structured data intended for processing by the LLM."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "content",
+                  "type": "str",
+                  "description": "The extracted pure text content of the LLM's response, or an error message if processing failed."
+                }
+              ],
+              "usage_context": {
+                "calls": [
+                  "logging.info",
+                  "SystemMessage",
+                  "HumanMessage",
+                  "self.llm_client.llm.invoke",
+                  "logging.warning",
+                  "logging.error"
+                ],
+                "called_by": []
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": [
+            "os",
+            "logging",
+            "sys",
+            "json",
+            "dotenv.load_dotenv",
+            "datetime.datetime",
+            "re",
+            "langchain_google_genai.ChatGoogleGenerativeAI",
+            "langchain.messages.HumanMessage",
+            "langchain.messages.SystemMessage",
+            "tools.analyze_repository"
+          ],
+          "instantiated_by": [
+            "backend/MainLLM.py::main_workflow"
+          ]
+        }
+      },
+      "error": null
+    },
+    "backend/agent.py::LLMClient": {
+      "identifier": "backend/agent.py::LLMClient",
+      "description": {
+        "overall": "The LLMClient class serves as a dedicated wrapper for configuring and initializing the connection to a Large Language Model, specifically utilizing Google's Gemini models through the LangChain framework. Its primary responsibility is to manage the necessary authentication (API key) and model parameters (name and temperature). Upon instantiation, it validates the API key and internally calls a private method to create a ready-to-use instance of the `ChatGoogleGenerativeAI` client, which is stored for subsequent use by higher-level agents or components.",
+        "init_method": {
+          "description": "Initializes the client by validating the required API key, storing configuration parameters (model name, temperature), and creating the underlying LLM instance.",
+          "parameters": [
+            {
+              "name": "api_key",
+              "type": "str",
+              "description": "The secret key required for authenticating with the Gemini API."
+            },
+            {
+              "name": "model_name",
+              "type": "str",
+              "description": "Specifies the name of the generative model to be used (defaults to 'gemini-flash-latest')."
+            },
+            {
+              "name": "temperature",
+              "type": "float",
+              "description": "Controls the randomness of the model's output generation (defaults to 1)."
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "backend/agent.py::_create_llm_instance",
+            "description": {
+              "overall": "This private helper method instantiates and returns a ChatGoogleGenerativeAI object from the langchain_google_genai library. It uses the configuration parameters (model name, API key, and temperature) stored as instance attributes during the client's initialization.",
+              "parameters": [],
+              "returns": [
+                {
+                  "name": "llm_instance",
+                  "type": "ChatGoogleGenerativeAI",
+                  "description": "Returns the configured instance of the LangChain Google Generative AI chat client."
+                }
+              ],
+              "usage_context": {
+                "calls": [
+                  "ChatGoogleGenerativeAI"
+                ],
+                "called_by": [
+                  "backend/agent.py::__init__"
+                ]
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": [
+            "sys",
+            "os",
+            "datetime",
+            "logging",
+            "typing.List",
+            "typing.Any",
+            "typing.Dict",
+            "dotenv.load_dotenv",
+            "langchain_google_genai.ChatGoogleGenerativeAI",
+            "langchain.agents.create_agent",
+            "langchain.messages.HumanMessage",
+            "langchain.messages.AIMessage",
+            "langchain.messages.SystemMessage",
+            "tools.analyze_repository"
+          ],
+          "instantiated_by": [
+            "backend/MainLLM.py::__init__",
+            "backend/agent.py::__init__"
+          ]
+        }
+      },
+      "error": null
+    },
+    "backend/agent.py::RepoAnalysisAgent": {
+      "identifier": "backend/agent.py::RepoAnalysisAgent",
+      "description": {
+        "overall": "The `RepoAnalysisAgent` class encapsulates the setup and execution logic for a specialized AI agent designed for code repository analysis, leveraging the LangChain framework. It requires an LLM instance, a set of tools, and a system prompt file path for initialization. The constructor handles loading the prompt from the file system and assembling the agent executor using these components. The primary responsibility of the class is exposed through the `run` method, which takes a user query, executes the underlying LangChain agent, and robustly parses the resulting complex message structure to return a clean, final text response. This class serves as the operational interface for interacting with the repository analysis AI.",
+        "init_method": {
+          "description": "Initializes the `RepoAnalysisAgent` by validating the required components (LLM and tools), loading the system prompt from a specified file path, and constructing the executable agent executor.",
+          "parameters": [
+            {
+              "name": "llm",
+              "type": "ChatGoogleGenerativeAI",
+              "description": "The language model instance used for agent reasoning and response generation."
+            },
+            {
+              "name": "tools",
+              "type": "List[Any]",
+              "description": "A list of functions or utilities the agent can use to interact with the environment, such as code analysis tools."
+            },
+            {
+              "name": "system_prompt_path",
+              "type": "str",
+              "description": "The file path pointing to the text containing the agent's system instructions."
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "backend/agent.py::__init__",
+            "description": {
+              "overall": "Initializes the `RepoAnalysisAgent` by validating the required components (LLM and tools) and setting up the agent's core configuration. It loads the system prompt from a specified file path using `_load_prompt_from_file` and then constructs the executable agent using `_create_agent`. Logging confirms successful initialization.",
+              "parameters": [
+                {
+                  "name": "llm",
+                  "type": "ChatGoogleGenerativeAI",
+                  "description": "The language model instance used for agent reasoning."
+                },
+                {
+                  "name": "tools",
+                  "type": "List[Any]",
+                  "description": "A list of functions or utilities the agent can use to interact with the environment (e.g., code analysis tools)."
+                },
+                {
+                  "name": "system_prompt_path",
+                  "type": "str",
+                  "description": "The file path pointing to the text containing the agent's system instructions."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": [
+                  "self._load_prompt_from_file",
+                  "self._create_agent",
+                  "logging.info"
+                ],
+                "called_by": [
+                  "backend/agent.py::<main_block>"
+                ]
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "backend/agent.py::_load_prompt_from_file",
+            "description": {
+              "overall": "Reads the content of a specified file path to retrieve the system prompt text. It handles potential `FileNotFoundError` by logging the error before re-raising the exception, ensuring the prompt is loaded successfully or initialization fails clearly.",
+              "parameters": [
+                {
+                  "name": "file_path",
+                  "type": "str",
+                  "description": "The path to the file containing the system prompt text."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "return_value",
+                  "type": "str",
+                  "description": "The entire text content of the prompt file."
+                }
+              ],
+              "usage_context": {
+                "calls": [
+                  "open",
+                  "logging.error"
+                ],
+                "called_by": [
+                  "backend/agent.py::__init__"
+                ]
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "backend/agent.py::_create_agent",
+            "description": {
+              "overall": "Constructs and returns the executable LangChain agent instance. It utilizes the pre-configured LLM, the list of available tools, and the loaded system prompt, delegating the actual agent creation to the external `create_agent` function.",
+              "parameters": [],
+              "returns": [
+                {
+                  "name": "return_value",
+                  "type": "Any",
+                  "description": "The initialized LangChain agent executor object."
+                }
+              ],
+              "usage_context": {
+                "calls": [
+                  "create_agent"
+                ],
+                "called_by": [
+                  "backend/agent.py::__init__"
+                ]
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "backend/agent.py::run",
+            "description": {
+              "overall": "Executes the core functionality of the agent by processing a user query. It packages the query into a standard input payload, invokes the internal `agent_executor`, and then meticulously parses the complex response structure to extract the final, clean text content from the `AIMessage`. Logging is used to track the start and end of the execution.",
+              "parameters": [
+                {
+                  "name": "user_query",
+                  "type": "str",
+                  "description": "The natural language question or request provided by the user."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "final_output",
+                  "type": "str",
+                  "description": "The final, cleaned text response generated by the AI agent, or an error message if extraction fails."
+                }
+              ],
+              "usage_context": {
+                "calls": [
+                  "logging.info",
+                  "self.agent_executor.invoke",
+                  "logging.warning"
+                ],
+                "called_by": []
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": [
+            "sys",
+            "os",
+            "datetime",
+            "logging",
+            "typing.List",
+            "typing.Any",
+            "typing.Dict",
+            "dotenv.load_dotenv",
+            "langchain_google_genai.ChatGoogleGenerativeAI",
+            "langchain.agents.create_agent",
+            "langchain.messages.HumanMessage",
+            "langchain.messages.AIMessage",
+            "langchain.messages.SystemMessage",
+            "tools.analyze_repository"
+          ],
+          "instantiated_by": [
+            "backend/agent.py::__init__",
+            "backend/agent.py::<main_block>"
+          ]
+        }
+      },
+      "error": null
+    },
+    "backend/basic_info.py::ProjektInfoExtractor": {
+      "identifier": "backend/basic_info.py::ProjektInfoExtractor",
+      "description": {
+        "overall": "The ProjektInfoExtractor class is designed to systematically gather and structure key metadata about a software project from various common repository files. It initializes an internal state dictionary (`self.info`) with default placeholders for all expected fields, such as title, description, dependencies, and setup instructions. The extraction process is orchestrated by the public `extrahiere_info` method, which prioritizes structured files like `pyproject.toml` for core data and dependencies. It uses `requirements.txt` as a dependency fallback and then parses descriptive files like READMEs. Parsing of READMEs is handled by specialized private methods that use regular expressions to locate and extract specific sections (e.g., Features, Installation) based on predefined keywords, ensuring robust data collection from unstructured text.",
+        "init_method": {
+          "description": "Initializes the extractor by defining a constant placeholder string for missing information and creating the structured `self.info` dictionary to store extracted project details, categorized into 'projekt_uebersicht' and 'installation'.",
+          "parameters": []
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": [
+            "re",
+            "os",
+            "tomllib",
+            "tomli",
+            "typing.List",
+            "typing.Dict",
+            "typing.Any",
+            "typing.Optional"
+          ],
+          "instantiated_by": [
+            "backend/tools.py::analyze_repository",
+            "backend/basic_info.py::extrahiere_info",
+            "backend/main.py::<main_block>",
+            "backend/basic_info.py::_parse_readme"
+          ]
+        }
+      },
+      "error": null
+    },
+    "backend/getRepo.py::RepoFile": {
+      "identifier": "backend/getRepo.py::RepoFile",
+      "description": {
+        "overall": "The RepoFile class is designed to represent a single file residing within a specific Git commit tree, focusing on efficient resource management through lazy loading. It stores the file path and the associated Git tree object upon initialization. Attributes such as the Git blob object, the decoded file content, and the file size are only retrieved from the repository when they are first accessed. This lazy approach minimizes I/O operations until the data is explicitly required. Additionally, the class provides utility methods, such as word counting, demonstrating its role as a container for file data and associated analysis functions.",
+        "init_method": {
+          "description": "The constructor initializes the RepoFile object by storing the necessary path and Git tree context, and setting up internal attributes for subsequent lazy loading of file data.",
+          "parameters": [
+            {
+              "name": "file_path",
+              "type": "str",
+              "description": "The path to the file within the Git repository."
+            },
+            {
+              "name": "commit_tree",
+              "type": "git.Tree",
+              "description": "The Git Tree object corresponding to the commit from which the file data should be retrieved."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": [
+            "tempfile",
+            "shutil",
+            "git.Repo",
+            "git.GitCommandError"
+          ],
+          "instantiated_by": []
+        }
+      },
+      "error": null
+    },
+    "backend/getRepo.py::GitRepository": {
+      "identifier": "backend/getRepo.py::GitRepository",
+      "description": {
+        "overall": "The GitRepository class is a specialized utility designed to manage the lifecycle and access of a remote Git repository. Its primary responsibility is to clone a repository URL into a temporary local directory upon instantiation, ensuring isolation and cleanup. It acts as a context manager, guaranteeing that the temporary files are handled via the `close` method when exiting a `with` block. The class provides methods to access the repository content, either as a flat list of `RepoFile` objects (`get_all_files`) or as a nested dictionary structure representing the file hierarchy (`get_file_tree`). This structure is built recursively using the private `_traverse_tree` helper, mapping directory names to dictionaries and file names to `RepoFile` instances.",
+        "init_method": {
+          "description": "This constructor initializes the GitRepository instance by cloning the specified repository URL into a newly created temporary directory. It uses the `git.Repo.clone_from` method to perform the operation. Upon successful cloning, it stores the repository object, the latest commit, and the commit tree for subsequent file access. If the cloning fails due to a `GitCommandError`, it ensures the temporary directory is cleaned up via `self.close()` before raising a `RuntimeError`.",
+          "parameters": [
+            {
+              "name": "self",
+              "type": "GitRepository",
+              "description": "The instance of the GitRepository class."
+            },
+            {
+              "name": "repo_url",
+              "type": "str",
+              "description": "The URL of the Git repository that needs to be cloned."
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "backend/getRepo.py::__init__",
+            "description": {
+              "overall": "This constructor initializes the GitRepository instance by cloning the specified repository URL into a newly created temporary directory. It uses the `git.Repo.clone_from` method to perform the operation. Upon successful cloning, it stores the repository object, the latest commit, and the commit tree for subsequent file access. If the cloning fails due to a `GitCommandError`, it ensures the temporary directory is cleaned up via `self.close()` before raising a `RuntimeError`.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "GitRepository",
+                  "description": "The instance of the GitRepository class."
+                },
+                {
+                  "name": "repo_url",
+                  "type": "str",
+                  "description": "The URL of the Git repository that needs to be cloned."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": [
+                  "tempfile.mkdtemp",
+                  "Repo.clone_from",
+                  "self.close"
+                ],
+                "called_by": [
+                  "backend/main.py::<main_block>",
+                  "backend/tools.py::analyze_repository"
+                ]
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "backend/getRepo.py::get_all_files",
+            "description": {
+              "overall": "This method retrieves a list of all file paths within the cloned repository using the underlying Git command `ls-files`. It then iterates over these paths, creating a `RepoFile` object for each file, referencing the repository's commit tree. The resulting list of `RepoFile` instances is stored internally and returned to the caller.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "GitRepository",
+                  "description": "The instance of the GitRepository class."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "files",
+                  "type": "list[RepoFile]",
+                  "description": "A list of RepoFile instances representing every file in the repository."
+                }
+              ],
+              "usage_context": {
+                "calls": [
+                  "self.repo.git.ls_files",
+                  "RepoFile"
+                ],
+                "called_by": []
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "backend/getRepo.py::close",
+            "description": {
+              "overall": "This method is responsible for cleaning up resources associated with the repository. It checks if the temporary directory path is set and, if so, prints a message indicating the directory is being deleted. Crucially, it sets `self.temp_dir` to `None`, signaling that the resource reference is cleared.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "GitRepository",
+                  "description": "The instance of the GitRepository class."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": [
+                  "print"
+                ],
+                "called_by": [
+                  "backend/getRepo.py::__init__",
+                  "backend/getRepo.py::__exit__"
+                ]
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "backend/getRepo.py::__enter__",
+            "description": {
+              "overall": "This method implements the entry point for the context manager protocol, enabling the `GitRepository` object to be used within a Python `with` statement. It simply returns the instance itself, allowing the user to interact with the repository object within the context block.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "GitRepository",
+                  "description": "The instance of the GitRepository class."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "self",
+                  "type": "GitRepository",
+                  "description": "Returns the instance of the GitRepository class."
+                }
+              ],
+              "usage_context": {
+                "calls": [],
+                "called_by": []
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "backend/getRepo.py::__exit__",
+            "description": {
+              "overall": "This method implements the exit point for the context manager protocol. Its primary function is to guarantee that the cleanup method, `self.close()`, is executed when the `with` block is exited. This ensures that the temporary directory is handled, regardless of whether the block completed successfully or terminated due to an exception.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "GitRepository",
+                  "description": "The instance of the GitRepository class."
+                },
+                {
+                  "name": "exc_type",
+                  "type": "type | None",
+                  "description": "The type of exception raised within the context block, or None if no exception occurred."
+                },
+                {
+                  "name": "exc_val",
+                  "type": "Exception | None",
+                  "description": "The exception instance raised within the context block, or None."
+                },
+                {
+                  "name": "exc_tb",
+                  "type": "Traceback | None",
+                  "description": "The traceback object associated with the exception, or None."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": [
+                  "self.close"
+                ],
+                "called_by": []
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "backend/getRepo.py::get_file_tree",
+            "description": {
+              "overall": "This method serves as the public interface for retrieving the repository's file structure in a hierarchical format. It first checks if the commit tree was successfully loaded during initialization. If available, it delegates the complex recursive traversal task to the private helper method `_traverse_tree`, starting from the root commit tree, to build the nested dictionary structure.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "GitRepository",
+                  "description": "The instance of the GitRepository class."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "file_tree",
+                  "type": "dict",
+                  "description": "A nested dictionary representing the file and directory structure of the repository."
+                }
+              ],
+              "usage_context": {
+                "calls": [
+                  "self._traverse_tree"
+                ],
+                "called_by": [
+                  "backend/getRepo.py::get_file_tree"
+                ]
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "backend/getRepo.py::_traverse_tree",
+            "description": {
+              "overall": "This is a recursive helper function designed to walk through the Git tree structure. It iterates over both file objects (blobs) and directory objects (subtrees) within the current tree node. For blobs, it instantiates a `RepoFile` object; for subtrees, it recursively calls itself to build the nested dictionary structure. This process constructs the complete hierarchical representation of the repository content.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "GitRepository",
+                  "description": "The instance of the GitRepository class."
+                },
+                {
+                  "name": "tree",
+                  "type": "git.Tree",
+                  "description": "The current Git tree object that needs to be traversed."
+                },
+                {
+                  "name": "current_path",
+                  "type": "str",
+                  "description": "The accumulated path string leading to the current tree object from the repository root."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "file_structure",
+                  "type": "dict",
+                  "description": "The dictionary structure built for the current level of the Git tree."
+                }
+              ],
+              "usage_context": {
+                "calls": [
+                  "RepoFile",
+                  "self._traverse_tree"
+                ],
+                "called_by": [
+                  "backend/getRepo.py::get_file_tree",
+                  "backend/getRepo.py::_traverse_tree"
+                ]
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": [
+            "tempfile",
+            "shutil",
+            "git.Repo",
+            "git.GitCommandError"
+          ],
+          "instantiated_by": [
+            "backend/getRepo.py::__exit__",
+            "backend/getRepo.py::_traverse_tree",
+            "backend/getRepo.py::__init__",
+            "backend/main.py::<main_block>",
+            "backend/tools.py::analyze_repository",
+            "backend/getRepo.py::get_file_tree"
+          ]
+        }
+      },
+      "error": null
+    },
+    "schemas/types.py::ParameterDescription": {
+      "identifier": "schemas/types.py::ParameterDescription",
+      "description": {
+        "overall": "This class is a Pydantic data model (`BaseModel`) designed to strictly define the structure for describing a single parameter of a function. Its primary responsibility is to ensure that parameter descriptions consistently contain three required string fields: the parameter's name, its inferred type, and a textual description of its purpose. It acts as a schema definition for structured data exchange regarding function signatures, enforcing data integrity through Pydantic validation.",
+        "init_method": {
+          "description": "The constructor initializes the data model fields (`name`, `type`, `description`) and validates that all inputs conform to the required string type, leveraging Pydantic's `BaseModel` functionality.",
+          "parameters": [
+            {
+              "name": "name",
+              "type": "str",
+              "description": "The unique identifier for the function parameter."
+            },
+            {
+              "name": "type",
+              "type": "str",
+              "description": "The inferred or explicit type annotation of the parameter."
+            },
+            {
+              "name": "description",
+              "type": "str",
+              "description": "A concise explanation of the parameter's role and expected value."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": [
+            "typing.List",
+            "typing.Optional",
+            "typing.Literal",
+            "pydantic.BaseModel",
+            "pydantic.ValidationError"
+          ],
+          "instantiated_by": []
+        }
+      },
+      "error": null
+    },
+    "schemas/types.py::ReturnDescription": {
+      "identifier": "schemas/types.py::ReturnDescription",
+      "description": {
+        "overall": "This class is a Pydantic BaseModel designed to structure metadata about a function's return value. It serves as a schema definition, ensuring that return descriptions adhere to a specific, machine-readable format. It contains fields for the return value's identifier, its inferred data type, and a concise textual description of its purpose. As a data model, it primarily facilitates data validation and serialization within the system's schema definitions.",
+        "init_method": {
+          "description": "This class uses the default Pydantic constructor to initialize its fields based on the defined schema.",
+          "parameters": [
+            {
+              "name": "name",
+              "type": "str",
+              "description": "The identifier or name assigned to the return value."
+            },
+            {
+              "name": "type",
+              "type": "str",
+              "description": "The inferred data type of the return value."
+            },
+            {
+              "name": "description",
+              "type": "str",
+              "description": "A textual explanation detailing the purpose of the returned value."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": [
+            "typing.List",
+            "typing.Optional",
+            "typing.Literal",
+            "pydantic.BaseModel",
+            "pydantic.ValidationError"
+          ],
+          "instantiated_by": []
+        }
+      },
+      "error": null
+    },
+    "schemas/types.py::UsageContext": {
+      "identifier": "schemas/types.py::UsageContext",
+      "description": {
+        "overall": "This class defines a structured data model using Pydantic's BaseModel. Its primary role is to encapsulate the usage context of a code entity, typically a function or method. It achieves this by defining two mandatory fields: one listing the entities it calls, and another listing the entities that call it. This structure ensures machine-readable consistency for tracking code dependencies and relationships within the codebase.",
+        "init_method": {
+          "description": "This class relies on the Pydantic-generated constructor to initialize its fields based on the provided data, ensuring type validation upon instantiation.",
+          "parameters": [
+            {
+              "name": "calls",
+              "type": "List[str]",
+              "description": "A list of identifiers (strings) representing functions or methods that the analyzed entity calls."
+            },
+            {
+              "name": "called_by",
+              "type": "List[str]",
+              "description": "A list of identifiers (strings) representing functions or methods that call the analyzed entity."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": [
+            "typing.List",
+            "typing.Optional",
+            "typing.Literal",
+            "pydantic.BaseModel",
+            "pydantic.ValidationError"
+          ],
+          "instantiated_by": []
+        }
+      },
+      "error": null
+    },
+    "schemas/types.py::FunctionDescription": {
+      "identifier": "schemas/types.py::FunctionDescription",
+      "description": {
+        "overall": "This class defines a Pydantic data schema used to store the complete, structured analysis of a Python function or method. It inherits from `BaseModel` to ensure strict type validation and data integrity for documentation generation. The schema is designed to capture all essential aspects of a function, including its textual summary, detailed signature, and integration context. It serves as the canonical machine-readable format for function documentation within the larger system.",
+        "init_method": {
+          "description": "The constructor initializes the `FunctionDescription` instance, validating that the provided data conforms to the defined schema fields and types, as inherited from Pydantic's `BaseModel`.",
+          "parameters": [
+            {
+              "name": "overall",
+              "type": "str",
+              "description": "The high-level, textual summary of the function's purpose and logic."
+            },
+            {
+              "name": "parameters",
+              "type": "List[ParameterDescription]",
+              "description": "A list detailing the name, type, and purpose of each input argument the function accepts."
+            },
+            {
+              "name": "returns",
+              "type": "List[ReturnDescription]",
+              "description": "A list describing the expected return values, including their type and purpose."
+            },
+            {
+              "name": "usage_context",
+              "type": "UsageContext",
+              "description": "Structured data detailing the function's dependencies and integration points within the codebase."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": [
+            "typing.List",
+            "typing.Optional",
+            "typing.Literal",
+            "pydantic.BaseModel",
+            "pydantic.ValidationError"
+          ],
+          "instantiated_by": []
+        }
+      },
+      "error": null
+    },
+    "schemas/types.py::FunctionAnalysis": {
+      "identifier": "schemas/types.py::FunctionAnalysis",
+      "description": {
+        "overall": "This class serves as the primary data structure for storing the results of a single function analysis within the system. It inherits from Pydantic's `BaseModel`, ensuring strict data validation and structure for machine-readable output. Its purpose is to encapsulate the unique string identifier of the analyzed function, its detailed descriptive content (via the `FunctionDescription` model), and an optional field for reporting errors encountered during the analysis process. It acts as the root object for structured function documentation.",
+        "init_method": {
+          "description": "The constructor initializes the data model, typically by receiving keyword arguments corresponding to the defined fields, as inherited from Pydantic's `BaseModel`.",
+          "parameters": [
+            {
+              "name": "identifier",
+              "type": "str",
+              "description": "The unique string identifier for the analyzed function (e.g., file path and function name)."
+            },
+            {
+              "name": "description",
+              "type": "FunctionDescription",
+              "description": "A nested Pydantic model containing the detailed analysis of the function's purpose, parameters, returns, and usage context."
+            },
+            {
+              "name": "error",
+              "type": "Optional[str]",
+              "description": "An optional field used to store a string detailing any error encountered during the analysis process."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": [
+            "typing.List",
+            "typing.Optional",
+            "typing.Literal",
+            "pydantic.BaseModel",
+            "pydantic.ValidationError"
+          ],
+          "instantiated_by": []
+        }
+      },
+      "error": null
+    },
+    "schemas/types.py::ConstructorDescription": {
+      "identifier": "schemas/types.py::ConstructorDescription",
+      "description": {
+        "overall": "This class serves as a Pydantic data model, inheriting from `BaseModel`, specifically designed to structure the documentation of a Python class's constructor (`__init__` method). Its primary responsibility is to define the required fields for describing the constructor's behavior and its inputs. It enforces that the description includes a summary string and a structured list detailing all accepted parameters, ensuring machine-readable consistency for documentation generation.",
+        "init_method": {
+          "description": "This class relies on the Pydantic `BaseModel` default constructor to initialize its fields (`description` and `parameters`) upon instantiation.",
+          "parameters": [
+            {
+              "name": "description",
+              "type": "str",
+              "description": "A textual summary describing the overall purpose and behavior of the constructor."
+            },
+            {
+              "name": "parameters",
+              "type": "List[ParameterDescription]",
+              "description": "A list of structured objects detailing each individual parameter accepted by the constructor."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": [
+            "typing.List",
+            "typing.Optional",
+            "typing.Literal",
+            "pydantic.BaseModel",
+            "pydantic.ValidationError"
+          ],
+          "instantiated_by": []
+        }
+      },
+      "error": null
+    },
+    "schemas/types.py::ClassContext": {
+      "identifier": "schemas/types.py::ClassContext",
+      "description": {
+        "overall": "The ClassContext is a Pydantic BaseModel designed to structure metadata about a specific class within the system. Its primary role is to define and enforce the types for two key pieces of contextual information: a list of external dependencies the class relies upon, and a list of locations or functions that are responsible for instantiating the class. As a schema, it achieves its purpose by inheriting from BaseModel and defining type-hinted fields, ensuring data integrity for class context analysis.",
+        "init_method": {
+          "description": "This class uses the default Pydantic constructor to initialize its fields based on the provided keyword arguments.",
+          "parameters": [
+            {
+              "name": "dependencies",
+              "type": "List[str]",
+              "description": "A list of external modules, services, or components that the described class relies upon."
+            },
+            {
+              "name": "instantiated_by",
+              "type": "List[str]",
+              "description": "A list of identifiers (e.g., function names) that are responsible for creating instances of the described class."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": [
+            "typing.List",
+            "typing.Optional",
+            "typing.Literal",
+            "pydantic.BaseModel",
+            "pydantic.ValidationError"
+          ],
+          "instantiated_by": []
+        }
+      },
+      "error": null
+    },
+    "schemas/types.py::ClassDescription": {
+      "identifier": "schemas/types.py::ClassDescription",
+      "description": {
+        "overall": "This class is a Pydantic `BaseModel` designed to structure the detailed analysis of a Python class. Its primary responsibility is to define the schema for storing comprehensive documentation data, including a high-level summary, details about the constructor, and a list of analyses for all defined methods. It acts purely as a data container for machine-readable class metadata, ensuring consistency and validation when passing class analysis results between system components. It integrates contextual information regarding the class's dependencies and instantiation points.",
+        "init_method": {
+          "description": "Initializes the data structure, validating that the provided data conforms to the required schema for a class analysis object, inheriting standard Pydantic validation behavior.",
+          "parameters": [
+            {
+              "name": "overall",
+              "type": "str",
+              "description": "The high-level summary description of the class's purpose and logic."
+            },
+            {
+              "name": "init_method",
+              "type": "ConstructorDescription",
+              "description": "The structured analysis details pertaining to the class's constructor (__init__)."
+            },
+            {
+              "name": "methods",
+              "type": "List[FunctionAnalysis]",
+              "description": "A list containing the structured analysis results for every method defined within the class."
+            },
+            {
+              "name": "usage_context",
+              "type": "ClassContext",
+              "description": "Contextual information regarding the class's dependencies and where it is instantiated."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": [
+            "typing.List",
+            "typing.Optional",
+            "typing.Literal",
+            "pydantic.BaseModel",
+            "pydantic.ValidationError"
+          ],
+          "instantiated_by": []
+        }
+      },
+      "error": null
+    },
+    "schemas/types.py::ClassAnalysis": {
+      "identifier": "schemas/types.py::ClassAnalysis",
+      "description": {
+        "overall": "The `ClassAnalysis` class serves as the root Pydantic data model for the entire structured output generated during the analysis of a Python class. It defines the machine-readable schema used to encapsulate all findings, acting as a standardized container for class documentation metadata. It inherits from `BaseModel` to ensure strict type validation and data integrity for downstream processing. The model primarily holds the class's unique identifier, the detailed analysis structure, and an optional field for reporting errors encountered during the analysis process.",
+        "init_method": {
+          "description": "This class does not have an explicit constructor; initialization is handled automatically by the Pydantic `BaseModel` based on the defined fields.",
+          "parameters": [
+            {
+              "name": "identifier",
+              "type": "str",
+              "description": "A unique string identifying the location and name of the analyzed class within the codebase."
+            },
+            {
+              "name": "description",
+              "type": "ClassDescription",
+              "description": "A nested object containing the detailed analysis and structured description of the class, including its methods and overall purpose."
+            },
+            {
+              "name": "error",
+              "type": "Optional[str]",
+              "description": "An optional field used to report any errors encountered during the class analysis process."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": [
+            "typing.List",
+            "typing.Optional",
+            "typing.Literal",
+            "pydantic.BaseModel",
+            "pydantic.ValidationError"
+          ],
+          "instantiated_by": []
+        }
+      },
+      "error": null
+    },
+    "schemas/types.py::FunctionContextInput": {
+      "identifier": "schemas/types.py::FunctionContextInput",
+      "description": {
+        "overall": "This class, inheriting from Pydantic's `BaseModel`, serves as a structured schema for holding contextual information necessary for analyzing a Python function. Its primary responsibility is to define the expected data structure for inputs related to function usage, specifically tracking which functions the target function calls and which functions call the target function. It ensures that the `calls` and `called_by` attributes are lists of strings, providing reliable, type-checked context data for downstream processing.",
+        "init_method": {
+          "description": "The constructor initializes the data model, validating that the provided `calls` and `called_by` attributes conform to the expected list of strings type defined by the schema.",
+          "parameters": [
+            {
+              "name": "calls",
+              "type": "List[str]",
+              "description": "A list of identifiers (strings) representing the functions or methods that the target function calls."
+            },
+            {
+              "name": "called_by",
+              "type": "List[str]",
+              "description": "A list of identifiers (strings) representing the functions or methods that call the target function."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": [
+            "typing.List",
+            "typing.Optional",
+            "typing.Literal",
+            "pydantic.BaseModel",
+            "pydantic.ValidationError"
+          ],
+          "instantiated_by": []
+        }
+      },
+      "error": null
+    },
+    "schemas/types.py::FunctionAnalysisInput": {
+      "identifier": "schemas/types.py::FunctionAnalysisInput",
+      "description": {
+        "overall": "This class serves as a structured data model, inheriting from Pydantic's BaseModel, defining the exact schema required for input when performing a function analysis. Its primary responsibility is to ensure that all necessary data points—such as the operational mode, the function's unique identifier, its source code, relevant imports, and specific context details—are present and correctly typed before processing. It acts as a strict contract for the data pipeline, ensuring reliable input for the subsequent analysis stage.",
+        "init_method": {
+          "description": "The constructor is implicitly generated by Pydantic's BaseModel to validate and initialize the data fields required for function analysis input.",
+          "parameters": [
+            {
+              "name": "mode",
+              "type": "Literal['function_analysis']",
+              "description": "Specifies the operational mode, which must strictly be 'function_analysis'."
+            },
+            {
+              "name": "identifier",
+              "type": "str",
+              "description": "The unique string identifier for the function being analyzed (e.g., file::function_name)."
+            },
+            {
+              "name": "source_code",
+              "type": "str",
+              "description": "The raw source code string of the function definition."
+            },
+            {
+              "name": "imports",
+              "type": "List[str]",
+              "description": "A list of relevant import statements necessary for understanding the function's dependencies."
+            },
+            {
+              "name": "context",
+              "type": "FunctionContextInput",
+              "description": "A nested object containing additional context, such as call graphs and dependencies."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": [
+            "typing.List",
+            "typing.Optional",
+            "typing.Literal",
+            "pydantic.BaseModel",
+            "pydantic.ValidationError"
+          ],
+          "instantiated_by": []
+        }
+      },
+      "error": null
+    },
+    "schemas/types.py::ClassContextInput": {
+      "identifier": "schemas/types.py::ClassContextInput",
+      "description": {
+        "overall": "This class is a Pydantic `BaseModel` defining the structured input schema used for analyzing a Python class within the documentation generation system. It acts as a container for all necessary contextual information required by the analysis engine. Specifically, it mandates fields to track external dependencies, points of instantiation, and the detailed, pre-processed analysis results for all methods belonging to the class.",
+        "init_method": {
+          "description": "The constructor initializes the data model, requiring lists for dependencies, instantiation points, and the structured analysis results of the class's methods.",
+          "parameters": [
+            {
+              "name": "dependencies",
+              "type": "List[str]",
+              "description": "A list of external modules or components that the class relies upon."
+            },
+            {
+              "name": "instantiated_by",
+              "type": "List[str]",
+              "description": "A list of identifiers indicating where this class is created or used."
+            },
+            {
+              "name": "methods_analysis",
+              "type": "List[FunctionAnalysis]",
+              "description": "A list containing the structured analysis results for all methods defined within the class."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": [
+            "typing.List",
+            "typing.Optional",
+            "typing.Literal",
+            "pydantic.BaseModel",
+            "pydantic.ValidationError"
+          ],
+          "instantiated_by": []
+        }
+      },
+      "error": null
+    },
+    "schemas/types.py::ClassAnalysisInput": {
+      "identifier": "schemas/types.py::ClassAnalysisInput",
+      "description": {
+        "overall": "This class serves as a Pydantic data model defining the structured input required for the class analysis process within the documentation generation system. It inherits from `BaseModel` to enforce strict type validation and structure for incoming data. The model specifies all necessary components for analysis, including the operational mode, the unique identifier of the code, the raw source code string, a list of relevant imports, and a nested context object containing method analyses and dependencies. Its primary responsibility is ensuring that the data passed to the class analyzer is complete and correctly formatted.",
+        "init_method": {
+          "description": "The constructor is implicitly generated by Pydantic's BaseModel, responsible for validating and initializing the data fields based on the provided type hints.",
+          "parameters": [
+            {
+              "name": "mode",
+              "type": "Literal['class_analysis']",
+              "description": "Specifies the operational mode, which must be fixed to 'class_analysis' for this input type."
+            },
+            {
+              "name": "identifier",
+              "type": "str",
+              "description": "The unique identifier (e.g., file path and class name) of the code being analyzed."
+            },
+            {
+              "name": "source_code",
+              "type": "str",
+              "description": "The raw Python source code string of the class definition."
+            },
+            {
+              "name": "imports",
+              "type": "List[str]",
+              "description": "A list of relevant import statements used by the class or its methods."
+            },
+            {
+              "name": "context",
+              "type": "ClassContextInput",
+              "description": "Additional contextual data required for the analysis, such as dependencies and method analyses."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": [
+            "typing.List",
+            "typing.Optional",
+            "typing.Literal",
+            "pydantic.BaseModel",
+            "pydantic.ValidationError"
+          ],
+          "instantiated_by": []
+        }
+      },
+      "error": null
+    }
+  }
+}
