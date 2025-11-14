@@ -17,7 +17,7 @@ from basic_info import ProjektInfoExtractor
 # Dieser Import ist korrekt, WENN das Projekt-Root im Suchpfad ist
 from schemas.types import FunctionAnalysis
 
-@tool
+#@tool
 def analyze_repository(repo_url: str) -> Tuple[Optional[Dict[str, Any]], Dict[str, Any]]:
     """
     Analysiert ein Git-Repository umfassend.
