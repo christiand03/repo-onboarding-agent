@@ -1,0 +1,7 @@
+strict digraph {
+n0 [label=<main_block>];
+n1 [label="types.py::print"];
+n2 [label="types.py::model_validate"];
+n0 -> n1;
+n0 -> n2;
+}

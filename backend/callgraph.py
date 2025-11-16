@@ -1,8 +1,13 @@
 import ast
 import networkx as nx
-from typing import Dict
+import os 
 
-def build_callGraph(tree: ast.AST, filename: str | None = None, file_content: str | None = None) -> nx.DiGraph:
+from typing import Dict
+from getRepo import RepoFile
+
+def build_callGraph(tree: ast.AST, 
+                    filename: str | None = None, 
+                    file_content: str | None = None) -> nx.DiGraph:
     """ 
     Erstellt einen Call-Graphen aus einem gegebenen Python-AST.
 
@@ -19,7 +24,6 @@ def build_callGraph(tree: ast.AST, filename: str | None = None, file_content: st
     """
 
     graph = nx.DiGraph()
-    edges: Dict[str, set[str]] = {}
 
     class CallGraph(ast.NodeVisitor):
         """
@@ -31,7 +35,69 @@ def build_callGraph(tree: ast.AST, filename: str | None = None, file_content: st
             Initialisiert den Visitor mit einem Platzhalter für die aktuelle Funktion.
             """
             self.current_function = None
+            self.current_class = None
 
+            self.import_mapping: dict[str, str] = {}
+            self.function_set: set[str] = ()
+            self.edges: Dict[str, set[str]] = {}
+
+        def _recursive_call(self, node) -> list[str]:
+            all_calls = []
+            if isinstance(node, ast.Call):
+                return self._recursive_call(node.func)
+            elif isinstance(node, ast.Name):
+                all_calls.append(node.id)
+                return all_calls
+            elif isinstance(node, ast.Attribute):
+                all_calls.append(node.attr)
+                return all_calls
+            return all_calls
+               
+        def _resolve_all_callee_names(self, callee_nodes: list[str]) -> list[str]:
+            resolved_callees = []
+            for raw_callee in callee_nodes:
+                if not self.current_class:
+                    resolved_callee = f"{filename}::{raw_callee}"
+                else:
+                    resolved_callee = f"{filename}::{self.current_class}::{raw_callee}"
+                resolved_callees.append(resolved_callee)
+
+            return resolved_callees
+
+        def _make_full_name(self, basename: str, class_name: str | None = None)-> str:
+            if class_name:
+                return f"{filename}::{class_name}::{basename}"
+            return f"{filename}::{basename}"
+        
+        def _current_caller(self)-> str:
+            if self.current_function:
+                return self.current_function
+            return f"<{filename}>" if filename else"<global-scope>"
+        
+        def visit_Import(self, node):
+            for alias in node.names:
+                module_name = alias.name
+                module_asname = (alias.asname if alias.asname else module_name)
+                self.import_mapping[module_asname] = module_name
+            self.generic_visit(node)
+
+        def visit_ImportFrom(self, node):
+            module_name = node.module
+            level_depth = node.level
+            
+            module_base = module_name.split(".")[0]
+            for alias in node.names:
+                import_name = (alias.asname if alias.asname else alias.name)
+                self.import_mapping[import_name] = module_base
+            # TODO: level depth und relative import From resolven
+
+        def visit_ClassDef(self, node: ast.ClassDef):
+            prev_class = self.current_class
+            self.current_class = node.name
+            for function in node.body:
+                self.visit(function)
+            self.current_class = prev_class
+           
         def visit_FunctionDef(self, node):
             """ 
             Besucht eine normale Funktionsdefinition.
@@ -39,7 +105,10 @@ def build_callGraph(tree: ast.AST, filename: str | None = None, file_content: st
             Setzt `self.current_function`, erstellt den Knoten im Graphen und 
             traversiert rekursiv den Funktionskörper.
             """
-            self.current_function = node.name
+            if self.current_class:
+                self.current_function = self._make_full_name(node.name, class_name=self.current_class)
+            else:
+                self.current_function = self._make_full_name(node.name) 
             graph.add_node(self.current_function)
             self.generic_visit(node)
             self.current_function = None
@@ -50,60 +119,35 @@ def build_callGraph(tree: ast.AST, filename: str | None = None, file_content: st
 
             Funktioniert analog zu `visit_FunctionDef`.
             """
-            self.current_function = node.name
-            graph.add_node(self.current_function)
-            self.generic_visit(node)
-            self.current_function = None
+            self.visit_FunctionDef(node)
 
         def visit_Call(self, node):
             """
             Besucht einen Funktions- oder Methodenaufruf und behandelt komplexe Fälle
             mit einer detaillierten Warnung, anstatt abzustürzen.
             """             
-            caller = self.current_function or (f"<{filename}>" if filename else "<global-scope>")
+            caller = self._current_caller()
+            raw_callees: list[str] = []
             try:
-                # Iterativ durch verschachtelte Calls navigieren, um den Basis-Namen zu finden
-                callee_node = node.func
-                while isinstance(callee_node, ast.Call):
-                    callee_node = callee_node.func
+                # benutze die Helferfunktion, um Namen zu extrahieren
+                raw_callees = self._recursive_call(node)
+                # falls _recursive_call ein leeres array oder None zurückgibt, sicherstellen, dass es list ist
+                if raw_callees is None:
+                    raw_callees = []
 
-                call_name = None
-                if isinstance(callee_node, ast.Name):
-                    call_name = callee_node.id
-                elif isinstance(callee_node, ast.Attribute):
-                    call_name = callee_node.attr
-                else:
-                    # --- NEUE, VERBESSERTE WARNUNG ---
-                    
-                    # 1. Versuche, das exakte Code-Snippet zu extrahieren
-                    source_segment = "N/A (benötigt Python 3.8+ und file_content)"
-                    # ast.get_source_segment ist die "magische" Funktion dafür
-                    if file_content and hasattr(ast, 'get_source_segment'):
-                        try:
-                            source_segment = ast.get_source_segment(file_content, node)
-                        except Exception:
-                            source_segment = "(Konnte Quellcode-Segment nicht extrahieren)"
-                    
-                    # 2. Gib eine strukturierte, mehrzeilige Warnung aus
-                    print(
-                        f"\n--- WARNUNG: Komplexer Funktionsaufruf übersprungen ---\n"
-                        f"| Problem:  Der Typ des aufgerufenen Objekts ('{type(callee_node).__name__}') wird nicht unterstützt.\n"
-                        f"| Ort:      Datei '{filename}', Zeile {getattr(node, 'lineno', '?')}\n"
-                        f"| Code:     {source_segment}\n"
-                        f"| AST-Dump: {ast.dump(callee_node)}\n"
-                        f"----------------------------------------------------------"
-                    )
-                    # Der Aufruf wird bewusst übersprungen, anstatt das Programm abstürzen zu lassen.
+                resolved_callees = self._resolve_all_callee_names(raw_callees)
 
-                if call_name:
-                    if caller not in edges:
-                        edges[caller] = {call_name}
-                    else:
-                        edges[caller].add(call_name)
-            
+                # sicherstellen, dass caller als Key existiert und ein Set ist
+                if caller not in self.edges:
+                    self.edges[caller] = set()
+
+                for resolved_callee in resolved_callees:
+                    if resolved_callee:
+                        self.edges[caller].add(resolved_callee)
+
             except Exception as e:
                 print(f"Unerwarteter Fehler bei der Verarbeitung eines Funktionsaufrufs: {e} in Datei {filename}")
-            
+
             self.generic_visit(node)
 
         def visit_If(self, node):
@@ -128,7 +172,7 @@ def build_callGraph(tree: ast.AST, filename: str | None = None, file_content: st
     visitor.visit(tree)
 
     # add all edges from dictionary to the graph at once
-    for caller, callees in edges.items():
+    for caller, callees in visitor.edges.items():
         for callee in callees:
             graph.add_edge(caller, callee)
 
@@ -156,3 +200,79 @@ def graph_to_adj_list(graph: nx.DiGraph) -> Dict[str, list[str]]:
         if successors:  # Nur Knoten aufnehmen, die auch wirklich andere aufrufen
             adj_list[node] = successors
     return adj_list
+
+# Globale Darstellung des Callgraphen
+
+def build_global_callgraph(all_repo_files: list[RepoFile])-> nx.DiGraph:
+    return NotImplementedError
+   
+def make_safe_dot(graph: nx.DiGraph, out_path: str):
+    mapping = {}
+    H = graph.copy()
+    for i, n in enumerate(list(graph.nodes())):
+        safe = f"n{i}"            # sichere Node-ID ohne Sonderzeichen
+        mapping[n] = safe
+
+    H = nx.relabel_nodes(H, mapping)  # jetzt sichere IDs
+    # originale Bezeichnung als label setzen
+    for orig, safe in mapping.items():
+        H.nodes[safe]["label"] = orig
+
+    nx.drawing.nx_pydot.write_dot(H, out_path)
+
+if __name__ == "__main__":
+    from getRepo import GitRepository
+    from basic_info import ProjektInfoExtractor
+    import os
+
+    repo_url = "https://github.com/christiand03/repo-onboarding-agent"
+    # repo_url = "https://github.com/pallets/flask"    
+
+    with GitRepository(repo_url) as repository:
+        print(f"Repository von {repository.repo_url} erfolgreich geklont.")
+        
+        # Die Dateiliste wird jetzt am Anfang geholt, damit sie für alle Analysen verfügbar ist
+        all_file_objects = repository.get_all_files()
+        
+        # ==================================================================
+        # 1. Basis-Informationen extrahieren und ausgeben
+        # ==================================================================
+        info_extractor = ProjektInfoExtractor()
+        basic_project_info = info_extractor.extrahiere_info(all_file_objects, repo_url)
+        # print_basic_info(basic_project_info)
+        # Sie können die Daten auch als JSON haben:
+        # print(json.dumps(basic_project_info, indent=2, ensure_ascii=False))
+
+
+        # ==================================================================
+        # 2. Verzeichnisstruktur anzeigen
+        # ==================================================================
+        print("\n--- Verzeichnisstruktur (Tree View) ---")
+        file_tree_structure = repository.get_file_tree()
+        repo_name = os.path.basename(repo_url.removesuffix('.git'))
+        print(f"📁 {repo_name}/")
+        # print_tree_view(file_tree_structure, indent="  ")
+
+
+        # ==================================================================
+        # 3. Detaillierte Code-Analyse durchführen
+        # ==================================================================
+        print("\n--- Starte nun die detaillierte Code-Analyse... ---")
+        print(f"Insgesamt {len(all_file_objects)} Dateien im Repository für die Analyse gefunden.")
+        
+        # analyzer = ASTAnalyzer()
+        # repo_ast_schema = analyzer.analyze_repository(all_file_objects, repository.repo_url)
+        
+        # Callgraphs erstellen
+        call_graphs = {}
+        json_call_graphs = {}
+        for file_object in all_file_objects:
+            if not file_object.path.endswith(".py"):
+                continue
+            
+            tree = ast.parse(file_object.content)
+            filename = os.path.basename(file_object.path)
+
+            graph = build_callGraph(tree, filename=filename)
+            call_graphs[file_object.path] = graph
+            make_safe_dot(graph, f"{str(filename).removesuffix(".py")}.dot")
