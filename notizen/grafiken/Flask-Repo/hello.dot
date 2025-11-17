@@ -1,0 +1,8 @@
+strict digraph {
+n0 [label="hello.py::hello"];
+n1 [label=<hello.py>];
+n2 [label="hello.py::Flask"];
+n3 [label="hello.py::route"];
+n0 -> n3;
+n1 -> n2;
+}

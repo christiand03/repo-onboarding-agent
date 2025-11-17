@@ -1,0 +1,5 @@
+strict digraph {
+n0 [label=<make_celery.py>];
+n1 [label="make_celery.py::create_app"];
+n0 -> n1;
+}

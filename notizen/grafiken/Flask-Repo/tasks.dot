@@ -1,0 +1,16 @@
+strict digraph {
+n0 [label="tasks.py::add"];
+n1 [label="tasks.py::block"];
+n2 [label="tasks.py::process"];
+n3 [label="tasks.py::shared_task"];
+n4 [label="tasks.py::sleep"];
+n5 [label="tasks.py::update_state"];
+n6 [label="tasks.py::range"];
+n0 -> n3;
+n1 -> n3;
+n1 -> n4;
+n2 -> n5;
+n2 -> n3;
+n2 -> n6;
+n2 -> n4;
+}

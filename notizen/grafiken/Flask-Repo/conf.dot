@@ -1,0 +1,23 @@
+strict digraph {
+n0 [label="conf.py::github_link"];
+n1 [label="conf.py::setup"];
+n2 [label=<conf.py>];
+n3 [label="conf.py::ProjectLink"];
+n4 [label="conf.py::get_version"];
+n5 [label="conf.py::strip"];
+n6 [label="conf.py::parse"];
+n7 [label="conf.py::reference"];
+n8 [label="conf.py::rsplit"];
+n9 [label="conf.py::endswith"];
+n10 [label="conf.py::set_classes"];
+n11 [label="conf.py::add_role"];
+n0 -> n5;
+n0 -> n6;
+n0 -> n7;
+n0 -> n8;
+n0 -> n9;
+n0 -> n10;
+n1 -> n11;
+n2 -> n3;
+n2 -> n4;
+}

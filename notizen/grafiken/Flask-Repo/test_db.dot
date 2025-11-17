@@ -1,0 +1,20 @@
+strict digraph {
+n0 [label="test_db.py::test_get_close_db"];
+n1 [label="test_db.py::test_init_db_command"];
+n2 [label="test_db.py::fake_init_db"];
+n3 [label="test_db.py::raises"];
+n4 [label="test_db.py::execute"];
+n5 [label="test_db.py::str"];
+n6 [label="test_db.py::app_context"];
+n7 [label="test_db.py::get_db"];
+n8 [label=<test_db.py>];
+n9 [label="test_db.py::invoke"];
+n10 [label="test_db.py::setattr"];
+n0 -> n3;
+n0 -> n4;
+n0 -> n5;
+n0 -> n6;
+n0 -> n7;
+n8 -> n9;
+n8 -> n10;
+}

@@ -1,0 +1,5 @@
+strict digraph {
+n0 [label=<__init__.py>];
+n1 [label="__init__.py::Module"];
+n0 -> n1;
+}

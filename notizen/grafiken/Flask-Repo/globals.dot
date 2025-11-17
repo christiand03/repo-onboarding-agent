@@ -1,0 +1,15 @@
+strict digraph {
+n0 [label="globals.py::ProxyMixin::_get_current_object"];
+n1 [label="globals.py::__getattr__"];
+n2 [label=<globals.py>];
+n3 [label="globals.py::TypeVar"];
+n4 [label="globals.py::ContextVar"];
+n5 [label="globals.py::LocalProxy"];
+n6 [label="globals.py::AttributeError"];
+n7 [label="globals.py::warn"];
+n1 -> n6;
+n1 -> n7;
+n2 -> n3;
+n2 -> n4;
+n2 -> n5;
+}

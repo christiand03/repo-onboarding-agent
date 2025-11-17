@@ -1,0 +1,30 @@
+strict digraph {
+n0 [label="test_auth.py::test_register"];
+n1 [label="test_auth.py::test_register_validate_input"];
+n2 [label="test_auth.py::test_login"];
+n3 [label="test_auth.py::test_login_validate_input"];
+n4 [label="test_auth.py::test_logout"];
+n5 [label="test_auth.py::execute"];
+n6 [label="test_auth.py::get"];
+n7 [label="test_auth.py::get_db"];
+n8 [label="test_auth.py::fetchone"];
+n9 [label="test_auth.py::app_context"];
+n10 [label="test_auth.py::post"];
+n11 [label="test_auth.py::parametrize"];
+n12 [label="test_auth.py::login"];
+n13 [label="test_auth.py::logout"];
+n0 -> n5;
+n0 -> n6;
+n0 -> n7;
+n0 -> n8;
+n0 -> n9;
+n0 -> n10;
+n1 -> n11;
+n1 -> n10;
+n2 -> n6;
+n2 -> n12;
+n3 -> n11;
+n3 -> n12;
+n4 -> n13;
+n4 -> n12;
+}

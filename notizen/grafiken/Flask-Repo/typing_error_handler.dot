@@ -1,0 +1,14 @@
+strict digraph {
+n0 [label="typing_error_handler.py::handle_400"];
+n1 [label="typing_error_handler.py::handle_custom"];
+n2 [label="typing_error_handler.py::handle_accept_base"];
+n3 [label="typing_error_handler.py::handle_multiple"];
+n4 [label=<typing_error_handler.py>];
+n5 [label="typing_error_handler.py::Flask"];
+n6 [label="typing_error_handler.py::errorhandler"];
+n0 -> n6;
+n1 -> n6;
+n2 -> n6;
+n3 -> n6;
+n4 -> n5;
+}

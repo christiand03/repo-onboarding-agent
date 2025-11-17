@@ -1,0 +1,5 @@
+strict digraph {
+n0 [label=<flask.py>];
+n1 [label="flask.py::Flask"];
+n0 -> n1;
+}

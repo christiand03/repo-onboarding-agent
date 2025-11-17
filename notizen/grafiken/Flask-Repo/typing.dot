@@ -1,0 +1,5 @@
+strict digraph {
+n0 [label=<typing.py>];
+n1 [label="typing.py::TypeVar"];
+n0 -> n1;
+}

@@ -1,0 +1,7 @@
+strict digraph {
+n0 [label=<importerrorapp.py>];
+n1 [label="importerrorapp.py::ImportError"];
+n2 [label="importerrorapp.py::Flask"];
+n0 -> n1;
+n0 -> n2;
+}

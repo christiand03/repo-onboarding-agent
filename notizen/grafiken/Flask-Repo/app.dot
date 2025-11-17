@@ -1,0 +1,5 @@
+strict digraph {
+n0 [label=<app.py>];
+n1 [label="app.py::Flask"];
+n0 -> n1;
+}

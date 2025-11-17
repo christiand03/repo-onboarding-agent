@@ -1,0 +1,29 @@
+digraph {
+n0 [label="wrappers.py::Request::max_content_length"];
+n1 [label="wrappers.py::Request::max_form_memory_size"];
+n2 [label="wrappers.py::Request::max_form_parts"];
+n3 [label="wrappers.py::Request::endpoint"];
+n4 [label="wrappers.py::Request::blueprint"];
+n5 [label="wrappers.py::Request::blueprints"];
+n6 [label="wrappers.py::Request::_load_form_data"];
+n7 [label="wrappers.py::Request::on_json_loading_failed"];
+n8 [label="wrappers.py::Response::max_cookie_size"];
+n9 [label="wrappers.py::Request::super"];
+n10 [label="wrappers.py::Request::rpartition"];
+n11 [label="wrappers.py::Request::_split_blueprint_path"];
+n12 [label="wrappers.py::Request::attach_enctype_error_multidict"];
+n13 [label="wrappers.py::Request::BadRequest"];
+n14 [label="wrappers.py::Response::super"];
+n0 -> n9;
+n1 -> n9;
+n2 -> n9;
+n4 -> n10;
+n5 -> n11;
+n6 -> n9;
+n6 -> n6;
+n6 -> n12;
+n7 -> n9;
+n7 -> n7;
+n7 -> n13;
+n8 -> n14;
+}
