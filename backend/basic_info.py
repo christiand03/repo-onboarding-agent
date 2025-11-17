@@ -1,22 +1,9 @@
-# basic_info.py
-
 import re
 import os
-try:
-    # Standardbibliothek für Python 3.11+
-    import tomllib
-except ImportError:
-    # Fallback für ältere Python-Versionen, erfordert 'pip install tomli'
-    try:
-        import tomli as tomllib
-    except ImportError:
-        tomllib = None
+import tomllib
 
 from typing import List, Dict, Any, Optional
 
-# Die RepoFile-Klasse wird nicht direkt importiert, um die Datei eigenständig
-# zu halten. Es wird angenommen, dass die übergebenen 'files'-Objekte
-# die Attribute .path und .content haben.
 
 class ProjektInfoExtractor:
     """
@@ -71,13 +58,11 @@ class ProjektInfoExtractor:
         )
         match = pattern.search(inhalt)
         if match:
-            # Gibt die zweite Capturing Group zurück (den Inhalt) und entfernt überflüssige Leerzeichen
             return match.group(2).strip()
         return None
 
     def _parse_readme(self, inhalt: str):
         """Parst den Inhalt einer README-Datei."""
-        # Titel (Fallback, falls nicht in toml gefunden)
         if self.info["projekt_uebersicht"]["titel"] == self.INFO_NICHT_GEFUNDEN:
             title_match = re.search(r"^\s*#\s*(.*)", inhalt)
             if title_match:
@@ -181,9 +166,6 @@ class ProjektInfoExtractor:
             else:
                 self.info["installation"]["dependencies"] = "\n".join(f"- {dep}" for dep in deps)
         
-        # Titel basierend auf der Repository-URL generieren und überschreiben
-        # os.path.basename extrahiert den letzten Teil des Pfades (z.B. 'flask' oder 'flask.git')
-        # .removesuffix('.git') entfernt die Endung, falls vorhanden
         repo_name = os.path.basename(repo_url.removesuffix('.git'))
         self.info["projekt_uebersicht"]["titel"] = f"{repo_name} documentation"
 
