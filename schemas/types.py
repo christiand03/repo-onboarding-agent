@@ -17,8 +17,8 @@ class ReturnDescription(BaseModel):
 
 class UsageContext(BaseModel):
     """Describes the calling context of a function."""
-    calls: List[str]
-    called_by: List[str]
+    calls: str
+    called_by: str
 
 class FunctionDescription(BaseModel):
     """Contains the detailed analysis of a function's purpose and signature."""
@@ -43,8 +43,8 @@ class ConstructorDescription(BaseModel):
 
 class ClassContext(BaseModel):
     """Describes the class's external dependencies and primary points of instantiation."""
-    dependencies: List[str]
-    instantiated_by: List[str]
+    dependencies: str
+    instantiated_by: str
 
 class ClassDescription(BaseModel):
     """Contains the detailed analysis of a class's purpose, constructor, and methods."""
@@ -122,8 +122,8 @@ if __name__ == "__main__":
             ],
         
             "usage_context": {
-                "calls": ["logging.info"],
-                "called_by": ["api.v1.endpoints.add_numbers", "scripts.run_daily_job"]
+                "calls": " bla bla logging.info",
+                "called_by": "bla bla api.v1.endpoints.add_numbers and scripts.run_daily_job"
             }
         },
         # The 'error' field is optional. We can omit it, and it will default to None.
@@ -166,14 +166,8 @@ if __name__ == "__main__":
                 function_analysis_output
             ],
             "usage_context": {
-                "dependencies": [
-                    "A",
-                    "B"
-                ],
-                "instantiated_by": [
-                    "A",
-                    "B"
-                ]
+                "dependencies": "bla bla A and B",
+                "instantiated_by": "bla bla A and B"
             }
         },
         "error": "None"
