@@ -70,6 +70,8 @@ if __name__ == "__main__":
     # 9. Dependecygraph ausführen 
 
     # 10. Daten verarbeiten für HelperLLM Input 
+    logging.info("Processing data for HelperLLM input...")
+
 
     # 11. HelperLLM Funktion Batch (Notfalls stückeln wegen RPM Limits) 
 

@@ -2,8 +2,9 @@ import ast
 
 class ASTVisitor(ast.NodeVisitor):
 
-    def __init__(self):
-        self.schema = {"imports": [], "functions": {}, "classes": {}}
+    def __init__(self, source_code: str):
+        self.source_code = source_code
+        self.schema = {"imports": [], "functions": [], "classes": []}
         self._current_class = None
 
     def visit_Import(self, node):
@@ -17,21 +18,39 @@ class ASTVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_ClassDef(self, node):
-        self._current_class = node.name
-        self.schema["classes"][node.name] = {
-            "methods": {},
+        class_info = {
+            "mode": "class_analysis",
+            "identifier": node.name, 
+            "methods": [],
             "docstring": ast.get_docstring(node),
+            "source_code": ast.get_source_segment(self.source_code, node),
+            "start_line": node.lineno,
+            "end_line": node.end_lineno
         }
+        self.schema["classes"].append(class_info)
+        
+        self._current_class = class_info 
         self.generic_visit(node)
         self._current_class = None
 
     def visit_FunctionDef(self, node):
-        info = {"args": [arg.arg for arg in node.args.args], "docstring": ast.get_docstring(node)}
+        func_info = {
+            "mode": "function_analysis",
+            "identifier": node.name,
+            "args": [arg.arg for arg in node.args.args],
+            "docstring": ast.get_docstring(node),
+            "source_code": ast.get_source_segment(self.source_code, node),
+            "start_line": node.lineno,
+            "end_line": node.end_lineno
+        }
+        
         if self._current_class:
-            self.schema["classes"][self._current_class]["methods"][node.name] = info
+            self._current_class["methods"].append(func_info)
         else:
-            self.schema["functions"][node.name] = info
+            self.schema["functions"].append(func_info)
+            
         self.generic_visit(node)
+
     
     def visit_AsyncFunctionDef(self, node):
         self.visit_FunctionDef(node)
@@ -56,7 +75,7 @@ class ASTAnalyzer:
 
             try:
                 tree = ast.parse(file_content)
-                visitor = ASTVisitor()
+                visitor = ASTVisitor(source_code=file_content)
                 visitor.visit(tree)
         
                 file_schema_nodes = visitor.schema
@@ -66,7 +85,7 @@ class ASTAnalyzer:
                         "ast_nodes": file_schema_nodes
                     }
 
-            except (SyntaxError, ValueError, ast.UnparseError) as e:
+            except (SyntaxError, ValueError) as e:
                 print(f"Warnung: Konnte Datei '{file_obj.path}' nicht parsen. Fehler: {e}")
         
         return full_schema         
