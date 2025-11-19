@@ -18,8 +18,9 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 if __name__ == "__main__":
     # 1. User gibt Input
-    user_input = "Analyze the following Git Repository https://github.com/christiand03/repo-onboarding-agent" # Dummy Data
-    
+    user_input = "Analyze the following Git Repository https://github.com/pallets/flask" # Dummy Data
+    # https://github.com/christiand03/repo-onboarding-agent
+
     # 2. Input ans Backend übergeben
 
     # 3. URL per Regex extrahieren
