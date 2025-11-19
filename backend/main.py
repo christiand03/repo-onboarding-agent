@@ -6,7 +6,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 
 from getRepo import GitRepository, RepoFile
-from AST import ASTAnalyzer
+from AST_Schema import ASTAnalyzer
 from MainLLM import MainLLM
 from basic_info import ProjektInfoExtractor
 
@@ -60,6 +60,10 @@ if __name__ == "__main__":
     logging.info("File tree generated.")
 
     # 7. AST ausführen
+    logging.info("Starting AST analysis...")
+    ast_analyzer = ASTAnalyzer()   
+    ast_schema = ast_analyzer.analyze_repository(files=repo_files)
+    logging.info("AST analysis completed.")
 
     # 8. Callgraph ausführen 
 
