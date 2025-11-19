@@ -1,6 +1,7 @@
 import tempfile
 import shutil
 from git import Repo, GitCommandError
+import logging
 
 # ==============================================================================
 # Klasse 1: Das Datenobjekt, das eine einzelne Datei repräsentiert
@@ -78,14 +79,14 @@ class GitRepository:
         self.files = []
         
         try:
-            print(f"Klone Repository von {self.repo_url}...")
+            logging.info(f"Clone Repository {self.repo_url}...")
             self.repo = Repo.clone_from(self.repo_url, self.temp_dir)
             self.latest_commit = self.repo.head.commit
             self.commit_tree = self.latest_commit.tree
-            print("Klonen erfolgreich.")
+            logging.info("Cloning successful.")
         except GitCommandError as e:
             self.close()
-            raise RuntimeError(f"Fehler beim Klonen des Repositories: {e}") from e
+            raise RuntimeError(f"Error cloning repository: {e}") from e
 
     def get_all_files(self):
         """
