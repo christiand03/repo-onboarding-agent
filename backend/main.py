@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+import json
 from datetime import datetime
 
 from dotenv import load_dotenv
@@ -56,11 +57,13 @@ def main_workflow():
     info_extractor = ProjektInfoExtractor()
     basic_project_info = info_extractor.extrahiere_info(dateien=repo_files, repo_url=repo_url)
     logging.info("Basic project information extracted.")
+    #print(basic_project_info)
 
     # 6. File Tree ausführen
     logging.info("Generating file tree...")
     repo_file_tree = repo.get_file_tree()
     logging.info("File tree generated.")
+    #print(repo_file_tree)
 
     # 7. AST ausführen
     logging.info("Starting AST analysis...")
@@ -86,26 +89,29 @@ def main_workflow():
         classes = ast_nodes.get('classes', [])
 
         for function in functions:
+            context = function.get('context', {})
             function_context = FunctionContextInput(
-                calls = function.get('calls', []),
-                called_by = function.get('called_by', [])
+                calls = context.get('calls', []),
+                called_by = context.get('called_by', [])
             )
             
             function_input = FunctionAnalysisInput(
                 mode = function.get('mode', 'function_analysis'),
-                identifier=function.get('identifier'),
-                source_code=function.get('source_code'),
-                imports=imports,
-                context=function_context
+                identifier = function.get('identifier'),
+                source_code = function.get('source_code'),
+                imports = imports,
+                context = function_context
             )
             
             helper_llm_function_input.append(function_input)
 
 
         for _class in classes:
+            context = _class.get('context', {})
             class_context = ClassContextInput(
-                dependencies=_class.get('dependencies', []),
-                instantiated_by=_class.get('instantiated_by', [])
+                dependencies = context.get('dependencies', []),
+                instantiated_by = context.get('instantiated_by', []),
+                method_context = context.get('method_context', [])
             )
 
             class_input = ClassAnalysisInput(
@@ -120,7 +126,7 @@ def main_workflow():
     
     logging.info(f"Total Functions to process: {len(helper_llm_function_input)}")
     logging.info(f"Total Classes to process: {len(helper_llm_class_input)}")
-
+    
     # print("--------------------- Function Input -------------------")
     # if helper_llm_function_input:
     #     print("\n--- Example Function Input ---")
@@ -140,7 +146,7 @@ def main_workflow():
 
     logging.info("\n--- Generating documentation for Functions ---")
     if len(helper_llm_function_input) != 0:
-        function_analysis_results = llm_helper.generate_for_functions(helper_llm_function_input)
+        function_analysis_results = llm_helper.generate_for_functions(helper_llm_function_input[:6])
 
     if len(function_analysis_results) != 0:
         for doc in function_analysis_results:
@@ -157,7 +163,7 @@ def main_workflow():
 
     logging.info("\n--- Generating documentation for Classes ---")
     if len(helper_llm_class_input) != 0:
-        class_analysis_results = llm_helper.generate_for_classes(helper_llm_class_input)
+        class_analysis_results = llm_helper.generate_for_classes(helper_llm_class_input[:3])
 
     if len(class_analysis_results) != 0:
         for doc in class_analysis_results:
@@ -176,6 +182,8 @@ def main_workflow():
     main_llm_input["file_tree"] = repo_file_tree
     main_llm_input["ast_schema"] = ast_schema
     main_llm_input["analysis_results"] = analysis_results
+
+    main_llm_input_json = json.dumps(main_llm_input, indent=2)
     
     # model validate muss noch gemacht werden
     
@@ -183,7 +191,7 @@ def main_workflow():
     main_llm = MainLLM(api_key=GEMINI_API_KEY, prompt_file_path="SystemPrompts\SystemPromptMainLLM.txt")
 
     logging.info("Starting Synthesis Stage...")
-    final_report = main_llm.call_llm(main_llm_input)
+    final_report = main_llm.call_llm(main_llm_input_json)
     logging.info("Synthesis Stage completed.")
     logging.info("Report generated.")
     
