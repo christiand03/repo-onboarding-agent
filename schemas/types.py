@@ -82,7 +82,6 @@ class ClassContextInput(BaseModel):
     """Structured context for analyzing a class."""
     dependencies: List[str]
     instantiated_by: List[str]
-    methods_analysis: List[FunctionAnalysis]
 
 class ClassAnalysisInput(BaseModel):
     """The required input to generate a ClassAnalysis object."""
