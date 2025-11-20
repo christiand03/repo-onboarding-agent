@@ -4,6 +4,7 @@ import sys
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.messages import HumanMessage, SystemMessage
  
@@ -44,3 +45,35 @@ class MainLLM:
         except Exception as e:
             logging.error(f"Error during LLM call: {e}")
             return None
+
+    def stream_llm(self, user_input: str):
+        messages = [
+            SystemMessage(content=self.system_prompt),
+            HumanMessage(content=user_input)
+        ]
+        logging.info("Calling LLM with 'stream'...")
+
+        try:
+            stream_iterator = self.llm.stream(messages)
+            
+            for chunk in stream_iterator:
+                yield chunk.content
+        except Exception as e:
+            error_message = f"\n--- Error during LLM stream call: {e} ---"
+            logging.error(error_message)
+            yield error_message
+
+# Für main.py:
+
+    logging.info("Starting Synthesis Phase...")
+    # final_report = main_llm.call_llm(processed_json)
+    logging.info("stream LLM for final report...")
+    full_response = ""
+    for token in main_llm.stream_llm(processed_json):
+    # ------ Statt print den Token ans Frontend schicken ------
+        print(token, end="", flush=True)
+        full_response += token    
+    final_report = full_response
+    logging.info("streaming complete.")
+    logging.info("final report generated.")
+    logging.info("Synthesis Phase completed.")
