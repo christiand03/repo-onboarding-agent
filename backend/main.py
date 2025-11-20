@@ -9,6 +9,8 @@ from getRepo import GitRepository, RepoFile
 from AST_Schema import ASTAnalyzer
 from MainLLM import MainLLM
 from basic_info import ProjektInfoExtractor
+from HelperLLM import LLMHelper
+from schemas.types import FunctionContextInput, FunctionAnalysisInput, ClassContextInput, ClassAnalysisInput
 
 
 # --- Konfiguration & Logging ---
@@ -16,10 +18,10 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-if __name__ == "__main__":
+def main_workflow():
     # 1. User gibt Input
-    user_input = "Analyze the following Git Repository https://github.com/pallets/flask" # Dummy Data
-    # https://github.com/christiand03/repo-onboarding-agent
+    user_input = "Analyze the following Git Repository https://github.com/christiand03/repo-onboarding-agent" # Dummy Data
+    # https://github.com/pallets/flask
 
     # 2. Input ans Backend übergeben
 
@@ -64,6 +66,7 @@ if __name__ == "__main__":
     logging.info("Starting AST analysis...")
     ast_analyzer = ASTAnalyzer()   
     ast_schema = ast_analyzer.analyze_repository(files=repo_files)
+    #print(ast_schema)
     logging.info("AST analysis completed.")
 
     # 8. Callgraph ausführen 
@@ -73,22 +76,116 @@ if __name__ == "__main__":
     # 10. Daten verarbeiten für HelperLLM Input 
     logging.info("Processing data for HelperLLM input...")
 
+    helper_llm_function_input = []
+    helper_llm_class_input = []
+
+    for filename, file_data in ast_schema['files'].items():
+        ast_nodes = file_data.get('ast_nodes', {})
+        imports = ast_nodes.get('imports', [])
+        functions = ast_nodes.get('functions', [])
+        classes = ast_nodes.get('classes', [])
+
+        for function in functions:
+            function_context = FunctionContextInput(
+                calls = function.get('calls', []),
+                called_by = function.get('called_by', [])
+            )
+            
+            function_input = FunctionAnalysisInput(
+                mode = function.get('mode', 'function_analysis'),
+                identifier=function.get('identifier'),
+                source_code=function.get('source_code'),
+                imports=imports,
+                context=function_context
+            )
+            
+            helper_llm_function_input.append(function_input)
+
+
+        for _class in classes:
+            class_context = ClassContextInput(
+                dependencies=_class.get('dependencies', []),
+                instantiated_by=_class.get('instantiated_by', [])
+            )
+
+            class_input = ClassAnalysisInput(
+                mode = _class.get('mode', 'class_analysis'),
+                identifier =_class.get('identifier'),
+                source_code = _class.get('source_code'), 
+                imports = imports, 
+                context = class_context
+            )
+            
+            helper_llm_class_input.append(class_input)
+    
+    logging.info(f"Total Functions to process: {len(helper_llm_function_input)}")
+    logging.info(f"Total Classes to process: {len(helper_llm_class_input)}")
+
+    # print("--------------------- Function Input -------------------")
+    # if helper_llm_function_input:
+    #     print("\n--- Example Function Input ---")
+    #     print(helper_llm_function_input[0].model_dump_json(indent=2))
+    # print("--------------------- Class Input -------------------")
+    # if helper_llm_class_input:
+    #     print("\n--- Example Class Input ---")
+    #     print(helper_llm_class_input[0].model_dump_json(indent=2))
 
     # 11. HelperLLM Funktion Batch (Notfalls stückeln wegen RPM Limits) 
+    function_prompt_file = 'SystemPrompts/SystemPromptFunctionHelperLLM.txt'
+    class_prompt_file = 'SystemPrompts/SystemPromptClassHelperLLM.txt'
+    llm_helper = LLMHelper(api_key=GEMINI_API_KEY, function_prompt_path=function_prompt_file, class_prompt_path=class_prompt_file)
+    analysis_results = {}
+
+    #raise ("Test End.")
+
+    logging.info("\n--- Generating documentation for Functions ---")
+    if len(helper_llm_function_input) != 0:
+        function_analysis_results = llm_helper.generate_for_functions(helper_llm_function_input)
+
+    if len(function_analysis_results) != 0:
+        for doc in function_analysis_results:
+            if doc:
+                logging.info(f"Successfully generated doc for: {doc.identifier}")
+                if "functions" not in analysis_results:
+                    analysis_results["functions"] = {}
+                analysis_results["functions"][doc.identifier] = doc.model_dump() 
+            else:
+                logging.warning(f"Failed to generate doc for a function")
+
 
     # 12. HelperLLM Class Batch 
 
+    logging.info("\n--- Generating documentation for Classes ---")
+    if len(helper_llm_class_input) != 0:
+        class_analysis_results = llm_helper.generate_for_classes(helper_llm_class_input)
+
+    if len(class_analysis_results) != 0:
+        for doc in class_analysis_results:
+            if doc:
+                logging.info(f"Successfully generated doc for: {doc.identifier}")
+                if "classes" not in analysis_results:
+                    analysis_results["classes"] = {}
+                analysis_results["classes"][doc.identifier] = doc.model_dump() 
+            else:
+                logging.warning(f"Failed to generate doc for a class")
+
     # 13. Final Documentation Dictionary als Input für MainLLM 
-
-    processed_json = "{...}"  # Platzhalter für das verarbeitete JSON
-
+    main_llm_input = {}
+    
+    main_llm_input["basic_info"] = basic_project_info
+    main_llm_input["file_tree"] = repo_file_tree
+    main_llm_input["ast_schema"] = ast_schema
+    main_llm_input["analysis_results"] = analysis_results
+    
+    # model validate muss noch gemacht werden
+    
     # 14. final Report generieren (MainLLM)
     main_llm = MainLLM(api_key=GEMINI_API_KEY, prompt_file_path="SystemPrompts\SystemPromptMainLLM.txt")
 
-    logging.info("Starting Synthesis Phase...")
-    final_report = main_llm.call_llm(processed_json)
-    logging.info("final report generated.")
-    logging.info("Synthesis Phase completed.")
+    logging.info("Starting Synthesis Stage...")
+    final_report = main_llm.call_llm(main_llm_input)
+    logging.info("Synthesis Stage completed.")
+    logging.info("Report generated.")
     
     # (15. Documenation an Frontend zurückgeben)
 
@@ -106,3 +203,7 @@ if __name__ == "__main__":
         f.write(final_report)
     
     logging.info(f"Final report saved to '{report_filepath}'.")
+
+
+if __name__ == "__main__":
+    main_workflow()
