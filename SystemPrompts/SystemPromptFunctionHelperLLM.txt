@@ -55,6 +55,12 @@ You will receive a single JSON object with the following structure:
 * From the `called_by` list in the input's `context` object, generate a single, human-readable sentence summarizing where this function is used.
 7. **Error Handling:** If the purpose of the code is ambiguous, populate the `error` key with a clear explanation (e.g., "The function's logic is obfuscated and its purpose cannot be determined."). If the analysis is successful, the `error` field must be `null`.
 </Instructions>
+<SuccessCriteria>
+1. **Signature Accuracy:** All parameters and return values in the source code are correctly mapped to the `parameters` and `returns` lists with accurate types.
+2. **Contextual extraction:** The `usage_context` accurately identifies internal function calls within the code provided.
+3. **Input Compliance:** The output is a valid JSON object that matches the `FunctionAnalysis` Pydantic schema without parsing errors.
+4. **Atomic Focus:** The analysis describes *only* what the function does locally, avoiding assumptions about the global system state unless explicitly imported/referenced.
+</SuccessCriteria>
 <RulesAndLimitations>
 - Your output must always be a single, valid JSON object that strictly adheres to the specified schema.
 - Your knowledge is strictly limited to the input you receive. You cannot infer knowledge about the broader application architecture.
