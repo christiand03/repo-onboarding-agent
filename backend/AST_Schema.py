@@ -1,8 +1,10 @@
 import ast
+import networkx as nx
+
+from callgraph import build_callGraph
 
 class ASTVisitor(ast.NodeVisitor):
-
-    def __init__(self, source_code: str):
+    def __init__(self, source_code: str,):
         self.source_code = source_code
         self.schema = {"imports": [], "functions": [], "classes": []}
         self._current_class = None
@@ -25,7 +27,12 @@ class ASTVisitor(ast.NodeVisitor):
             "docstring": ast.get_docstring(node),
             "source_code": ast.get_source_segment(self.source_code, node),
             "start_line": node.lineno,
-            "end_line": node.end_lineno
+            "end_line": node.end_lineno,
+            "context": {
+                "dependencies": [],
+                "instantiated_by": [],
+                "methods_analysis": [],
+            },   
         }
         self.schema["classes"].append(class_info)
         
@@ -41,7 +48,11 @@ class ASTVisitor(ast.NodeVisitor):
             "docstring": ast.get_docstring(node),
             "source_code": ast.get_source_segment(self.source_code, node),
             "start_line": node.lineno,
-            "end_line": node.end_lineno
+            "end_line": node.end_lineno,
+            "context": {
+                "calls": [],
+                "called_by": []
+            }
         }
         
         if self._current_class:
@@ -50,7 +61,6 @@ class ASTVisitor(ast.NodeVisitor):
             self.schema["functions"].append(func_info)
             
         self.generic_visit(node)
-
     
     def visit_AsyncFunctionDef(self, node):
         self.visit_FunctionDef(node)
@@ -59,6 +69,21 @@ class ASTAnalyzer:
 
     def __init__(self):
         pass
+
+    @staticmethod
+    def _enrich_schema_with_callgraph(schema: dict, call_graph: nx.DiGraph, filename: str):
+        for func in schema["functions"]:
+            func_name = f"{filename}::{func['identifier']}"
+            if func_name in call_graph:
+                func['calls'] = sorted(list(call_graph.successors(func_name)))
+                func['called_by'] = sorted(list(call_graph.predecessors(func_name)))
+
+        for cls in schema["classes"]:
+            for method in cls["methods"]:
+                func_name = f"{filename}::{cls['identifier']}::{method['identifier']}"
+                if func_name in call_graph:
+                    method['calls'] = sorted(list(call_graph.successors(func_name)))
+                    method['called_by'] = sorted(list(call_graph.predecessors(func_name)))
 
     def analyze_repository(self, files: list) -> dict:
         full_schema = {
@@ -77,8 +102,15 @@ class ASTAnalyzer:
                 tree = ast.parse(file_content)
                 visitor = ASTVisitor(source_code=file_content)
                 visitor.visit(tree)
-        
                 file_schema_nodes = visitor.schema
+
+                call_graph = build_callGraph(tree, filename=file_obj.path)
+
+                self._enrich_schema_with_callgraph(
+                    file_schema_nodes, 
+                    call_graph, 
+                    file_obj.path
+                )
 
                 if file_schema_nodes["imports"] or file_schema_nodes["functions"] or file_schema_nodes["classes"]:
                     full_schema["files"][file_obj.path] = {
@@ -88,4 +120,31 @@ class ASTAnalyzer:
             except (SyntaxError, ValueError) as e:
                 print(f"Warnung: Konnte Datei '{file_obj.path}' nicht parsen. Fehler: {e}")
         
-        return full_schema         
+        # Alle Bibliotheken rausfiltern, die nicht selbst im Projekt geschrieben sind
+        all_project_functions = set()
+        for file_path, file_data in full_schema["files"].items():
+            ast_nodes = file_data["ast_nodes"]
+
+            for func in ast_nodes["functions"]:
+                func_name = f"{file_path}::{func['identifier']}"
+                all_project_functions.add(func_name)
+
+            for cls in ast_nodes["classes"]:
+                for method in cls["methods"]:
+                    func_name = f"{file_path}::{cls['identifier']}::{method['identifier']}"
+                    all_project_functions.add(func_name)
+        
+        for file_path, file_data in full_schema["files"].items():
+            ast_nodes = file_data["ast_nodes"]
+
+            for func in ast_nodes["functions"]:
+                func['calls'] = [call for call in func['calls'] if call in all_project_functions]
+                func['called_by'] = [caller for caller in func['called_by'] if caller in all_project_functions]
+            
+
+            for cls in ast_nodes["classes"]:
+                for method in cls["methods"]:
+                    method['calls'] = [call for call in method['calls'] if call in all_project_functions]
+                    method['called_by'] = [caller for caller in method['called_by'] if caller in all_project_functions]
+
+        return full_schema
