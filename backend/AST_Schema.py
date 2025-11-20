@@ -31,7 +31,6 @@ class ASTVisitor(ast.NodeVisitor):
             "context": {
                 "dependencies": [],
                 "instantiated_by": [],
-                "methods_analysis": [],
             },   
         }
         self.schema["classes"].append(class_info)
@@ -82,8 +81,8 @@ class ASTAnalyzer:
             for method in cls["methods"]:
                 func_name = f"{filename}::{cls['identifier']}::{method['identifier']}"
                 if func_name in call_graph:
-                    method['calls'] = sorted(list(call_graph.successors(func_name)))
-                    method['called_by'] = sorted(list(call_graph.predecessors(func_name)))
+                    method['context']['calls'] = sorted(list(call_graph.successors(func_name)))
+                    method['context']['called_by'] = sorted(list(call_graph.predecessors(func_name)))
 
     def analyze_repository(self, files: list) -> dict:
         full_schema = {
@@ -138,13 +137,13 @@ class ASTAnalyzer:
             ast_nodes = file_data["ast_nodes"]
 
             for func in ast_nodes["functions"]:
-                func['calls'] = [call for call in func['calls'] if call in all_project_functions]
-                func['called_by'] = [caller for caller in func['called_by'] if caller in all_project_functions]
+                func['context']['calls'] = [call for call in func['context']['calls'] if call in all_project_functions]
+                func['context']['called_by'] = [caller for caller in func['context']['called_by'] if caller in all_project_functions]
             
 
             for cls in ast_nodes["classes"]:
                 for method in cls["methods"]:
-                    method['calls'] = [call for call in method['calls'] if call in all_project_functions]
-                    method['called_by'] = [caller for caller in method['called_by'] if caller in all_project_functions]
+                    method['context']['calls'] = [call for call in method['context']['calls'] if call in all_project_functions]
+                    method['context']['called_by'] = [caller for caller in method['context']['called_by'] if caller in all_project_functions]
 
         return full_schema
