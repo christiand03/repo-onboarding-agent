@@ -50,7 +50,7 @@ class ClassDescription(BaseModel):
     """Contains the detailed analysis of a class's purpose, constructor, and methods."""
     overall: str
     init_method: ConstructorDescription
-    methods: List[FunctionAnalysis] # Könnte auch nächträglich hinzugefügt werden um Tokens zu sparen
+    methods: List[FunctionAnalysis]
     usage_context: ClassContext
 
 class ClassAnalysis(BaseModel):
@@ -78,10 +78,16 @@ class FunctionAnalysisInput(BaseModel):
 
 # ------ Helper LLM CLASS INPUT Schema  ------
 
+class MethodContextInput(BaseModel):
+    """Structured context for a classes methods"""
+    identifier: str
+    calls: List[str]
+    called_by: List[str]
 class ClassContextInput(BaseModel):
     """Structured context for analyzing a class."""
     dependencies: List[str]
     instantiated_by: List[str]
+    method_context: MethodContextInput
 
 class ClassAnalysisInput(BaseModel):
     """The required input to generate a ClassAnalysis object."""
