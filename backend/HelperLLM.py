@@ -74,21 +74,6 @@ class LLMHelper:
         conversations = [[SystemMessage(content=self.function_system_prompt), HumanMessage(content=payload)] for payload in json_payloads]
         
         try:
-            
-            # --- DEBUGGING ADDITION: Capture and print the raw, faulty output ---
-            logging.error("--- CAPTURING RAW LLM OUTPUT FOR DEBUGGING ---")
-            try:
-                # Re-run the batch call with the raw LLM
-                raw_responses = self.raw_llm.batch(conversations)
-                for i, response in enumerate(raw_responses):
-                    print("\n" + "="*20 + f" RAW RESPONSE {i+1} " + "="*20)
-                    # The raw response is in the .content attribute of the message
-                    print(response.content) 
-                    print("="*55 + "\n")
-            except Exception as raw_e:
-                logging.error(f"Failed to even get raw response for debugging: {raw_e}")
-            # --- END DEBUGGING ADDITION ---
-
             logging.info(f"Calling Gemini API in batch for {len(conversations)} functions...")
             validated_functions = self.function_llm.batch(conversations)
 
