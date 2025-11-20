@@ -23,7 +23,6 @@ class ASTVisitor(ast.NodeVisitor):
         class_info = {
             "mode": "class_analysis",
             "identifier": node.name, 
-            "methods": [],
             "docstring": ast.get_docstring(node),
             "source_code": ast.get_source_segment(self.source_code, node),
             "start_line": node.lineno,
@@ -31,6 +30,7 @@ class ASTVisitor(ast.NodeVisitor):
             "context": {
                 "dependencies": [],
                 "instantiated_by": [],
+                "method_context": []
             },   
         }
         self.schema["classes"].append(class_info)
@@ -40,23 +40,31 @@ class ASTVisitor(ast.NodeVisitor):
         self._current_class = None
 
     def visit_FunctionDef(self, node):
-        func_info = {
-            "mode": "function_analysis",
-            "identifier": node.name,
-            "args": [arg.arg for arg in node.args.args],
-            "docstring": ast.get_docstring(node),
-            "source_code": ast.get_source_segment(self.source_code, node),
-            "start_line": node.lineno,
-            "end_line": node.end_lineno,
-            "context": {
-                "calls": [],
-                "called_by": []
-            }
-        }
-        
         if self._current_class:
-            self._current_class["methods"].append(func_info)
+            method_context_info = {
+                "identifier": node.name,
+                "calls": [],
+                "called_by": [],
+                "args": [arg.arg for arg in node.args.args],
+                "docstring": ast.get_docstring(node),
+                "start_line": node.lineno,
+                "end_line": node.end_lineno,
+            }
+            self._current_class["context"]["method_context"].append(method_context_info)
         else:
+            func_info = {
+                "mode": "function_analysis",
+                "identifier": node.name,
+                "args": [arg.arg for arg in node.args.args],
+                "docstring": ast.get_docstring(node),
+                "source_code": ast.get_source_segment(self.source_code, node),
+                "start_line": node.lineno,
+                "end_line": node.end_lineno,
+                "context": {
+                    "calls": [],
+                    "called_by": []
+                }
+            }
             self.schema["functions"].append(func_info)
             
         self.generic_visit(node)
@@ -74,15 +82,18 @@ class ASTAnalyzer:
         for func in schema["functions"]:
             func_name = f"{filename}::{func['identifier']}"
             if func_name in call_graph:
-                func['calls'] = sorted(list(call_graph.successors(func_name)))
-                func['called_by'] = sorted(list(call_graph.predecessors(func_name)))
+                func['context']['calls'] = sorted(list(call_graph.successors(func_name)))
+                func['context']['called_by'] = sorted(list(call_graph.predecessors(func_name)))
 
         for cls in schema["classes"]:
-            for method in cls["methods"]:
-                func_name = f"{filename}::{cls['identifier']}::{method['identifier']}"
+            for method_context in cls["context"]["method_context"]:
+                func_name = f"{filename}::{cls['identifier']}::{method_context['identifier']}"
                 if func_name in call_graph:
-                    method['context']['calls'] = sorted(list(call_graph.successors(func_name)))
-                    method['context']['called_by'] = sorted(list(call_graph.predecessors(func_name)))
+                    calls = sorted(list(call_graph.successors(func_name)))
+                    called_by = sorted(list(call_graph.predecessors(func_name)))
+                    
+                    method_context['calls'] = calls
+                    method_context['called_by'] = called_by
 
     def analyze_repository(self, files: list) -> dict:
         full_schema = {
@@ -129,8 +140,8 @@ class ASTAnalyzer:
                 all_project_functions.add(func_name)
 
             for cls in ast_nodes["classes"]:
-                for method in cls["methods"]:
-                    func_name = f"{file_path}::{cls['identifier']}::{method['identifier']}"
+                for method_context in cls["context"]["method_context"]:
+                    func_name = f"{file_path}::{cls['identifier']}::{method_context['identifier']}"
                     all_project_functions.add(func_name)
         
         for file_path, file_data in full_schema["files"].items():
@@ -140,10 +151,9 @@ class ASTAnalyzer:
                 func['context']['calls'] = [call for call in func['context']['calls'] if call in all_project_functions]
                 func['context']['called_by'] = [caller for caller in func['context']['called_by'] if caller in all_project_functions]
             
-
             for cls in ast_nodes["classes"]:
-                for method in cls["methods"]:
-                    method['context']['calls'] = [call for call in method['context']['calls'] if call in all_project_functions]
-                    method['context']['called_by'] = [caller for caller in method['context']['called_by'] if caller in all_project_functions]
+                for method_context in cls["context"]["method_context"]:
+                    method_context['calls'] = [call for call in method_context['calls'] if call in all_project_functions]
+                    method_context['called_by'] = [caller for caller in method_context['called_by'] if caller in all_project_functions]
 
         return full_schema

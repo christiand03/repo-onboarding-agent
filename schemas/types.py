@@ -83,11 +83,13 @@ class MethodContextInput(BaseModel):
     identifier: str
     calls: List[str]
     called_by: List[str]
+    args: List[str]
+    docstring: Optional[str]
 class ClassContextInput(BaseModel):
     """Structured context for analyzing a class."""
     dependencies: List[str]
     instantiated_by: List[str]
-    method_context: MethodContextInput
+    method_context: List[MethodContextInput]
 
 class ClassAnalysisInput(BaseModel):
     """The required input to generate a ClassAnalysis object."""
