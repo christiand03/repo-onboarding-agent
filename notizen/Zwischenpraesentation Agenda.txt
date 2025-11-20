@@ -1,0 +1,14 @@
+Insgesamt wären es drei Kapitel:
+Recap unserer Vision/Ziele -> Veränderungen zeigen -> Zwischenstand präsentieren
+
+1. Kurzes Recap: Vision, Ziele und Key Components
+2. Welche Key Components haben sich verändert?
+3. Welchen Tech Stack haben wir für die Komponenten gewählt?
+4. Veränderung des Workflows darstellen (Vergleich zwischen Alt und Neu)
+5. Zeigen warum wir explizit keinen Agenten gebraucht haben (linearer Workflow und State Management/Data Parsing machen wir manuell)
+6. Vergleich: Geplante und umgesetzte Features des MVP
+7. Grob auf die Architektur und Umsetzung eingehen
+8. Resultate präsentieren 
+9. Potenzielle Erweiterungen präsentieren + Feedback einholen was wir noch in der Restzeit umsetzen sollen
+
+- Evtl noch auf Probleme und Hürden eingehen die wir während Umsetzung hatten
