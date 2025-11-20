@@ -24,7 +24,7 @@ class FunctionDescription(BaseModel):
     """Contains the detailed analysis of a function's purpose and signature."""
     overall: str
     parameters: List[ParameterDescription]
-    returns: List[ReturnDescription]
+    returns: Optional[List[ReturnDescription]]
     usage_context: UsageContext
 
 class FunctionAnalysis(BaseModel):
