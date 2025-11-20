@@ -131,29 +131,29 @@ class ASTAnalyzer:
                 print(f"Warnung: Konnte Datei '{file_obj.path}' nicht parsen. Fehler: {e}")
         
         # Alle Bibliotheken rausfiltern, die nicht selbst im Projekt geschrieben sind
-        all_project_functions = set()
-        for file_path, file_data in full_schema["files"].items():
-            ast_nodes = file_data["ast_nodes"]
+        # all_project_functions = set()
+        # for file_path, file_data in full_schema["files"].items():
+        #     ast_nodes = file_data["ast_nodes"]
 
-            for func in ast_nodes["functions"]:
-                func_name = f"{file_path}::{func['identifier']}"
-                all_project_functions.add(func_name)
+        #     for func in ast_nodes["functions"]:
+        #         func_name = f"{file_path}::{func['identifier']}"
+        #         all_project_functions.add(func_name)
 
-            for cls in ast_nodes["classes"]:
-                for method_context in cls["context"]["method_context"]:
-                    func_name = f"{file_path}::{cls['identifier']}::{method_context['identifier']}"
-                    all_project_functions.add(func_name)
+        #     for cls in ast_nodes["classes"]:
+        #         for method_context in cls["context"]["method_context"]:
+        #             func_name = f"{file_path}::{cls['identifier']}::{method_context['identifier']}"
+        #             all_project_functions.add(func_name)
         
-        for file_path, file_data in full_schema["files"].items():
-            ast_nodes = file_data["ast_nodes"]
+        # for file_path, file_data in full_schema["files"].items():
+        #     ast_nodes = file_data["ast_nodes"]
 
-            for func in ast_nodes["functions"]:
-                func['context']['calls'] = [call for call in func['context']['calls'] if call in all_project_functions]
-                func['context']['called_by'] = [caller for caller in func['context']['called_by'] if caller in all_project_functions]
+        #     for func in ast_nodes["functions"]:
+        #         func['context']['calls'] = [call for call in func['context']['calls'] if call in all_project_functions]
+        #         func['context']['called_by'] = [caller for caller in func['context']['called_by'] if caller in all_project_functions]
             
-            for cls in ast_nodes["classes"]:
-                for method_context in cls["context"]["method_context"]:
-                    method_context['calls'] = [call for call in method_context['calls'] if call in all_project_functions]
-                    method_context['called_by'] = [caller for caller in method_context['called_by'] if caller in all_project_functions]
+        #     for cls in ast_nodes["classes"]:
+        #         for method_context in cls["context"]["method_context"]:
+        #             method_context['calls'] = [call for call in method_context['calls'] if call in all_project_functions]
+        #             method_context['called_by'] = [caller for caller in method_context['called_by'] if caller in all_project_functions]
 
         return full_schema
