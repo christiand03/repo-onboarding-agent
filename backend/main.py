@@ -2,15 +2,16 @@ import logging
 import os
 import re
 import json
+import time
 from datetime import datetime
 
 from dotenv import load_dotenv
 
-from getRepo import GitRepository, RepoFile
-from AST_Schema import ASTAnalyzer
-from MainLLM import MainLLM
-from basic_info import ProjektInfoExtractor
-from HelperLLM import LLMHelper
+from backend.getRepo import GitRepository, RepoFile
+from backend.AST_Schema import ASTAnalyzer
+from backend.MainLLM import MainLLM
+from backend.basic_info import ProjektInfoExtractor
+from backend.HelperLLM import LLMHelper
 from schemas.types import FunctionContextInput, FunctionAnalysisInput, ClassContextInput, ClassAnalysisInput
 
 
@@ -23,6 +24,7 @@ def main_workflow():
     # 1. User gibt Input
     user_input = "Analyze the following Git Repository https://github.com/christiand03/repo-onboarding-agent" # Dummy Data
     # https://github.com/pallets/flask
+    # https://github.com/christiand03/repo-onboarding-agent
 
     # 2. Input ans Backend übergeben
 
@@ -146,7 +148,7 @@ def main_workflow():
 
     logging.info("\n--- Generating documentation for Functions ---")
     if len(helper_llm_function_input) != 0:
-        function_analysis_results = llm_helper.generate_for_functions(helper_llm_function_input[:6])
+        function_analysis_results = llm_helper.generate_for_functions(helper_llm_function_input)
 
     if len(function_analysis_results) != 0:
         for doc in function_analysis_results:
@@ -158,12 +160,13 @@ def main_workflow():
             else:
                 logging.warning(f"Failed to generate doc for a function")
 
-
+    logging.info("Waiting to respect rate limits before class analysis...")
+    time.sleep(61)
     # 12. HelperLLM Class Batch 
 
     logging.info("\n--- Generating documentation for Classes ---")
     if len(helper_llm_class_input) != 0:
-        class_analysis_results = llm_helper.generate_for_classes(helper_llm_class_input[:3])
+        class_analysis_results = llm_helper.generate_for_classes(helper_llm_class_input)
 
     if len(class_analysis_results) != 0:
         for doc in class_analysis_results:
