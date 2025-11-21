@@ -143,7 +143,8 @@ def main_workflow():
     class_prompt_file = 'SystemPrompts/SystemPromptClassHelperLLM.txt'
     llm_helper = LLMHelper(api_key=GEMINI_API_KEY, function_prompt_path=function_prompt_file, class_prompt_path=class_prompt_file)
     analysis_results = {}
-
+    function_analysis_results = []
+    class_analysis_results = []
     #raise ("Test End.")
 
     logging.info("\n--- Generating documentation for Functions ---")
@@ -160,12 +161,12 @@ def main_workflow():
             else:
                 logging.warning(f"Failed to generate doc for a function")
 
-    logging.info("Waiting to respect rate limits before class analysis...")
-    time.sleep(61)
     # 12. HelperLLM Class Batch 
 
     logging.info("\n--- Generating documentation for Classes ---")
     if len(helper_llm_class_input) != 0:
+        logging.info("Waiting to respect rate limits before class analysis...")
+        time.sleep(61)
         class_analysis_results = llm_helper.generate_for_classes(helper_llm_class_input)
 
     if len(class_analysis_results) != 0:
