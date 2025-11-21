@@ -12,6 +12,7 @@ from MainLLM import MainLLM
 from basic_info import ProjektInfoExtractor
 from HelperLLM import LLMHelper
 from schemas.types import FunctionContextInput, FunctionAnalysisInput, ClassContextInput, ClassAnalysisInput
+from tools import render_graphviz_diagrams
 
 
 # --- Konfiguration & Logging ---
@@ -191,17 +192,23 @@ def main_workflow():
     main_llm = MainLLM(api_key=GEMINI_API_KEY, prompt_file_path="SystemPrompts\SystemPromptMainLLM.txt")
 
     logging.info("Starting Synthesis Stage...")
-    final_report = main_llm.call_llm(main_llm_input_json)
+    raw_report = main_llm.call_llm(main_llm_input_json)
     logging.info("Synthesis Stage completed.")
     logging.info("Report generated.")
-    
-    # (15. Documenation an Frontend zurückgeben)
+
+
+    # 15. Graphviz Diagramme rendern und im Markdown ersetzen
+    output_dir = "result"
+    os.makedirs(output_dir, exist_ok=True)
+
+    logging.info("Processing Graphviz diagrams...")  
+    final_report = render_graphviz_diagrams(raw_report, output_dir)
+    logging.info("Graphviz diagrams processed.")
+
+    # (16. Documenation an Frontend zurückgeben)
 
     # Optional: Speichern des finalen Berichts in einer Datei
     logging.info("Saving final report...")
-    output_dir = "result"
-    os.makedirs(output_dir, exist_ok=True)  
-
     timestamp = datetime.now().strftime("%d_%m_%Y_%H-%M-%S")
     
     report_filename = f"report_{timestamp}.md"
