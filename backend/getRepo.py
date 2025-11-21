@@ -2,6 +2,7 @@ import tempfile
 import shutil
 from git import Repo, GitCommandError
 import logging
+import os
 
 # ==============================================================================
 # Klasse 1: Das Datenobjekt, das eine einzelne Datei repräsentiert
@@ -61,6 +62,17 @@ class RepoFile:
     def __repr__(self):
         """Gibt eine nützliche String-Repräsentation des Objekts zurück."""
         return f"<RepoFile(path='{self.path}')>"
+    
+    def to_dict(self, include_content=False):
+        data = {
+            "path": self.path,
+            "name": os.path.basename(self.path),
+            "size": self.size,
+            "type": "file"
+        }
+        if include_content:
+            data["content"] = self.content
+        return data
 
 
 # ==============================================================================
@@ -112,48 +124,30 @@ class GitRepository:
     def __exit__(self, exc_type, exc_val, exc_tb):
         self.close()
 
-    def get_file_tree(self):
-        """
-        Extrahiert die Verzeichnisstruktur (Tree View) des Repositories als
-        verschachteltes Dictionary.
-        
-        Die Schlüssel sind Datei- oder Verzeichnisnamen.
-        Die Werte für Dateien sind RepoFile-Objekte.
-        Die Werte für Verzeichnisse sind weitere Dictionaries.
+    def get_file_tree(self, include_content=False):
 
-        Returns:
-            dict: Eine verschachtelte Dictionary-Repräsentation der Dateistruktur.
-        """
-        if not self.commit_tree:
-            return {}
-        return self._traverse_tree(self.commit_tree, "")
+        if not self.files:
+            self.get_all_files()
 
-    def _traverse_tree(self, tree, current_path):
-        """
-        Rekursive Hilfsfunktion, die ein git.Tree-Objekt durchläuft und
-        eine Dictionary-Struktur aufbaut.
+        tree = {"name": "root", "type": "directory", "children": []}
 
-        Args:
-            tree (git.Tree): Das aktuell zu durchlaufende Tree-Objekt.
-            current_path (str): Der Pfad zum aktuellen Tree vom Repository-Root aus.
-
-        Returns:
-            dict: Die Dictionary-Struktur für den aktuellen Tree.
-        """
-        file_structure = {}
-        
-        # 1. Dateien (Blobs) auf der aktuellen Ebene verarbeiten
-        for blob in tree.blobs:
-            # Den vollständigen Pfad für das RepoFile-Objekt erstellen
-            full_path = f"{current_path}/{blob.name}" if current_path else blob.name
-            file_structure[blob.name] = RepoFile(full_path, self.commit_tree)
-
-        # 2. Unterverzeichnisse (Trees) rekursiv verarbeiten
-        for subtree in tree.trees:
-            # Den Pfad für die nächste Rekursionsstufe erweitern
-            full_path = f"{current_path}/{subtree.name}" if current_path else subtree.name
-            # Rekursiver Aufruf für das Unterverzeichnis
-            file_structure[subtree.name] = self._traverse_tree(subtree, full_path)
+        for file_obj in self.files:
+            parts = file_obj.path.split('/')
+            current_level = tree["children"]
             
-        return file_structure
+            # Iteriere durch die Ordnerstruktur
+            for part in parts[:-1]:
+                # Suche, ob Ordner schon existiert
+                found = next((item for item in current_level if item["name"] == part and item["type"] == "directory"), None)
+                if not found:
+                    new_dir = {"name": part, "type": "directory", "children": []}
+                    current_level.append(new_dir)
+                    current_level = new_dir["children"]
+                else:
+                    current_level = found["children"]
+            
+            # Datei am Ende hinzufügen
+            current_level.append(file_obj.to_dict(include_content=include_content))
+
+        return tree
 
