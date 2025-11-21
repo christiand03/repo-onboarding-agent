@@ -1,0 +1,53 @@
+Report Agenda:
+
+- Vision / Ziele 
+- Technologie 
+- Warum brauchen wir die Technologie
+- Welche Technologien gibt es?
+- Welche Technologien verwenden wir und warum?
+- Wie haben wir sie eingesetzt?
+- Wie haben wir die Technologien miteinander verbunden?
+- Wie sind wir an das Projekt herangegangen
+- Produktarchitektur
+- Welche Erweiterungen könnte man noch hinzufügen?
+- Welche Technologien würden dafür gebraucht werden?
+- Best Practices und Learnings
+- Welche Probleme und Hürden hatten wir
+- Was geht noch nicht? Was ist technologisch noch nicht umsetzbar?
+
+
+
+
+1. Einleitung (ca. 2–3 Seiten)
+	1.1 Motivation: Warum ist Code-Dokumentation wichtig, aber nervig? Warum wird sie oft vernachlässigt?
+	1.2 Vision & Zielsetzung: Was wollten wir erreichen? (Recap Kick-off Vision).
+	1.3 Aufbau des Berichts: Kurzer Wegweiser durch die Arbeit.
+2. Theoretische Grundlagen & Technologie-Stack (ca. 4–6 Seiten)
+	2.1 Large Language Models (LLMs): Funktionsweise kurz erklärt, Prompt Engineering Basics.
+	2.2 AI Agents vs. Lineare Chains: Definition eines Agenten (autonom, entscheidet selbst über nächste Schritte) vs. deterministische Workflows 	(Pipeline).
+	2.3 Relevante Technologien: LangChain, AST etc
+	2.4 Auswahl der Technologien: Begründung der Auswahl für jedes Key Component.
+3. Konzeption & Strategiewechsel: Vom Agenten zur Pipeline (ca. 4–6 Seiten)
+	3.1 Ursprünglicher Ansatz (Agent): Wie sah der erste Entwurf aus? (Agent Workflow). Was haben wir uns davon versprochen?
+	3.2 Die Entscheidung gegen den Agenten: Detaillierte Begründung (Warum ist ein linearer Workflow besser für Dokumentation?
+	3.3 Das neue Konzept (Dual-Modell Strategie): Vorstellung der neuen Architektur. Warum zwei Modelle?
+4. Implementierung & Systemarchitektur (ca. 5–8 Seiten)
+	4.1 Gesamtarchitektur: Diagramm des finalen Systems.
+	4.2 Workflow-Vergleich: Diagramm Alt (Agent) vs. Neu (Linear).
+	4.3 Die Komponenten im Detail: Jeden einzelnen Schritt detailliert erklären.
+	4.4 Feature-Vergleich (MVP): Geplant vs. Umgesetzt. Was hat es in den MVP geschafft, was nicht?
+5. Best Practices & Learnings (ca. 5–7 Seiten)
+	5.1 Prompt Engineering Patterns: Welche Prompts funktionieren gut für Code? (z.B. Chain-of-Thought, Few-Shot Prompting). Wie verhindert man 	Halluzinationen bei Code-Erklärungen?
+	5.2 Kontext-Management: Umgang mit Rate Limits bei großen Files.
+	5.3 Determinismus vs. Kreativität: Warum Code-Doku wenig "Temperatur" braucht.
+	5.4 LLM-Orchestrierung: Learnings aus der Verbindung der zwei Modelle.
+	5.5 Wie bringt man ein LLM dazu ein bestimmtes Output Format einzuhalten?
+	5.6 Learnings aus der veränderten Systemarchitektur. Wann wäre ein Agent gerechtfertigt?
+	5.7 Hürden & Lösungen: Konkrete Probleme (z.B. "Modell vergisst Parameter") und wie sie gelöst wurden.
+6. Evaluation & Ergebnisse (ca. 2–4 Seiten)
+	6.1 Resultate: Vorstellung einer generierten Dokumentation (Beispiele: Input Code -> Output Doku).
+	6.2 Qualitätsanalyse: Ist die Doku brauchbar? Wo macht das Modell noch Fehler?
+	6.3 Limitationen: Was ist technologisch aktuell noch nicht machbar? (z.B. Verstehen von riesigen Projektzusammenhängen über hunderte Files hinweg).
+7. Ausblick & Fazit (ca. 2–3 Seiten)
+	7.1 Erweiterungsmöglichkeiten: Was könnte man noch bauen? (IDE Plugin, CI/CD Integration, Chat mit der Doku). Welche Technologien bräuchte man dafür?
+	7.2 Ausblick: Abschlussbetrachtung des Projekts. Welche zukünftigen Projekte könnten aus unseren Ergebnissen entstehen? 

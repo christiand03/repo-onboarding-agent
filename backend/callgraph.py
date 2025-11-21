@@ -226,7 +226,7 @@ if __name__ == "__main__":
     import os
 
     repo_url = "https://github.com/christiand03/repo-onboarding-agent"
-    # repo_url = "https://github.com/pallets/flask"    
+    #repo_url = "https://github.com/pallets/flask"    
 
     with GitRepository(repo_url) as repository:
         print(f"Repository von {repository.repo_url} erfolgreich geklont.")
@@ -270,9 +270,11 @@ if __name__ == "__main__":
             if not file_object.path.endswith(".py"):
                 continue
             
+            print(f"--> Analysing: {file_object.path}")
+
             tree = ast.parse(file_object.content)
             filename = os.path.basename(file_object.path)
 
             graph = build_callGraph(tree, filename=filename)
             call_graphs[file_object.path] = graph
-            make_safe_dot(graph, f"{str(filename).removesuffix(".py")}.dot")
+            make_safe_dot(graph, f"{str(filename).removesuffix('.py')}.dot")
