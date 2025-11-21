@@ -1,6 +1,7 @@
 import os
 import json
 import logging
+import time
 from typing import List, Dict, Any, Optional, Union
 
 from dotenv import load_dotenv
@@ -47,21 +48,50 @@ class LLMHelper:
             logging.error(f"Class system prompt file not found at: {class_prompt_path}")
             raise
         
+        # Batch-Size config
+        self.model_name = model_name
+        self._configure_batch_settings(model_name)
+
         base_llm = ChatGoogleGenerativeAI(
             model=model_name,
             api_key=api_key,
             temperature=0.3, 
         )
 
-        self.function_llm = base_llm.with_structured_output(FunctionAnalysis)
-        self.class_llm = base_llm.with_structured_output(ClassAnalysis)
+        self.function_llm = base_llm.with_structured_output(FunctionAnalysis, method="json_schema")
+        self.class_llm = base_llm.with_structured_output(ClassAnalysis, method="json_schema")
 
         self.raw_llm = base_llm
 
-        logging.info(f"LLMHelper initialized with model '{model_name}'.")
+        logging.info(f"LLMHelper initialized with model '{model_name}'. Batch Size: {self.batch_size}")
+
+    def _configure_batch_settings(self, model_name: str):
+
+        if model_name == "gemini-2.0-flash-lite":
+            self.batch_size = 30
+        
+        elif model_name == "gemini-flash-latest":
+            self.batch_size = 10
+            
+        elif model_name == "gemini-2.5-pro":
+            self.batch_size = 2
+        
+        elif model_name == "gemini-2.0-flash":
+            self.batch_size = 15
+
+        elif model_name == "gemini-2.5-flash-lite":
+            self.batch_size = 15
+            
+        else:
+            logging.warning(f"Unknown model '{model_name}', using conservative defaults.")
+            self.batch_size = 2
 
     def generate_for_functions(self, function_inputs: List[FunctionAnalysisInput]) -> List[Optional[FunctionAnalysis]]:
         """Generates and validates documentation for a batch of functions."""
+
+        BATCH_SIZE = self.batch_size
+        WAITING_TIME = 61
+
         if not function_inputs:
             return []
 
@@ -72,17 +102,30 @@ class LLMHelper:
         ]
        
         conversations = [[SystemMessage(content=self.function_system_prompt), HumanMessage(content=payload)] for payload in json_payloads]
+
+        all_validated_functions = []
+        total_items = len(conversations)
+
+        for i in range(0, total_items, BATCH_SIZE):
+
+            batch_conversations = conversations[i:i + BATCH_SIZE]
+
+            logging.info(f"Calling Gemini API for Batch {i // BATCH_SIZE + 1} (Items {i+1} to {min(i + BATCH_SIZE, total_items)} of {total_items})...")            
         
-        try:
-            logging.info(f"Calling Gemini API in batch for {len(conversations)} functions...")
-            validated_functions = self.function_llm.batch(conversations)
+            try:
+                batch_results = self.function_llm.batch(batch_conversations)
+                all_validated_functions.extend(batch_results)
+                logging.info("Batch call successful.")
 
-            logging.info("API batch call and parsing successful.")
-            return validated_functions
+            except Exception as e:
+                logging.error(f"An error occurred during batch {i // BATCH_SIZE + 1}: {e}")
+                all_validated_functions.extend([None] * len(batch_conversations))
+            
+            if i + BATCH_SIZE < total_items:
+                logging.info(f"Waiting {WAITING_TIME} seconds to respect rate limits...")
+                time.sleep(WAITING_TIME)
 
-        except Exception as e:
-            logging.error(f"An unexpected error occurred during API batch call or parsing: {e}")
-            return [None] * len(conversations)
+        return all_validated_functions
         
             
     
@@ -91,6 +134,9 @@ class LLMHelper:
         """Generates and validates documentation for a batch of classes."""
         if not class_inputs:
             return []
+        
+        BATCH_SIZE = self.batch_size
+        WAITING_TIME = 61
 
         # Create a list of JSON payloads from the input models
         json_payloads = [
@@ -100,17 +146,29 @@ class LLMHelper:
 
         conversations = [[SystemMessage(content=self.class_system_prompt), HumanMessage(content=payload)] for payload in json_payloads]
 
-        try:
-            logging.info(f"Calling Gemini API in batch for {len(conversations)} classes...")
-            validated_classes = self.class_llm.batch(conversations)
-            
-            logging.info("API batch call and parsing successful.")
-            return validated_classes
+        all_validated_classes = []
+        total_items = len(conversations)
 
-        except Exception as e:
-            logging.error(f"An unexpected error occurred during API batch call or parsing: {e}")
-            return [None] * len(conversations)
+        for i in range(0, total_items, BATCH_SIZE):
 
+            batch_conversations = conversations[i:i + BATCH_SIZE]
+            logging.info(f"Calling Gemini API for Batch {i // BATCH_SIZE + 1} (Items {i+1} to {min(i + BATCH_SIZE, total_items)} of {total_items})...")            
+
+            try:
+                batch_results = self.class_llm.batch(batch_conversations)
+                all_validated_classes.extend(batch_results)
+                logging.info("Batch call successful.")
+
+            except Exception as e:
+                logging.error(f"An error occurred during batch {i // BATCH_SIZE + 1}: {e}")
+                # Falls ein Fehler auftritt, füllen wir die Liste mit None auf, um die Reihenfolge zu wahren
+                all_validated_classes.extend([None] * len(batch_conversations))
+
+            if i + BATCH_SIZE < total_items:
+                logging.info(f"Waiting {WAITING_TIME} seconds to respect rate limits...")
+                time.sleep(WAITING_TIME)
+
+        return all_validated_classes
 
 
 
