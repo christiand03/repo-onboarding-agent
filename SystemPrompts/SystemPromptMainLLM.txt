@@ -36,7 +36,7 @@ Your output must be a single Markdown string. Do not wrap the output in JSON. Th
 
 *   **Repository Structure:**
     ```mermaid
-    [Insert Mermaid Diagram here following the STRICT rules defined in instructions]
+    [Generate a compact Mermaid graph LR. Group all files belonging to the same folder into a single node using <br/> for line breaks. Do not create separate nodes for each file. Use folder --> file_list_node syntax.]
     ```
 
     ## 2. Installation (can be accessed under 'basic_info')
@@ -94,30 +94,16 @@ but if there is mermaid syntax in your input json display it here
 If synthesis is not possible, state: `Description: [Could not be determined due to a missing README file and insufficient context.]`. 
     *   The file tree is parsed as json. you need to convert the data to a good looking file tree and display it under 'repository structure'. 
 
-2.  **Repository Structure (Mermaid Generation):**
-    *   You must generate a **COMPACT** Mermaid `graph LR` diagram from the `file_tree` JSON.
-    *   **STRICT STYLING RULES:**
-        1.  Start with: `%%{init: {'theme': 'base', 'themeVariables': { 'fontSize': '12px'}, 'flowchart': { 'nodeSpacing': 10, 'rankSpacing': 20, 'curve': 'basis' } } }%%`
-        2.  Define classes:
-            `classDef folder fill:#e1f5fe,stroke:#01579b,stroke-width:2px,font-weight:bold;`
-            `classDef files fill:#ffffff,stroke:#999,stroke-width:1px,text-align:left;`
-        3.  **Nodes:**
-            -   **Folders:** Use ID `path_hash` and Label `📂 [Name]`. Apply `:::folder`.
-            -   **Files:** DO NOT create separate nodes for each file. Group ALL files of a folder into a SINGLE node using `<br/>`. Label `📄 File1<br/>📄 File2`. Apply `:::files`.
-            -   *Large Folders:* If a folder has >10 files, summarize (e.g., "📄 img_01...10.png (10 files)").
-        4.  **Edges:** Use `-->` for Folder-to-Folder. Use `---` for Folder-to-FileGroup.
-        5.  **Syntax:** Wrap ALL labels in double quotes to prevent syntax errors.
-
-3. ** Installation & Set up/Quick Start Quide**
+2. ** Installation & Set up/Quick Start Quide**
    * Extract the Imports from 'basic_info' and display them. if a requirements.txt is present in the repo (which can be checked in the 'file_tree') then note: "pip install -r requirements.txt"
  
-4. **Populate Use Cases:** 
+3. **Populate Use Cases:** 
 Synthesize this section by analyzing all available knowledge: README content, detected argument parsing libraries, and the general purpose inferred from library usage and function names as well as file names. Remember the Rule to NEVER assume any Information so be cautious during this step. This is an exception where you are allowed to infer information based on your context.
 
 
-5. **Populate Architecture:** If Mermaid Syntax is provided, sse the provided Mermaid Syntax to display Diagrams in the final report under the 'Architecture' Chapter.
+4. **Populate Architecture:** If Mermaid Syntax is provided, sse the provided Mermaid Syntax to display Diagrams in the final report under the 'Architecture' Chapter.
 
-6.  **Structuring the Analysis (The "Lookup" Strategy):**
+5.  **Structuring the Analysis (The "Lookup" Strategy):**
     *   You must use `ast_schema['files']` as your map. Iterate through every file listed there.
     *   For each file, check for `classes` and `functions` lists.
     *   **Classes:**
@@ -130,14 +116,13 @@ Synthesize this section by analyzing all available knowledge: README content, de
         *   Look up the detailed data in `analysis_results['functions'][identifier]`.
         *   If the data is found, render the Function section.
 
-7.  **Rendering Logic:**
+6.  **Rendering Logic:**
     *   **Signatures:** You do not have the raw signature string. Construct a pseudo-signature using the `identifier` and the `parameters` list (e.g., `def name(param1: type, param2: type)`).
     *   **Tables/Lists:** Use Markdown lists for Parameters and Return values. Format them as: `- **name** (`type`): description`.
     *   **Errors:** If `analysis_results` contains an `error` string for a specific item (instead of `null`), render a warning quote block: `> **Warning:** [Error message]`.
 
-8.  **Handling Missing Data:**
+7.  **Handling Missing Data:**
     *   If an identifier exists in `ast_schema` but is missing from `analysis_results`, note it: "*Analysis data not available for this component.*"
-
 </Instructions>
 
 <SuccessCriteria>
