@@ -17,14 +17,14 @@ class ReturnDescription(BaseModel):
 
 class UsageContext(BaseModel):
     """Describes the calling context of a function."""
-    calls: List[str]
-    called_by: List[str]
+    calls: str
+    called_by: str
 
 class FunctionDescription(BaseModel):
     """Contains the detailed analysis of a function's purpose and signature."""
     overall: str
     parameters: List[ParameterDescription]
-    returns: List[ReturnDescription]
+    returns: Optional[List[ReturnDescription]]
     usage_context: UsageContext
 
 class FunctionAnalysis(BaseModel):
@@ -43,14 +43,14 @@ class ConstructorDescription(BaseModel):
 
 class ClassContext(BaseModel):
     """Describes the class's external dependencies and primary points of instantiation."""
-    dependencies: List[str]
-    instantiated_by: List[str]
+    dependencies: str
+    instantiated_by: str
 
 class ClassDescription(BaseModel):
     """Contains the detailed analysis of a class's purpose, constructor, and methods."""
     overall: str
     init_method: ConstructorDescription
-    methods: List[FunctionAnalysis] # Könnte auch nächträglich hinzugefügt werden um Tokens zu sparen
+    methods: List[FunctionAnalysis]
     usage_context: ClassContext
 
 class ClassAnalysis(BaseModel):
@@ -78,11 +78,18 @@ class FunctionAnalysisInput(BaseModel):
 
 # ------ Helper LLM CLASS INPUT Schema  ------
 
+class MethodContextInput(BaseModel):
+    """Structured context for a classes methods"""
+    identifier: str
+    calls: List[str]
+    called_by: List[str]
+    args: List[str]
+    docstring: Optional[str]
 class ClassContextInput(BaseModel):
     """Structured context for analyzing a class."""
     dependencies: List[str]
     instantiated_by: List[str]
-    methods_analysis: List[FunctionAnalysis]
+    method_context: List[MethodContextInput]
 
 class ClassAnalysisInput(BaseModel):
     """The required input to generate a ClassAnalysis object."""
@@ -122,8 +129,8 @@ if __name__ == "__main__":
             ],
         
             "usage_context": {
-                "calls": ["logging.info"],
-                "called_by": ["api.v1.endpoints.add_numbers", "scripts.run_daily_job"]
+                "calls": " bla bla logging.info",
+                "called_by": "bla bla api.v1.endpoints.add_numbers and scripts.run_daily_job"
             }
         },
         # The 'error' field is optional. We can omit it, and it will default to None.
@@ -166,14 +173,8 @@ if __name__ == "__main__":
                 function_analysis_output
             ],
             "usage_context": {
-                "dependencies": [
-                    "A",
-                    "B"
-                ],
-                "instantiated_by": [
-                    "A",
-                    "B"
-                ]
+                "dependencies": "bla bla A and B",
+                "instantiated_by": "bla bla A and B"
             }
         },
         "error": "None"
