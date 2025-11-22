@@ -6,13 +6,20 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_ollama import ChatOllama
 from langchain.messages import HumanMessage, SystemMessage
- 
+
+# --- Configuration & Logging ---
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+load_dotenv()
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL")
+
 class MainLLM:
     """
     Hauptklasse für die Interaktion mit dem LLM.
     """
-    def __init__(self, api_key: str, prompt_file_path: str, model_name: str = "gemini-2.5-pro"):
+    def __init__(self, api_key: str, prompt_file_path: str, model_name: str = "llama3"):
         if not api_key:
             raise ValueError("Gemini API Key must be set.")
         
@@ -23,11 +30,21 @@ class MainLLM:
             logging.error(f"System prompt file not found at: {prompt_file_path}")
             raise
         
-        self.llm = ChatGoogleGenerativeAI(
-            model=model_name,
-            api_key=api_key,
-            temperature=1.0, 
-        )
+        self.model_name = model_name
+
+        if model_name.startswith("gemini-"):
+            self.llm = ChatGoogleGenerativeAI(
+                model=model_name,
+                api_key=api_key,
+                temperature=1.0, 
+            )
+        else:
+            self.llm = ChatOllama(
+                model=model_name,
+                temperature=1.0,
+                base_url=OLLAMA_BASE_URL,
+            )
+
         logging.info(f"Main LLM initialized with model '{model_name}'.")
     
     def call_llm(self, user_input: str):

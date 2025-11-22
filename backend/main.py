@@ -165,8 +165,9 @@ def main_workflow():
 
     logging.info("\n--- Generating documentation for Classes ---")
     if len(helper_llm_class_input) != 0:
-        logging.info("Waiting to respect rate limits before class analysis...")
-        time.sleep(61)
+        if llm_helper.model_name.startswith("gemini-"):
+            logging.info("Waiting to respect rate limits before class analysis...")
+            time.sleep(61)
         class_analysis_results = llm_helper.generate_for_classes(helper_llm_class_input)
 
     if len(class_analysis_results) != 0:
@@ -208,7 +209,7 @@ def main_workflow():
 
     timestamp = datetime.now().strftime("%d_%m_%Y_%H-%M-%S")
     
-    report_filename = f"report_{timestamp}.md"
+    report_filename = f"report_{timestamp}_Helper_{llm_helper.model_name}_MainLLM_{main_llm.model_name}.md"
     report_filepath = os.path.join(output_dir, report_filename)
     
     with open(report_filepath, "w", encoding="utf-8") as f:

@@ -6,6 +6,7 @@ from typing import List, Dict, Any, Optional, Union
 
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_ollama import ChatOllama
 from langchain.messages import HumanMessage, SystemMessage, AIMessage
 from pydantic import ValidationError
 
@@ -22,6 +23,7 @@ from schemas.types import (
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL")
 
 
 class LLMHelper:
@@ -29,7 +31,7 @@ class LLMHelper:
     A class to interact with Google Gemini for generating code snippet documentation.
     It centralizes API interaction, error handling, and validates I/O using Pydantic.
     """
-    def __init__(self, api_key: str, function_prompt_path: str, class_prompt_path: str, model_name: str = "gemini-flash-latest"):
+    def __init__(self, api_key: str, function_prompt_path: str, class_prompt_path: str, model_name: str = "llama3"):
         if not api_key:
             raise ValueError("Gemini API Key must be set.")
         
@@ -52,11 +54,19 @@ class LLMHelper:
         self.model_name = model_name
         self._configure_batch_settings(model_name)
 
-        base_llm = ChatGoogleGenerativeAI(
-            model=model_name,
-            api_key=api_key,
-            temperature=0.3, 
-        )
+        if model_name.startswith("gemini-"):
+            base_llm = ChatGoogleGenerativeAI(
+                model=model_name,
+                api_key=api_key,
+                temperature=0.3, 
+            )
+
+        else:
+            base_llm = ChatOllama(
+                model=model_name,
+                temperature=0.3,
+                base_url=OLLAMA_BASE_URL,
+            )
 
         self.function_llm = base_llm.with_structured_output(FunctionAnalysis, method="json_schema")
         self.class_llm = base_llm.with_structured_output(ClassAnalysis, method="json_schema")
@@ -81,6 +91,9 @@ class LLMHelper:
 
         elif model_name == "gemini-2.5-flash-lite":
             self.batch_size = 15
+
+        elif model_name == "llama3":
+            self.batch_size = 50
             
         else:
             logging.warning(f"Unknown model '{model_name}', using conservative defaults.")
@@ -110,7 +123,7 @@ class LLMHelper:
 
             batch_conversations = conversations[i:i + BATCH_SIZE]
 
-            logging.info(f"Calling Gemini API for Batch {i // BATCH_SIZE + 1} (Items {i+1} to {min(i + BATCH_SIZE, total_items)} of {total_items})...")            
+            logging.info(f"Calling LLM {self.model_name} API for Batch {i // BATCH_SIZE + 1} (Items {i+1} to {min(i + BATCH_SIZE, total_items)} of {total_items})...")            
         
             try:
                 batch_results = self.function_llm.batch(batch_conversations)
@@ -152,7 +165,7 @@ class LLMHelper:
         for i in range(0, total_items, BATCH_SIZE):
 
             batch_conversations = conversations[i:i + BATCH_SIZE]
-            logging.info(f"Calling Gemini API for Batch {i // BATCH_SIZE + 1} (Items {i+1} to {min(i + BATCH_SIZE, total_items)} of {total_items})...")            
+            logging.info(f"Calling LLM {self.model_name} API for Batch {i // BATCH_SIZE + 1} (Items {i+1} to {min(i + BATCH_SIZE, total_items)} of {total_items})...")            
 
             try:
                 batch_results = self.class_llm.batch(batch_conversations)
