@@ -1,7 +1,7 @@
 import ast
 import networkx as nx
 
-from backend.callgraph import build_callGraph
+from .callgraph import build_callGraph
 
 class ASTVisitor(ast.NodeVisitor):
     def __init__(self, source_code: str,):
