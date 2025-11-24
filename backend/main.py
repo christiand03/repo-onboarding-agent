@@ -6,11 +6,11 @@ from datetime import datetime
 
 from dotenv import load_dotenv
 
-from getRepo import GitRepository, RepoFile
-from AST_Schema import ASTAnalyzer
-from MainLLM import MainLLM
-from basic_info import ProjektInfoExtractor
-from HelperLLM import LLMHelper
+from .getRepo import GitRepository, RepoFile
+from .AST_Schema import ASTAnalyzer
+from .MainLLM import MainLLM
+from .basic_info import ProjektInfoExtractor
+from .HelperLLM import LLMHelper
 from schemas.types import FunctionContextInput, FunctionAnalysisInput, ClassContextInput, ClassAnalysisInput
 
 
@@ -19,9 +19,10 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
-def main_workflow():
+def main_workflow(input):
     # 1. User gibt Input
-    user_input = "Analyze the following Git Repository https://github.com/christiand03/repo-onboarding-agent" # Dummy Data
+    user_input = input
+    #"Analyze the following Git Repository https://github.com/christiand03/repo-onboarding-agent" # Dummy Data
     # https://github.com/pallets/flask
 
     # 2. Input ans Backend übergeben

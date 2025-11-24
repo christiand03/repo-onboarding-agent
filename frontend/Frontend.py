@@ -1,10 +1,17 @@
-import streamlit as st
 import time
 import numpy as np
 from datetime import datetime
 from pymongo import MongoClient
 from dotenv import load_dotenv
 import os
+import sys
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import streamlit as st
+import backend
+
+
+
 
 load_dotenv()
 MONGO_KEY = os.getenv("MONGO_KEY")
@@ -67,12 +74,20 @@ for ex in chat["exchanges"]:
 if prompt := st.chat_input("Put in Link of Repository"):
     #print message and store it in chats
     st.chat_message("user").write(prompt)
-    
     # Statusanzeige
     status= st.status("⏳ Generiere Antwort...", expanded=True)
-    time.sleep(2)  # Delay simulieren
-    
-    response = f"Echo: {prompt}"
+
+    # Import backend.main only when needed to avoid import-time failures
+    try:
+        from backend.main import main_workflow
+    except Exception as e:
+        st.chat_message("assistant").write(f"Import error: {e}")
+        raise
+
+    try:
+        response = main_workflow(prompt)
+    except Exception as e:
+        response = f"Fehler bei der Verarbeitung: {e}"
     st.chat_message("assistant").write(response)
 
     new_id = len(chat["exchanges"])+1

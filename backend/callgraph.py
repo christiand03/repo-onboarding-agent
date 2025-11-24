@@ -3,7 +3,7 @@ import networkx as nx
 import os 
 
 from typing import Dict
-from getRepo import RepoFile
+from .getRepo import RepoFile
 
 def build_callGraph(tree: ast.AST, 
                     filename: str | None = None, 
