@@ -1,0 +1,17 @@
+strict digraph {
+n0 [label="test_js_example.py::test_index"];
+n1 [label="test_js_example.py::check"];
+n2 [label="test_js_example.py::test_add"];
+n3 [label=<test_js_example.py>];
+n4 [label="test_js_example.py::get"];
+n5 [label="test_js_example.py::connected_to"];
+n6 [label="test_js_example.py::parametrize"];
+n7 [label="test_js_example.py::get_json"];
+n8 [label="test_js_example.py::post"];
+n2 -> n6;
+n2 -> n7;
+n2 -> n8;
+n3 -> n4;
+n3 -> n5;
+n3 -> n6;
+}

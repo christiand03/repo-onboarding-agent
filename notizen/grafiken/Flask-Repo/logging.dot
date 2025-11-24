@@ -1,0 +1,23 @@
+strict digraph {
+n0 [label="logging.py::wsgi_errors_stream"];
+n1 [label="logging.py::has_level_handler"];
+n2 [label="logging.py::create_logger"];
+n3 [label="logging.py::any"];
+n4 [label="logging.py::getEffectiveLevel"];
+n5 [label=<logging.py>];
+n6 [label="logging.py::Formatter"];
+n7 [label="logging.py::StreamHandler"];
+n8 [label="logging.py::setFormatter"];
+n9 [label="logging.py::addHandler"];
+n10 [label="logging.py::getLogger"];
+n11 [label="logging.py::setLevel"];
+n1 -> n3;
+n1 -> n4;
+n2 -> n1;
+n2 -> n9;
+n2 -> n10;
+n2 -> n11;
+n5 -> n6;
+n5 -> n7;
+n5 -> n8;
+}
