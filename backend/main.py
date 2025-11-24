@@ -21,6 +21,7 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 def main_workflow():
+    starttime = datetime.now()
     # 1. User gibt Input
     user_input = "Analyze the following Git Repository https://github.com/christiand03/repo-onboarding-agent" # Dummy Data
     # https://github.com/pallets/flask
@@ -147,6 +148,8 @@ def main_workflow():
     class_analysis_results = []
     #raise ("Test End.")
 
+    Helper_starttime = datetime.now()
+
     logging.info("\n--- Generating documentation for Functions ---")
     if len(helper_llm_function_input) != 0:
         function_analysis_results = llm_helper.generate_for_functions(helper_llm_function_input)
@@ -180,6 +183,8 @@ def main_workflow():
             else:
                 logging.warning(f"Failed to generate doc for a class")
 
+    Helper_endtime =  datetime.now()
+
     # 13. Final Documentation Dictionary als Input für MainLLM 
     main_llm_input = {}
     
@@ -194,12 +199,14 @@ def main_workflow():
     
     # 14. final Report generieren (MainLLM)
     main_llm = MainLLM(api_key=GEMINI_API_KEY, prompt_file_path="SystemPrompts\SystemPromptMainLLM.txt")
-
+    Main_starttime = datetime.now()
     logging.info("Starting Synthesis Stage...")
     final_report = main_llm.call_llm(main_llm_input_json)
     logging.info("Synthesis Stage completed.")
     logging.info("Report generated.")
+    Main_endtime = datetime.now()
     
+
     # (15. Documenation an Frontend zurückgeben)
 
     # Optional: Speichern des finalen Berichts in einer Datei
@@ -217,6 +224,15 @@ def main_workflow():
     
     logging.info(f"Final report saved to '{report_filepath}'.")
 
+    # Logging der Ausführungszeiten
+    endtime = datetime.now()
+    duration = endtime - starttime
+    Main_duration = Main_endtime - Main_starttime
+    Helper_duration = Helper_endtime - Helper_starttime
+
+    logging.info(f"Total execution time: {duration}")
+    logging.info(f"HelperLLM report generation time: {Helper_duration}")
+    logging.info(f"MainLLM report generation time: {Main_duration}")
 
 if __name__ == "__main__":
     main_workflow()
