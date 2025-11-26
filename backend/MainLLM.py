@@ -19,7 +19,7 @@ class MainLLM:
     """
     Hauptklasse für die Interaktion mit dem LLM.
     """
-    def __init__(self, api_key: str, prompt_file_path: str, model_name: str = "llama3"):
+    def __init__(self, api_key: str, prompt_file_path: str, model_name: str = "gemini-2.5-pro", ollama_base_url: str = None):
         if not api_key:
             raise ValueError("Gemini API Key must be set.")
         
@@ -39,10 +39,11 @@ class MainLLM:
                 temperature=1.0, 
             )
         else:
+            target_url = ollama_base_url if ollama_base_url else OLLAMA_BASE_URL
             self.llm = ChatOllama(
                 model=model_name,
                 temperature=1.0,
-                base_url=OLLAMA_BASE_URL,
+                base_url=target_url,
             )
 
         logging.info(f"Main LLM initialized with model '{model_name}'.")
