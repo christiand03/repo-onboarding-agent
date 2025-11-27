@@ -37,28 +37,26 @@ def calculate_net_time(start_time, end_time, total_items, batch_size, model_name
     return max(0, net_time)
 
 
-# [CHANGE] Neuer Parameter status_callback
 def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None):
     
-    # [CHANGE] Helper Funktion für Status Updates im Frontend
     def update_status(msg):
         if status_callback:
-            status_callback(msg) # Sendet msg an st.status
+            status_callback(msg)
         logging.info(msg)
 
-    # 1. Setup & Input
-    # [CHANGE] Status Update
     update_status("🔍 Analysiere Input...")
     
     user_input = input
-    workflow_start_time = datetime.now()
     
+    # API Key & Ollama Base URL aus Frontend holen
     gemini_api_key = api_keys.get("gemini")
     ollama_base_url = api_keys.get("ollama")
 
-    helper_model = model_names.get("helper", "gemini-2.5-pro")
+    # Standardeinstellungen für Modelle
+    helper_model = model_names.get("helper", "gemini-flash-latest")
     main_model = model_names.get("main", "gemini-2.5-pro")
 
+    # Error Handling für fehlende API Keys
     if not gemini_api_key and "gemini" in helper_model:
         raise ValueError("Gemini API Key was not provided in api_keys dictionary.")
 
@@ -73,8 +71,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
     else:
         raise ValueError("Could not find a valid URL in the provided input.")
     
-    # 3. Repo Analyse
-    # [CHANGE] Status Update
+
     update_status(f"⬇️ Klone Repository: {repo_url} ...")
     
     repo_files = []
@@ -82,69 +79,99 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         with GitRepository(repo_url) as repo:
             repo_files = repo.get_all_files()
             logging.info(f"Total files retrieved: {len(repo_files)}")
-            
-            # Basic Info
-            # [CHANGE] Status Update
-            update_status("ℹ️ Extrahiere Basis-Informationen...")
-            info_extractor = ProjektInfoExtractor()
-            basic_project_info = info_extractor.extrahiere_info(dateien=repo_files, repo_url=repo_url)
-            
-            # File Tree
-            repo_file_tree = repo.get_file_tree()
-            
-            # AST
-            # [CHANGE] Status Update
-            update_status("🌳 Erstelle Abstract Syntax Tree (AST)...")
-            ast_analyzer = ASTAnalyzer()   
-            ast_schema = ast_analyzer.analyze_repository(files=repo_files)
+    except Exception as e:
+        logging.error(f"Error cloning repository: {e}")
+        raise        
 
+    # Extrahiere Basic Infos
+    update_status("ℹ️ Extrahiere Basis-Informationen...")
+    basic_project_info = {}
+    try:
+        info_extractor = ProjektInfoExtractor()
+        basic_project_info = info_extractor.extrahiere_info(dateien=repo_files, repo_url=repo_url)
+        logging.info("Basic project info extracted")
+    except Exception as e:
+        logging.error(f"Error extracting basic project info: {e}")
+        
+
+    # Erstelle Repository Dateibaum
+    update_status("🌲 Erstelle Repository Dateibaum...")
+    repo_file_tree = {}
+    try:
+        repo_file_tree = repo.get_file_tree()
+        logging.info("Repository file tree constructed")
+    except Exception as e:
+        logging.error(f"Error constructing repository file tree: {e}")
+        
+
+    # Erstelle AST Schema
+    update_status("🌳 Erstelle Abstract Syntax Tree (AST)...")
+    try:        
+        ast_analyzer = ASTAnalyzer()   
+        ast_schema = ast_analyzer.analyze_repository(files=repo_files)
+        logging.info("AST schema created")
     except Exception as e:
         logging.error(f"Error retrieving repository files: {e}")
         raise
 
-    # 4. Datenvorbereitung HelperLLM
-    # [CHANGE] Status Update
+    # 4. HelperLLM Input Vorbereitung
     update_status("⚙️ Bereite Daten für Helper LLM vor...")
     
     helper_llm_function_input = []
     helper_llm_class_input = []
 
-    for filename, file_data in ast_schema['files'].items():
-        ast_nodes = file_data.get('ast_nodes', {})
-        imports = ast_nodes.get('imports', [])
-        
-        for function in ast_nodes.get('functions', []):
-            context = function.get('context', {})
-            f_input = FunctionAnalysisInput(
-                mode=function.get('mode', 'function_analysis'),
-                identifier=function.get('identifier'),
-                source_code=function.get('source_code'),
-                imports=imports,
-                context=FunctionContextInput(
-                    calls=context.get('calls', []),
-                    called_by=context.get('called_by', [])
-                )
-            )
-            helper_llm_function_input.append(f_input)
+    try:
+        for filename, file_data in ast_schema['files'].items():
+            ast_nodes = file_data.get('ast_nodes', {})
+            imports = ast_nodes.get('imports', [])
+            functions = ast_nodes.get('functions', [])
+            classes = ast_nodes.get('classes', [])
 
-        for _class in ast_nodes.get('classes', []):
-            context = _class.get('context', {})
-            c_input = ClassAnalysisInput(
-                mode=_class.get('mode', 'class_analysis'),
-                identifier=_class.get('identifier'),
-                source_code=_class.get('source_code'), 
-                imports=imports, 
-                context=ClassContextInput(
-                    dependencies=context.get('dependencies', []),
-                    instantiated_by=context.get('instantiated_by', []),
-                    method_context=context.get('method_context', [])
+            for function in functions:
+                context = function.get('context', {})
+                function_context = FunctionContextInput(
+                    calls = context.get('calls', []),
+                    called_by = context.get('called_by', [])
                 )
+                
+                function_input = FunctionAnalysisInput(
+                    mode = function.get('mode', 'function_analysis'),
+                    identifier = function.get('identifier'),
+                    source_code = function.get('source_code'),
+                    imports = imports,
+                    context = function_context
+                )
+                
+                helper_llm_function_input.append(function_input)
+    except Exception as e:
+        logging.error(f"Error preparing function inputs for Helper LLM: {e}")
+        raise
+    
+    try:
+        for _class in classes:
+            context = _class.get('context', {})
+            class_context = ClassContextInput(
+                dependencies = context.get('dependencies', []),
+                instantiated_by = context.get('instantiated_by', []),
+                method_context = context.get('method_context', [])
             )
-            helper_llm_class_input.append(c_input)
+
+            class_input = ClassAnalysisInput(
+                mode = _class.get('mode', 'class_analysis'),
+                identifier =_class.get('identifier'),
+                source_code = _class.get('source_code'), 
+                imports = imports, 
+                context = class_context
+            )
+            
+            helper_llm_class_input.append(class_input)
+    except Exception as e:
+        logging.error(f"Error preparing class inputs for Helper LLM: {e}")
+        raise
     
     logging.info(f"Functions: {len(helper_llm_function_input)}, Classes: {len(helper_llm_class_input)}")
     
-    # 5. HelperLLM Ausführung
+    # Initialisiere HelperLLM
     function_prompt_file = 'SystemPrompts/SystemPromptFunctionHelperLLM.txt'
     class_prompt_file = 'SystemPrompts/SystemPromptClassHelperLLM.txt'
     
@@ -159,51 +186,71 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
     if ollama_base_url:
         os.environ["OLLAMA_BASE_URL"] = ollama_base_url
 
+    # Initialisiere Ergebniscontainer
     analysis_results = {}
-
-    # --- Functions ---
-    if len(helper_llm_function_input) > 0:
-        # [CHANGE] Status Update
-        update_status(f"🤖 Helper LLM: Analysiere {len(helper_llm_function_input)} Funktionen ({helper_model})...")
-    
-    t_start_func = time.time()
     function_analysis_results = []
-    
-    if len(helper_llm_function_input) > 0:
-        function_analysis_results = llm_helper.generate_for_functions(helper_llm_function_input)
-    
-    t_end_func = time.time()
-    net_time_func = calculate_net_time(t_start_func, t_end_func, len(helper_llm_function_input), llm_helper.batch_size, helper_model)
-
-    if function_analysis_results:
-        analysis_results["functions"] = {}
-        for doc in function_analysis_results:
-            if doc:
-                analysis_results["functions"][doc.identifier] = doc.model_dump()
-
-    # --- Classes ---
-    if len(helper_llm_class_input) > 0:
-        # [CHANGE] Status Update
-        update_status(f"🤖 Helper LLM: Analysiere {len(helper_llm_class_input)} Klassen ({helper_model})...")
-        
-    t_start_class = time.time()
     class_analysis_results = []
-    
-    if len(helper_llm_class_input) > 0:
-        class_analysis_results = llm_helper.generate_for_classes(helper_llm_class_input)
-    
-    t_end_class = time.time()
-    net_time_class = calculate_net_time(t_start_class, t_end_class, len(helper_llm_class_input), llm_helper.batch_size, helper_model)
 
-    if class_analysis_results:
-        analysis_results["classes"] = {}
-        for doc in class_analysis_results:
-            if doc:
-                analysis_results["classes"][doc.identifier] = doc.model_dump()
+    # Call HelperLLM für Funktionen
+    update_status(f"🤖 Helper LLM: Analysiere {len(helper_llm_function_input)} Funktionen ({helper_model})...")
+
+    try:
+        net_time_func = 0
+        if len(helper_llm_function_input) > 0:
+
+            logging.info("\n--- Generating documentation for Functions ---")
+            t_start_func = time.time()    
+            function_analysis_results = llm_helper.generate_for_functions(helper_llm_function_input)    
+            t_end_func = time.time()
+            net_time_func = calculate_net_time(t_start_func, t_end_func, len(helper_llm_function_input), llm_helper.batch_size, helper_model)
+
+        if len(function_analysis_results) != 0:
+            for doc in function_analysis_results:
+                if doc:
+                    logging.info(f"Successfully generated doc for: {doc.identifier}")
+                    if "functions" not in analysis_results:
+                        analysis_results["functions"] = {}
+                    analysis_results["functions"][doc.identifier] = doc.model_dump() 
+                else:
+                    logging.warning(f"Failed to generate doc for a function") 
+    except Exception as e:
+        logging.error(f"Error during Helper LLM function analysis: {e}")
+        raise
+    
+
+    # Call HelperLLM für Klassen
+    try:
+        net_time_class = 0
+        if len(helper_llm_class_input) > 0:
+            # Rate Limit Sleep für Gemini Modelle
+            if llm_helper.model_name.startswith("gemini-") & (len(helper_llm_function_input) == 0):
+                time.sleep(61)
+                update_status("💤 Wartezeit eingelegt, um Rate Limits einzuhalten...")
+            
+            update_status(f"🤖 Helper LLM: Analysiere {len(helper_llm_class_input)} Klassen ({helper_model})...")
+            
+            logging.info("\n--- Generating documentation for Classes ---")
+            t_start_class = time.time()
+            class_analysis_results = llm_helper.generate_for_classes(helper_llm_class_input)
+            t_end_class = time.time()
+            net_time_class = calculate_net_time(t_start_class, t_end_class, len(helper_llm_class_input), llm_helper.batch_size, helper_model)
+
+        if len(class_analysis_results) != 0:
+            for doc in class_analysis_results:
+                if doc:
+                    logging.info(f"Successfully generated doc for: {doc.identifier}")
+                    if "classes" not in analysis_results:
+                        analysis_results["classes"] = {}
+                    analysis_results["classes"][doc.identifier] = doc.model_dump() 
+                else:
+                    logging.warning(f"Failed to generate doc for a class")
+    except Exception as e:
+        logging.error(f"Error during Helper LLM class analysis: {e}")
+        raise
 
     total_helper_time = net_time_func + net_time_class
 
-    # 6. MainLLM Input Vorbereitung
+    # MainLLM Input Vorbereitung
     main_llm_input = {
         "basic_info": basic_project_info,
         "file_tree": repo_file_tree,
@@ -212,7 +259,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
     }
     main_llm_input_json = json.dumps(main_llm_input, indent=2)
     
-    # 7. MainLLM Ausführung
+    # MainLLM Ausführung
     main_llm = MainLLM(
         api_key=gemini_api_key, 
         prompt_file_path="SystemPrompts/SystemPromptMainLLM.txt",
@@ -220,19 +267,28 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         ollama_base_url=ollama_base_url,
     )
 
-    # [CHANGE] Status Update
-    update_status(f"🧠 Main LLM: Generiere finalen Report ({main_model})...")
-    
-    # Safety Sleep um RPM Limits zu respecten (nach dem Helper Stress)
-    time.sleep(5) 
 
-    t_start_main = time.time()
-    final_report = main_llm.call_llm(main_llm_input_json)
-    t_end_main = time.time()
-    total_main_time = t_end_main - t_start_main
-    
-    # [CHANGE] Status Update
-    update_status("✅ Analyse abgeschlossen!")
+    # RPM Limit Sleep für Gemini Modelle
+    if llm_helper.model_name == main_llm.model_name and main_llm.model_name.startswith("gemini-"):
+        time.sleep(61)
+        update_status("💤 Wartezeit eingelegt, um Rate Limits einzuhalten...")
+
+    # Call MainLLM für finalen Report
+    update_status(f"🧠 Main LLM: Generiere finalen Report ({main_model})...")
+    try:
+        total_main_time = 0
+        logging.info("\n--- Generating Final Report ---")
+        t_start_main = time.time()
+        final_report = main_llm.call_llm(main_llm_input_json)
+        #for token in main_llm.stream_llm(main_llm_input_json):
+        #    full_response += token    
+        #    final_report = full_response
+        t_end_main = time.time()
+        total_main_time = t_end_main - t_start_main
+    except Exception as e:
+        logging.error(f"Error during Main LLM final report generation: {e}")
+        raise
+
     
     # Speichern
     output_dir = "result"
