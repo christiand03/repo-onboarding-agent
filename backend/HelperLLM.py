@@ -31,7 +31,7 @@ class LLMHelper:
     A class to interact with Google Gemini for generating code snippet documentation.
     It centralizes API interaction, error handling, and validates I/O using Pydantic.
     """
-    def __init__(self, api_key: str, function_prompt_path: str, class_prompt_path: str, model_name: str = "llama3"):
+    def __init__(self, api_key: str, function_prompt_path: str, class_prompt_path: str, model_name: str = "gemini-2.0-flash-lite", ollama_base_url: str = None):
         if not api_key:
             raise ValueError("Gemini API Key must be set.")
         
@@ -62,10 +62,11 @@ class LLMHelper:
             )
 
         else:
+            target_url = ollama_base_url if ollama_base_url else OLLAMA_BASE_URL
             base_llm = ChatOllama(
                 model=model_name,
                 temperature=0.3,
-                base_url=OLLAMA_BASE_URL,
+                base_url=target_url,
             )
 
         self.function_llm = base_llm.with_structured_output(FunctionAnalysis, method="json_schema")

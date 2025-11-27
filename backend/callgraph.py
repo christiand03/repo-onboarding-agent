@@ -3,8 +3,8 @@ import networkx as nx
 import os 
 
 from typing import Dict
+from .getRepo import RepoFile
 
-from getRepo import RepoFile
 class CallGraph(ast.NodeVisitor):
     """
     Visitor, der Funktionsaufrufe im AST sammelt und Kanten für den Call-Graph erstellt.
