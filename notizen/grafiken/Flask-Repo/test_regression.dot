@@ -1,0 +1,28 @@
+strict digraph {
+n0 [label="test_regression.py::test_aborting"];
+n1 [label="test_regression.py::handle_foo"];
+n2 [label="test_regression.py::index"];
+n3 [label="test_regression.py::test"];
+n4 [label="test_regression.py::str"];
+n5 [label="test_regression.py::errorhandler"];
+n6 [label="test_regression.py::redirect"];
+n7 [label="test_regression.py::url_for"];
+n8 [label="test_regression.py::route"];
+n9 [label="test_regression.py::abort"];
+n10 [label="test_regression.py::Foo"];
+n11 [label=<test_regression.py>];
+n12 [label="test_regression.py::test_client"];
+n13 [label="test_regression.py::get"];
+n14 [label="test_regression.py::rpartition"];
+n1 -> n4;
+n1 -> n5;
+n2 -> n6;
+n2 -> n7;
+n2 -> n8;
+n2 -> n9;
+n3 -> n8;
+n3 -> n10;
+n11 -> n12;
+n11 -> n13;
+n11 -> n14;
+}

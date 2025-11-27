@@ -1,0 +1,14 @@
+strict digraph {
+n0 [label="typing_app_decorators.py::after_sync"];
+n1 [label="typing_app_decorators.py::after_async"];
+n2 [label="typing_app_decorators.py::before_sync"];
+n3 [label="typing_app_decorators.py::before_async"];
+n4 [label="typing_app_decorators.py::teardown_sync"];
+n5 [label="typing_app_decorators.py::teardown_async"];
+n6 [label=<typing_app_decorators.py>];
+n7 [label="typing_app_decorators.py::Flask"];
+n8 [label="typing_app_decorators.py::Response"];
+n0 -> n8;
+n1 -> n8;
+n6 -> n7;
+}

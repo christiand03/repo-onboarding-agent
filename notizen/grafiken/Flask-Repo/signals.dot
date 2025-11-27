@@ -1,0 +1,7 @@
+strict digraph {
+n0 [label=<signals.py>];
+n1 [label="signals.py::Namespace"];
+n2 [label="signals.py::signal"];
+n0 -> n1;
+n0 -> n2;
+}
