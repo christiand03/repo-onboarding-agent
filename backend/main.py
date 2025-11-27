@@ -85,7 +85,6 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
 
     # Extrahiere Basic Infos
     update_status("ℹ️ Extrahiere Basis-Informationen...")
-    basic_project_info = {}
     try:
         info_extractor = ProjektInfoExtractor()
         basic_project_info = info_extractor.extrahiere_info(dateien=repo_files, repo_url=repo_url)
@@ -96,7 +95,6 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
 
     # Erstelle Repository Dateibaum
     update_status("🌲 Erstelle Repository Dateibaum...")
-    repo_file_tree = {}
     try:
         repo_file_tree = repo.get_file_tree()
         logging.info("Repository file tree constructed")
@@ -223,7 +221,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         net_time_class = 0
         if len(helper_llm_class_input) > 0:
             # Rate Limit Sleep für Gemini Modelle
-            if llm_helper.model_name.startswith("gemini-") & (len(helper_llm_function_input) == 0):
+            if llm_helper.model_name.startswith("gemini-") & (len(helper_llm_function_input) > 0):
                 time.sleep(61)
                 update_status("💤 Wartezeit eingelegt, um Rate Limits einzuhalten...")
             
@@ -320,4 +318,5 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
     }
 
 if __name__ == "__main__":
-    pass
+    user_input = "https://github.com/christiand03/repo-onboarding-agent"
+    main_workflow(user_input, api_keys={"gemini": os.getenv("GEMINI_API_KEY")}, model_names={})
