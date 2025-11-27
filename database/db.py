@@ -3,13 +3,20 @@ from pymongo import MongoClient
 from dotenv import load_dotenv  
 import streamlit_authenticator as stauth
 from cryptography.fernet import Fernet
+import streamlit as st
 
 import os
 
-load_dotenv()
+if "MONGO_KEY" in st.secrets and "ENCRYPTION_KEY" in st.secrets:
+    MONGO_KEY = st.secrets["MONGO_KEY"]
+    ENCRYPTION_KEY = st.secrets["ENCRYPTION_KEY"]
+else:
+    load_dotenv()
+    MONGO_KEY = os.getenv("MONGO_KEY")
+    ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY")
 
-MONGO_KEY = os.getenv("MONGO_KEY")
-ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY")
+if not MONGO_KEY or not ENCRYPTION_KEY:
+    raise ValueError("Database configuration is missing! Check Secrets or .env")
 
 client=MongoClient(MONGO_KEY)
 
