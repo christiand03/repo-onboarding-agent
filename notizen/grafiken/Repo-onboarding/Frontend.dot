@@ -1,0 +1,25 @@
+strict digraph {
+n0 [label=<Frontend.py>];
+n1 [label="Frontend.py::title"];
+n2 [label="Frontend.py::button"];
+n3 [label="Frontend.py::write"];
+n4 [label="Frontend.py::status"];
+n5 [label="Frontend.py::len"];
+n6 [label="Frontend.py::markdown"];
+n7 [label="Frontend.py::append"];
+n8 [label="Frontend.py::sleep"];
+n9 [label="Frontend.py::rerun"];
+n10 [label="Frontend.py::chat_input"];
+n11 [label="Frontend.py::chat_message"];
+n0 -> n1;
+n0 -> n2;
+n0 -> n3;
+n0 -> n4;
+n0 -> n5;
+n0 -> n6;
+n0 -> n7;
+n0 -> n8;
+n0 -> n9;
+n0 -> n10;
+n0 -> n11;
+}

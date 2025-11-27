@@ -1,0 +1,8 @@
+strict digraph {
+n0 [label="test_factory.py::test_config"];
+n1 [label="test_factory.py::test_hello"];
+n2 [label="test_factory.py::create_app"];
+n3 [label="test_factory.py::get"];
+n0 -> n2;
+n1 -> n3;
+}

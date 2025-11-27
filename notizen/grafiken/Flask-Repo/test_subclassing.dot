@@ -1,0 +1,20 @@
+strict digraph {
+n0 [label="test_subclassing.py::test_suppressed_exception_logging"];
+n1 [label="test_subclassing.py::SuppressedFlask::log_exception"];
+n2 [label="test_subclassing.py::index"];
+n3 [label=<test_subclassing.py>];
+n4 [label="test_subclassing.py::test_client"];
+n5 [label="test_subclassing.py::getvalue"];
+n6 [label="test_subclassing.py::SuppressedFlask"];
+n7 [label="test_subclassing.py::StringIO"];
+n8 [label="test_subclassing.py::get"];
+n9 [label="test_subclassing.py::route"];
+n10 [label="test_subclassing.py::Exception"];
+n2 -> n9;
+n2 -> n10;
+n3 -> n4;
+n3 -> n5;
+n3 -> n6;
+n3 -> n7;
+n3 -> n8;
+}

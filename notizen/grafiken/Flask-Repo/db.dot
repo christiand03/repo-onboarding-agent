@@ -1,0 +1,37 @@
+strict digraph {
+n0 [label="db.py::get_db"];
+n1 [label="db.py::close_db"];
+n2 [label="db.py::init_db"];
+n3 [label="db.py::init_db_command"];
+n4 [label="db.py::init_app"];
+n5 [label="db.py::connect"];
+n6 [label="db.py::close"];
+n7 [label="db.py::pop"];
+n8 [label="db.py::read"];
+n9 [label="db.py::decode"];
+n10 [label="db.py::executescript"];
+n11 [label="db.py::open_resource"];
+n12 [label="db.py::echo"];
+n13 [label="db.py::command"];
+n14 [label=<db.py>];
+n15 [label="db.py::fromisoformat"];
+n16 [label="db.py::register_converter"];
+n17 [label="db.py::add_command"];
+n18 [label="db.py::teardown_appcontext"];
+n0 -> n5;
+n1 -> n6;
+n1 -> n7;
+n2 -> n0;
+n2 -> n8;
+n2 -> n9;
+n2 -> n10;
+n2 -> n11;
+n3 -> n2;
+n3 -> n12;
+n3 -> n13;
+n4 -> n17;
+n4 -> n18;
+n14 -> n9;
+n14 -> n15;
+n14 -> n16;
+}

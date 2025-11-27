@@ -1,0 +1,10 @@
+strict digraph {
+n0 [label="factory.py::create_app"];
+n1 [label="factory.py::create_app2"];
+n2 [label="factory.py::no_app"];
+n3 [label="factory.py::Flask"];
+n4 [label="factory.py::join"];
+n0 -> n3;
+n1 -> n4;
+n1 -> n3;
+}
