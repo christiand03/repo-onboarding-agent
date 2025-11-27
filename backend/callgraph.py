@@ -19,7 +19,7 @@ class CallGraph(ast.NodeVisitor):
 
         self.graph = nx.DiGraph()
         self.import_mapping: dict[str, str] = {}
-        self.function_set: set[str] = ()
+        self.function_set: set[str] = set()
         self.edges: Dict[str, set[str]] = {}
 
     def _recursive_call(self, node) -> list[str]:
