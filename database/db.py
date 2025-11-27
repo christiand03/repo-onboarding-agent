@@ -3,6 +3,7 @@ from pymongo import MongoClient
 from dotenv import load_dotenv  
 import streamlit_authenticator as stauth
 from cryptography.fernet import Fernet
+import streamlit as st
 
 import os
 
