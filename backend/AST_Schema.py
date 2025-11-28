@@ -1,11 +1,35 @@
 import ast
 import networkx as nx
+import os
 
-from .callgraph import build_callGraph
+from .callgraph import build_callGraph # Angenommen, diese Funktion existiert
+
+# ==============================================================================
+# NEU: Hilfsfunktion zur Umwandlung von Dateipfaden in Modulpfade
+# ==============================================================================
+def path_to_module(filepath, project_root):
+    """Wandelt einen Dateipfad in einen Python-Modulpfad um."""
+    try:
+        rel_path = os.path.relpath(filepath, project_root)
+    except ValueError:
+        rel_path = os.path.basename(filepath)
+
+    if rel_path.endswith('.py'):
+        rel_path = rel_path[:-3]
+    
+    module_path = rel_path.replace(os.path.sep, '.')
+    
+    if module_path.endswith('.__init__'):
+        return module_path[:-9]
+        
+    return module_path
 
 class ASTVisitor(ast.NodeVisitor):
-    def __init__(self, source_code: str,):
+    def __init__(self, source_code: str, file_path: str, project_root: str):
         self.source_code = source_code
+        self.file_path = file_path
+        self.project_root = project_root
+        self.module_path = path_to_module(self.file_path, self.project_root)
         self.schema = {"imports": [], "functions": [], "classes": []}
         self._current_class = None
 
@@ -20,9 +44,12 @@ class ASTVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_ClassDef(self, node):
+        class_identifier = f"{self.module_path}.{node.name}"
+
         class_info = {
             "mode": "class_analysis",
-            "identifier": node.name, 
+            "identifier": class_identifier,
+            "name": node.name,
             "docstring": ast.get_docstring(node),
             "source_code": ast.get_source_segment(self.source_code, node),
             "start_line": node.lineno,
@@ -41,8 +68,10 @@ class ASTVisitor(ast.NodeVisitor):
 
     def visit_FunctionDef(self, node):
         if self._current_class:
+            method_identifier = f"{self._current_class['identifier']}.{node.name}"
             method_context_info = {
-                "identifier": node.name,
+                "identifier": method_identifier,
+                "name": node.name,
                 "calls": [],
                 "called_by": [],
                 "args": [arg.arg for arg in node.args.args],
@@ -52,9 +81,11 @@ class ASTVisitor(ast.NodeVisitor):
             }
             self._current_class["context"]["method_context"].append(method_context_info)
         else:
+            func_identifier = f"{self.module_path}.{node.name}"
             func_info = {
                 "mode": "function_analysis",
-                "identifier": node.name,
+                "identifier": func_identifier,
+                "name": node.name,
                 "args": [arg.arg for arg in node.args.args],
                 "docstring": ast.get_docstring(node),
                 "source_code": ast.get_source_segment(self.source_code, node),
@@ -80,17 +111,17 @@ class ASTAnalyzer:
     @staticmethod
     def _enrich_schema_with_callgraph(schema: dict, call_graph: nx.DiGraph, filename: str):
         for func in schema["functions"]:
-            func_name = f"{filename}::{func['identifier']}"
-            if func_name in call_graph:
-                func['context']['calls'] = sorted(list(call_graph.successors(func_name)))
-                func['context']['called_by'] = sorted(list(call_graph.predecessors(func_name)))
+            func_name_key = f"{filename}::{func['name']}"
+            if func_name_key in call_graph:
+                func['context']['calls'] = sorted(list(call_graph.successors(func_name_key)))
+                func['context']['called_by'] = sorted(list(call_graph.predecessors(func_name_key)))
 
         for cls in schema["classes"]:
             for method_context in cls["context"]["method_context"]:
-                func_name = f"{filename}::{cls['identifier']}::{method_context['identifier']}"
-                if func_name in call_graph:
-                    calls = sorted(list(call_graph.successors(func_name)))
-                    called_by = sorted(list(call_graph.predecessors(func_name)))
+                func_name_key = f"{filename}::{cls['name']}::{method_context['name']}"
+                if func_name_key in call_graph:
+                    calls = sorted(list(call_graph.successors(func_name_key)))
+                    called_by = sorted(list(call_graph.predecessors(func_name_key)))
                     
                     method_context['calls'] = calls
                     method_context['called_by'] = called_by
@@ -99,6 +130,14 @@ class ASTAnalyzer:
         full_schema = {
             "files": {}
         }
+
+        all_paths = [file_obj.path for file_obj in files]
+        if not all_paths:
+            return full_schema
+        
+        project_root = os.path.commonpath(all_paths)
+        if os.path.isfile(project_root):
+            project_root = os.path.dirname(project_root)
 
         for file_obj in files:
             if not file_obj.path.endswith('.py'):
@@ -110,7 +149,12 @@ class ASTAnalyzer:
 
             try:
                 tree = ast.parse(file_content)
-                visitor = ASTVisitor(source_code=file_content)
+                
+                visitor = ASTVisitor(
+                    source_code=file_content, 
+                    file_path=file_obj.path, 
+                    project_root=project_root
+                )
                 visitor.visit(tree)
                 file_schema_nodes = visitor.schema
 
@@ -129,31 +173,6 @@ class ASTAnalyzer:
 
             except (SyntaxError, ValueError) as e:
                 print(f"Warnung: Konnte Datei '{file_obj.path}' nicht parsen. Fehler: {e}")
-        
-        # Alle Bibliotheken rausfiltern, die nicht selbst im Projekt geschrieben sind
-        # all_project_functions = set()
-        # for file_path, file_data in full_schema["files"].items():
-        #     ast_nodes = file_data["ast_nodes"]
-
-        #     for func in ast_nodes["functions"]:
-        #         func_name = f"{file_path}::{func['identifier']}"
-        #         all_project_functions.add(func_name)
-
-        #     for cls in ast_nodes["classes"]:
-        #         for method_context in cls["context"]["method_context"]:
-        #             func_name = f"{file_path}::{cls['identifier']}::{method_context['identifier']}"
-        #             all_project_functions.add(func_name)
-        
-        # for file_path, file_data in full_schema["files"].items():
-        #     ast_nodes = file_data["ast_nodes"]
-
-        #     for func in ast_nodes["functions"]:
-        #         func['context']['calls'] = [call for call in func['context']['calls'] if call in all_project_functions]
-        #         func['context']['called_by'] = [caller for caller in func['context']['called_by'] if caller in all_project_functions]
-            
-        #     for cls in ast_nodes["classes"]:
-        #         for method_context in cls["context"]["method_context"]:
-        #             method_context['calls'] = [call for call in method_context['calls'] if call in all_project_functions]
-        #             method_context['called_by'] = [caller for caller in method_context['called_by'] if caller in all_project_functions]
 
         return full_schema
+    
