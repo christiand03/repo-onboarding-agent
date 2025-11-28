@@ -2,11 +2,8 @@ import ast
 import networkx as nx
 import os
 
-from .callgraph import build_callGraph # Angenommen, diese Funktion existiert
+from .callgraph import build_callGraph
 
-# ==============================================================================
-# NEU: Hilfsfunktion zur Umwandlung von Dateipfaden in Modulpfade
-# ==============================================================================
 def path_to_module(filepath, project_root):
     """Wandelt einen Dateipfad in einen Python-Modulpfad um."""
     try:
