@@ -7,6 +7,7 @@ from typing import List, Dict, Any, Optional, Union
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
 from langchain.messages import HumanMessage, SystemMessage, AIMessage
 from pydantic import ValidationError
 
@@ -24,7 +25,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL")
-
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 class LLMHelper:
     """
@@ -59,6 +60,13 @@ class LLMHelper:
                 model=model_name,
                 api_key=api_key,
                 temperature=0.3, 
+            )
+        
+        elif model_name.startswith("gpt-"):
+            base_llm = ChatOpenAI(
+                model_name=model_name,
+                api_key=api_key,
+                temperature=0.3,
             )
 
         else:
@@ -95,6 +103,12 @@ class LLMHelper:
 
         elif model_name == "llama3":
             self.batch_size = 50
+
+        elif model_name == "gpt-5.1":
+            self.batch_size = 500
+
+        elif model_name == "gpt-5-mini":
+            self.batch_size = 500
             
         else:
             logging.warning(f"Unknown model '{model_name}', using conservative defaults.")

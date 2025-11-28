@@ -7,6 +7,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
+from langchain_openai import ChatOpenAI
 from langchain.messages import HumanMessage, SystemMessage
 
 # --- Configuration & Logging ---
@@ -14,6 +15,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 class MainLLM:
     """
@@ -38,6 +40,14 @@ class MainLLM:
                 api_key=api_key,
                 temperature=1.0, 
             )
+
+        elif model_name.startswith("gpt-"):
+            self.llm = ChatGoogleGenerativeAI(
+                model=model_name,
+                api_key=api_key,
+                temperature=1.0, 
+            )
+
         else:
             target_url = ollama_base_url if ollama_base_url else OLLAMA_BASE_URL
             self.llm = ChatOllama(
