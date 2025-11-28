@@ -50,11 +50,21 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
     
     # API Key & Ollama Base URL aus Frontend holen
     gemini_api_key = api_keys.get("gemini")
+    openai_api_key = api_keys.get("gpt")
     ollama_base_url = api_keys.get("ollama")
 
+    if model_names["helper"].startswith("gpt-"):
+        helper_api_key = openai_api_key
+    elif model_names["helper"].startswith("gemini-"):
+        helper_api_key = gemini_api_key
+    if model_names["main"].startswith("gpt-"):
+        api_key = openai_api_key
+    elif model_names["main"].startswith("gemini-"):
+        api_key = gemini_api_key
+
     # Standardeinstellungen für Modelle
-    helper_model = model_names.get("helper", "gemini-flash-latest")
-    main_model = model_names.get("main", "gemini-2.5-pro")
+    helper_model = model_names.get("helper", "gpt-5-mini")
+    main_model = model_names.get("main", "gpt-5.1")
 
     # Error Handling für fehlende API Keys
     if not gemini_api_key and "gemini" in helper_model:
@@ -107,6 +117,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
     try:        
         ast_analyzer = ASTAnalyzer()   
         ast_schema = ast_analyzer.analyze_repository(files=repo_files)
+        print(json.dumps(ast_schema, indent=2))
         logging.info("AST schema created")
     except Exception as e:
         logging.error(f"Error retrieving repository files: {e}")
@@ -174,7 +185,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
     class_prompt_file = 'SystemPrompts/SystemPromptClassHelperLLM.txt'
     
     llm_helper = LLMHelper(
-        api_key=gemini_api_key, 
+        api_key=helper_api_key, 
         function_prompt_path=function_prompt_file, 
         class_prompt_path=class_prompt_file,
         model_name=helper_model,
@@ -259,7 +270,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
     
     # MainLLM Ausführung
     main_llm = MainLLM(
-        api_key=gemini_api_key, 
+        api_key=api_key, 
         prompt_file_path="SystemPrompts/SystemPromptMainLLM.txt",
         model_name=main_model,
         ollama_base_url=ollama_base_url,
@@ -319,4 +330,4 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
 
 if __name__ == "__main__":
     user_input = "https://github.com/christiand03/repo-onboarding-agent"
-    main_workflow(user_input, api_keys={"gemini": os.getenv("GEMINI_API_KEY")}, model_names={})
+    main_workflow(user_input, api_keys={"gpt": os.getenv("OPENAI_API_KEY")}, model_names={"helper": "gpt-5-mini", "main": "gpt-5.1"})
