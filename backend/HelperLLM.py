@@ -118,7 +118,7 @@ class LLMHelper:
         """Generates and validates documentation for a batch of functions."""
 
         BATCH_SIZE = self.batch_size
-        WAITING_TIME = 61
+        WAITING_TIME = 70
 
         if not function_inputs:
             return []
@@ -164,7 +164,7 @@ class LLMHelper:
             return []
         
         BATCH_SIZE = self.batch_size
-        WAITING_TIME = 61
+        WAITING_TIME = 70
 
         # Create a list of JSON payloads from the input models
         json_payloads = [

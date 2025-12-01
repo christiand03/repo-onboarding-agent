@@ -5,6 +5,7 @@ import json
 import time
 import math
 from datetime import datetime
+import matplotlib.pyplot as plt
 
 from dotenv import load_dotenv
 
@@ -16,9 +17,35 @@ from .HelperLLM import LLMHelper
 from .relationship_analyzer import ProjectAnalyzer
 from schemas.types import FunctionContextInput, FunctionAnalysisInput, ClassContextInput, ClassAnalysisInput, MethodContextInput
 
+from toon_format import encode, count_tokens, estimate_savings, compare_formats
+
 # --- Konfiguration & Logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 load_dotenv()
+
+def create_savings_chart(json_tokens, toon_tokens, savings_percent, output_path):
+    """Erstellt ein Balkendiagramm für den Token-Vergleich und speichert es."""
+    labels = ['JSON', 'TOON']
+    values = [json_tokens, toon_tokens]
+    colors = ['#ff9999', '#66b3ff']
+
+    plt.figure(figsize=(8, 6))
+    bars = plt.bar(labels, values, color=colors, width=0.5)
+
+    # Titel und Beschriftungen
+    plt.title(f'Token-Vergleich: {savings_percent:.2f}% Einsparung', fontsize=14)
+    plt.ylabel('Anzahl Token')
+    plt.grid(axis='y', linestyle='--', alpha=0.7)
+
+    # Werte über den Balken anzeigen
+    for bar in bars:
+        height = bar.get_height()
+        plt.text(bar.get_x() + bar.get_width() / 2.0, height, 
+                 f'{int(height):,}', ha='center', va='bottom', fontsize=12, fontweight='bold')
+
+    # Speichern
+    plt.savefig(output_path)
+    plt.close()
 
 def calculate_net_time(start_time, end_time, total_items, batch_size, model_name):
     """Berechnet die Dauer abzüglich der Sleep-Zeiten für Rate-Limits."""
@@ -235,8 +262,6 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         logging.error(f"Error preparing inputs for Helper LLM: {e}")
         raise
     
-    logging.info(f"Functions: {len(helper_llm_function_input)}, Classes: {len(helper_llm_class_input)}")
-    
     # Initialisiere HelperLLM
     function_prompt_file = 'SystemPrompts/SystemPromptFunctionHelperLLM.txt'
     class_prompt_file = 'SystemPrompts/SystemPromptClassHelperLLM.txt'
@@ -291,7 +316,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
             # Rate Limit Sleep für Gemini Modelle
             if llm_helper.model_name.startswith("gemini-") & (len(helper_llm_function_input) > 0):
                 update_status("💤 Wartezeit eingelegt, um Rate Limits einzuhalten...")
-                time.sleep(61)
+                time.sleep(90)
             
             update_status(f"🤖 Helper LLM: Analysiere {len(helper_llm_class_input)} Klassen ({helper_model})...")
             
@@ -323,12 +348,41 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         "ast_schema": ast_schema,
         "analysis_results": analysis_results
     }
+
+    # Speichern als JSON (Optional)
     main_llm_input_json = json.dumps(main_llm_input, indent=2)
+    # with open("output.json", "w", encoding="utf-8") as f:
+    #     f.write(main_llm_input_json)
+    #     logging.info("JSON-Datei wurde gespeichert.")
+
+    # Konvertiere Input in Toon Format
+    main_llm_input_toon = encode(main_llm_input)
+
+    #Speichern in TOON Format (Optional)
+    # with open("output.toon", "w", encoding="utf-8") as f:
+    #     f.write(main_llm_input_toon)
+    #     logging.info("output.toon erfolgreich gespeichert.")
     
+    # Token Evaluation
+    savings_data = None
+    try:
+        logging.info("--- Evaluierung der Token-Ersparnis ---")
+        savings_data = estimate_savings(main_llm_input)
+        logging.info(f"JSON Tokens: {savings_data['json_tokens']}")
+        logging.info(f"TOON Tokens: {savings_data['toon_tokens']}")
+        logging.info(f"Ersparnis:   {savings_data['savings_percent']:.2f}%")
+        
+    except Exception as e:
+        logging.warning(f"Token evaluation could not be performed: {e}")    
+
+
+
+    prompt_file_mainllm = "SystemPrompts/SystemPromptMainLLM.txt"
+    prompt_file_mainllm_toon = "SystemPrompts/SystemPromptMainLLMToon.txt"
     # MainLLM Ausführung
     main_llm = MainLLM(
         api_key=api_key, 
-        prompt_file_path="SystemPrompts/SystemPromptMainLLM.txt",
+        prompt_file_path=prompt_file_mainllm_toon,
         model_name=main_model,
         ollama_base_url=ollama_base_url,
     )
@@ -336,7 +390,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
 
     # RPM Limit Sleep für Gemini Modelle
     if llm_helper.model_name == main_llm.model_name and main_llm.model_name.startswith("gemini-"):
-        time.sleep(61)
+        time.sleep(65)
         update_status("💤 Wartezeit eingelegt, um Rate Limits einzuhalten...")
 
     # Call MainLLM für finalen Report
@@ -345,10 +399,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         total_main_time = 0
         logging.info("\n--- Generating Final Report ---")
         t_start_main = time.time()
-        final_report = main_llm.call_llm(main_llm_input_json)
-        #for token in main_llm.stream_llm(main_llm_input_json):
-        #    full_response += token    
-        #    final_report = full_response
+        final_report = main_llm.call_llm(main_llm_input_toon)
         t_end_main = time.time()
         total_main_time = t_end_main - t_start_main
     except Exception as e:
@@ -356,12 +407,16 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         raise
 
     
-    # Speichern
+    # --- Speichern der Ergebnisse ---
     output_dir = "result"
-    os.makedirs(output_dir, exist_ok=True)  
+    stats_dir = "Statistics" # Neuer Ordner
+    os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(stats_dir, exist_ok=True) # Stelle sicher, dass Statistics Ordner existiert
+
     total_active_time = total_helper_time + total_main_time
-    timestamp = datetime.now().strftime("%d_%m_%Y_%H-%M-%S")
     
+    # Dateiname für Report
+    timestamp = datetime.now().strftime("%d_%m_%Y_%H-%M-%S")
     report_filename = f"report_{timestamp}_Helper_{llm_helper.model_name}_MainLLM_{main_llm.model_name}.md"
     report_filepath = os.path.join(output_dir, report_filename)
     
@@ -369,6 +424,25 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         with open(report_filepath, "w", encoding="utf-8") as f:
             f.write(final_report)
         logging.info(f"Final report saved to '{report_filepath}'.")
+        
+        # --- NEU: Speichern des Savings-Diagramms ---
+        # Nur wenn wir valide Savings Daten haben
+        if savings_data:
+            try:
+                # Dateiname ableiten: "savings_" statt "report_" und Endung .png
+                savings_filename = report_filename.replace("report_", "savings_").replace(".md", ".png")
+                savings_filepath = os.path.join(stats_dir, savings_filename)
+                
+                logging.info(f"Erstelle Token-Chart: {savings_filepath}")
+                create_savings_chart(
+                    json_tokens=savings_data['json_tokens'], 
+                    toon_tokens=savings_data['toon_tokens'], 
+                    savings_percent=savings_data['savings_percent'],
+                    output_path=savings_filepath
+                )
+            except Exception as chart_error:
+                logging.error(f"Konnte Diagramm nicht erstellen: {chart_error}")
+
     else:
         final_report = "Error: Report generation failed or returned empty."
 
@@ -387,4 +461,4 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
 
 if __name__ == "__main__":
     user_input = "https://github.com/christiand03/repo-onboarding-agent"
-    main_workflow(user_input, api_keys={"gemini": os.getenv("GEMINI_API_KEY")}, model_names={"helper": "gemini-flash-latest", "main": "gemini-2.5-pro"})
+    main_workflow(user_input, api_keys={"gemini": os.getenv("GEMINI_API_KEY")}, model_names={"helper": "gemini-2.5-flash-lite", "main": "gemini-2.5-pro"})
