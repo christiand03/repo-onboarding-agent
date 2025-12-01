@@ -13,7 +13,8 @@ from .AST_Schema import ASTAnalyzer
 from .MainLLM import MainLLM
 from .basic_info import ProjektInfoExtractor
 from .HelperLLM import LLMHelper
-from schemas.types import FunctionContextInput, FunctionAnalysisInput, ClassContextInput, ClassAnalysisInput
+from .relationship_analyzer import ProjectAnalyzer
+from schemas.types import FunctionContextInput, FunctionAnalysisInput, ClassContextInput, ClassAnalysisInput, MethodContextInput
 
 # --- Konfiguration & Logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -70,7 +71,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
     if not gemini_api_key and "gemini" in helper_model:
         raise ValueError("Gemini API Key was not provided in api_keys dictionary.")
 
-    # 2. URL Extraktion
+    # URL Extraktion
     repo_url = None
     url_pattern = r"https?://[^\s]+"
     match = re.search(url_pattern, user_input)
@@ -81,17 +82,29 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
     else:
         raise ValueError("Could not find a valid URL in the provided input.")
     
-
+    # Repo klonen und Dateien extrahieren
     update_status(f"⬇️ Klone Repository: {repo_url} ...")
     
     repo_files = []
+    local_repo_path = "" 
+
     try: 
+
         with GitRepository(repo_url) as repo:
             repo_files = repo.get_all_files()
+            if hasattr(repo, 'local_path'):
+                local_repo_path = repo.local_path
+            elif hasattr(repo, 'working_dir'):
+                local_repo_path = repo.working_dir
+            else:
+                local_repo_path = os.path.dirname(os.path.commonpath([f.path for f in repo_files]))
+
             logging.info(f"Total files retrieved: {len(repo_files)}")
+
     except Exception as e:
         logging.error(f"Error cloning repository: {e}")
-        raise        
+        raise 
+
 
     # Extrahiere Basic Infos
     update_status("ℹ️ Extrahiere Basis-Informationen...")
@@ -101,7 +114,6 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         logging.info("Basic project info extracted")
     except Exception as e:
         logging.error(f"Error extracting basic project info: {e}")
-        
 
     # Erstelle Repository Dateibaum
     update_status("🌲 Erstelle Repository Dateibaum...")
@@ -110,20 +122,38 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         logging.info("Repository file tree constructed")
     except Exception as e:
         logging.error(f"Error constructing repository file tree: {e}")
-        
+
+    # Relationship Analyse durchführen
+    update_status("🔗 Analysiere Beziehungen (Calls & Instanziierungen)...")
+    try:
+        rel_analyzer = ProjectAnalyzer(project_root=local_repo_path)
+        relationship_results = rel_analyzer.analyze()
+        logging.info(f"Relationships analyzed. Found definitions: {len(relationship_results)}")
+    except Exception as e:
+        logging.error(f"Error in relationship analyzer: {e}")
+        relationship_results = []
 
     # Erstelle AST Schema
     update_status("🌳 Erstelle Abstract Syntax Tree (AST)...")
     try:        
         ast_analyzer = ASTAnalyzer()   
         ast_schema = ast_analyzer.analyze_repository(files=repo_files)
-        print(json.dumps(ast_schema, indent=2))
         logging.info("AST schema created")
     except Exception as e:
         logging.error(f"Error retrieving repository files: {e}")
         raise
 
-    # 4. HelperLLM Input Vorbereitung
+    # Anreichern des AST Schemas mit Relationship Daten
+    update_status("➕ Reiche AST mit Beziehungsdaten an...")            
+    try:   
+        ast_schema = ast_analyzer.merge_relationship_data(ast_schema, relationship_results)
+        logging.info("AST schema created and enriched")
+
+    except Exception as e:
+        logging.error(f"Error processing repository: {e}")
+        raise
+
+    # Vorbereitung der HelperLLM Eingaben
     update_status("⚙️ Bereite Daten für Helper LLM vor...")
     
     helper_llm_function_input = []
@@ -138,6 +168,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
 
             for function in functions:
                 context = function.get('context', {})
+                
                 function_context = FunctionContextInput(
                     calls = context.get('calls', []),
                     called_by = context.get('called_by', [])
@@ -152,30 +183,41 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
                 )
                 
                 helper_llm_function_input.append(function_input)
-    except Exception as e:
-        logging.error(f"Error preparing function inputs for Helper LLM: {e}")
-        raise
-    
-    try:
-        for _class in classes:
-            context = _class.get('context', {})
-            class_context = ClassContextInput(
-                dependencies = context.get('dependencies', []),
-                instantiated_by = context.get('instantiated_by', []),
-                method_context = context.get('method_context', [])
-            )
 
-            class_input = ClassAnalysisInput(
-                mode = _class.get('mode', 'class_analysis'),
-                identifier =_class.get('identifier'),
-                source_code = _class.get('source_code'), 
-                imports = imports, 
-                context = class_context
-            )
-            
-            helper_llm_class_input.append(class_input)
+
+            for _class in classes:
+                context = _class.get('context', {})
+                
+                method_context_inputs = []
+                for method in context.get('method_context', []):
+                    method_context_inputs.append(
+                        MethodContextInput(
+                            identifier=method.get('identifier'),
+                            calls=method.get('calls', []),
+                            called_by=method.get('called_by', []),
+                            args=method.get('args', []),
+                            docstring=method.get('docstring')
+                        )
+                    )
+
+                class_context = ClassContextInput(
+                    dependencies = context.get('dependencies', []),
+                    instantiated_by = context.get('instantiated_by', []),
+                    method_context = method_context_inputs
+                )
+
+                class_input = ClassAnalysisInput(
+                    mode = _class.get('mode', 'class_analysis'),
+                    identifier =_class.get('identifier'),
+                    source_code = _class.get('source_code'), 
+                    imports = imports, 
+                    context = class_context
+                )
+                
+                helper_llm_class_input.append(class_input)
+
     except Exception as e:
-        logging.error(f"Error preparing class inputs for Helper LLM: {e}")
+        logging.error(f"Error preparing inputs for Helper LLM: {e}")
         raise
     
     logging.info(f"Functions: {len(helper_llm_function_input)}, Classes: {len(helper_llm_class_input)}")
@@ -233,8 +275,8 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         if len(helper_llm_class_input) > 0:
             # Rate Limit Sleep für Gemini Modelle
             if llm_helper.model_name.startswith("gemini-") & (len(helper_llm_function_input) > 0):
-                time.sleep(61)
                 update_status("💤 Wartezeit eingelegt, um Rate Limits einzuhalten...")
+                time.sleep(61)
             
             update_status(f"🤖 Helper LLM: Analysiere {len(helper_llm_class_input)} Klassen ({helper_model})...")
             
@@ -330,4 +372,4 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
 
 if __name__ == "__main__":
     user_input = "https://github.com/christiand03/repo-onboarding-agent"
-    main_workflow(user_input, api_keys={"gpt": os.getenv("OPENAI_API_KEY")}, model_names={"helper": "gpt-5-mini", "main": "gpt-5.1"})
+    main_workflow(user_input, api_keys={"gemini": os.getenv("GEMINI_API_KEY")}, model_names={"helper": "gemini-flash-latest", "main": "gemini-2.5-pro"})
