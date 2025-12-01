@@ -123,6 +123,31 @@ class ASTAnalyzer:
                     method_context['calls'] = calls
                     method_context['called_by'] = called_by
 
+    def merge_relationship_data(self, full_schema: dict, relationship_data: list) -> dict:
+        
+        rel_lookup = {item['identifier']: item.get('called_by', []) for item in relationship_data}
+
+        for file_path, file_data in full_schema.get("files", {}).items():
+            ast_nodes = file_data.get("ast_nodes", {})
+            
+            for func in ast_nodes.get("functions", []):
+                func_id = func.get("identifier")
+                if func_id and func_id in rel_lookup:
+                    func["context"]["called_by"] = rel_lookup[func_id]
+
+            for cls in ast_nodes.get("classes", []):
+                cls_id = cls.get("identifier")
+                
+                if cls_id and cls_id in rel_lookup:
+                    cls["context"]["instantiated_by"] = rel_lookup[cls_id]
+
+                for method in cls["context"].get("method_context", []):
+                    method_id = method.get("identifier")
+                    if method_id and method_id in rel_lookup:
+                        method["called_by"] = rel_lookup[method_id]
+        
+        return full_schema
+
     def analyze_repository(self, files: list) -> dict:
         full_schema = {
             "files": {}
