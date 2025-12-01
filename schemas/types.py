@@ -60,12 +60,25 @@ class ClassAnalysis(BaseModel):
     error: Optional[str] = None
 
 
+# CALL INFO MODEL
+
+class CallInfo(BaseModel):
+    """
+    Represents a specific call event from the relationship analyzer.
+    Used in 'called_by' and 'instantiated_by' lists.
+    """
+    file: str
+    function: str  # Name des Aufrufers
+    mode: str      # z.B. 'method', 'function', 'module'
+    line: int
+
+
 # -------- Helper LLM FUNCTION INPUT Schema --------
 
 class FunctionContextInput(BaseModel):
     """Structured context for analyzing a function."""
     calls: List[str]
-    called_by: List[str]
+    called_by: List[CallInfo]
 
 class FunctionAnalysisInput(BaseModel):
     """The required input to generate a FunctionAnalysis object."""
@@ -82,13 +95,14 @@ class MethodContextInput(BaseModel):
     """Structured context for a classes methods"""
     identifier: str
     calls: List[str]
-    called_by: List[str]
+    called_by: List[CallInfo]
     args: List[str]
     docstring: Optional[str]
+    
 class ClassContextInput(BaseModel):
     """Structured context for analyzing a class."""
     dependencies: List[str]
-    instantiated_by: List[str]
+    instantiated_by: List[CallInfo]
     method_context: List[MethodContextInput]
 
 class ClassAnalysisInput(BaseModel):
