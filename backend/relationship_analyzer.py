@@ -5,7 +5,11 @@ from collections import defaultdict
 
 def path_to_module(filepath, project_root):
     """Wandelt einen Dateipfad in einen Python-Modulpfad um."""
-    rel_path = os.path.relpath(filepath, project_root)
+    try:
+        rel_path = os.path.relpath(filepath, project_root)
+    except ValueError:
+        rel_path = os.path.basename(filepath)
+
     if rel_path.endswith('.py'):
         rel_path = rel_path[:-3]
     module_path = rel_path.replace(os.path.sep, '.')
@@ -19,18 +23,27 @@ class ProjectAnalyzer:
         self.project_root = os.path.abspath(project_root)
         self.definitions = {}
         self.call_graph = defaultdict(list)
+        self.file_asts = {} 
+        self.ignore_dirs = {'.git', '.venv', 'venv', '__pycache__', 'node_modules', 'dist', 'build', 'docs'}
 
     def analyze(self):
         py_files = self._find_py_files()
+        
         for filepath in py_files:
             self._collect_definitions(filepath)
+            
         for filepath in py_files:
             self._resolve_calls(filepath)
+            
+        self.file_asts.clear()
+        
         return self.get_formatted_results()
 
     def _find_py_files(self):
         py_files = []
-        for root, _, files in os.walk(self.project_root): # _ wird ignoriert aber für Struktur benötigt
+        for root, dirs, files in os.walk(self.project_root):
+            dirs[:] = [d for d in dirs if d not in self.ignore_dirs]
+            
             for file in files:
                 if file.endswith(".py"):
                     py_files.append(os.path.join(root, file))
@@ -41,23 +54,27 @@ class ProjectAnalyzer:
             with open(filepath, "r", encoding="utf-8") as f:
                 source = f.read()
                 tree = ast.parse(source, filename=filepath)
-                module_path = path_to_module(filepath, self.project_root)
                 
-                for node in ast.walk(tree):
-                    if isinstance(node, ast.FunctionDef):
-                        parent = self._get_parent(tree, node)
-                        if isinstance(parent, ast.ClassDef):
-                            path_name = f"{module_path}.{parent.name}.{node.name}"
-                            def_type = 'method'
-                        else:
-                            path_name = f"{module_path}.{node.name}"
-                            def_type = 'function'
-                        self.definitions[path_name] = {'file': filepath, 'line': node.lineno, 'type': def_type}
-                    elif isinstance(node, ast.ClassDef):
+            self.file_asts[filepath] = tree
+            
+            module_path = path_to_module(filepath, self.project_root)
+            
+            for node in ast.walk(tree):
+                if isinstance(node, ast.FunctionDef):
+                    parent = self._get_parent(tree, node)
+                    if isinstance(parent, ast.ClassDef):
+                        path_name = f"{module_path}.{parent.name}.{node.name}"
+                        def_type = 'method'
+                    else:
                         path_name = f"{module_path}.{node.name}"
-                        self.definitions[path_name] = {'file': filepath, 'line': node.lineno, 'type': 'class'}
+                        def_type = 'function'
+                    self.definitions[path_name] = {'file': filepath, 'line': node.lineno, 'type': def_type}
+                elif isinstance(node, ast.ClassDef):
+                    path_name = f"{module_path}.{node.name}"
+                    self.definitions[path_name] = {'file': filepath, 'line': node.lineno, 'type': 'class'}
         except Exception as e:
             logging.error(f"Error collecting definitions in {filepath}: {e}")
+            self.file_asts[filepath] = None
             
     def _get_parent(self, tree, node):
         for parent in ast.walk(tree):
@@ -67,14 +84,15 @@ class ProjectAnalyzer:
         return None
 
     def _resolve_calls(self, filepath):
+        tree = self.file_asts.get(filepath)
+        if not tree:
+            return
+
         try:
-            with open(filepath, "r", encoding="utf-8") as f:
-                source = f.read()
-                tree = ast.parse(source, filename=filepath)
-                resolver = CallResolverVisitor(filepath, self.project_root, self.definitions)
-                resolver.visit(tree)
-                for callee_pathname, caller_info in resolver.calls.items():
-                    self.call_graph[callee_pathname].extend(caller_info)
+            resolver = CallResolverVisitor(filepath, self.project_root, self.definitions)
+            resolver.visit(tree)
+            for callee_pathname, caller_info in resolver.calls.items():
+                self.call_graph[callee_pathname].extend(caller_info)
         except Exception as e:
             logging.error(f"Error resolving calls in {filepath}: {e}")
 
@@ -93,19 +111,19 @@ class ProjectAnalyzer:
                     "called_by": [] 
                 }
                 
-                unique_calls = []
+                unique_calls = {}
                 for call in calls:
-                    caller_dict = {
-                        "file": call['file'],
-                        "function": call['caller'],
-                        "mode": call.get('caller_type', 'unknown'),
-                        "line": call['line']
-                    }
-                    if caller_dict not in unique_calls:
-                        unique_calls.append(caller_dict)
+                    key = (call['file'], call['line'], call['caller'])
+                    if key not in unique_calls:
+                        unique_calls[key] = {
+                            "file": call['file'],
+                            "function": call['caller'],
+                            "mode": call.get('caller_type', 'unknown'),
+                            "line": call['line']
+                        }
 
                 if unique_calls:
-                    definition_dict["called_by"] = sorted(unique_calls, key=lambda x: (x['file'], x['line']))
+                    definition_dict["called_by"] = sorted(unique_calls.values(), key=lambda x: (x['file'], x['line']))
                     output_list.append(definition_dict)
                     
         return output_list
