@@ -193,9 +193,11 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
             functions = ast_nodes.get('functions', [])
             classes = ast_nodes.get('classes', [])
 
+            # --- 1. Funktionen verarbeiten ---
             for function in functions:
                 context = function.get('context', {})
                 
+                # BEREINIGUNG: Nur Dictionaries (CallInfo) zulassen
                 raw_called_by = context.get('called_by', [])
                 clean_called_by = [cb for cb in raw_called_by if isinstance(cb, dict)]
 
@@ -214,12 +216,15 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
                 
                 helper_llm_function_input.append(function_input)
 
+            # --- 2. Klassen verarbeiten ---
             for _class in classes:
                 context = _class.get('context', {})
                 
+                # Method Context inputs erstellen und bereinigen
                 method_context_inputs = []
                 for method in context.get('method_context', []):
                     
+                    # BEREINIGUNG: Nur Dictionaries (CallInfo) zulassen
                     raw_method_called_by = method.get('called_by', [])
                     clean_method_called_by = [cb for cb in raw_method_called_by if isinstance(cb, dict)]
 
@@ -233,6 +238,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
                         )
                     )
 
+                # BEREINIGUNG: Instantiated_by filtern
                 raw_instantiated_by = context.get('instantiated_by', [])
                 clean_instantiated_by = [ib for ib in raw_instantiated_by if isinstance(ib, dict)]
 
