@@ -16,6 +16,8 @@ from .HelperLLM import LLMHelper
 from .relationship_analyzer import ProjectAnalyzer
 from schemas.types import FunctionContextInput, FunctionAnalysisInput, ClassContextInput, ClassAnalysisInput, MethodContextInput
 
+from toon_format import decoder, encoder, decode, encode
+
 # --- Konfiguration & Logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 load_dotenv()
@@ -169,9 +171,12 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
             for function in functions:
                 context = function.get('context', {})
                 
+                raw_called_by = context.get('called_by', [])
+                clean_called_by = [cb for cb in raw_called_by if isinstance(cb, dict)]
+
                 function_context = FunctionContextInput(
                     calls = context.get('calls', []),
-                    called_by = context.get('called_by', [])
+                    called_by = clean_called_by 
                 )
                 
                 function_input = FunctionAnalysisInput(
@@ -184,25 +189,31 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
                 
                 helper_llm_function_input.append(function_input)
 
-
             for _class in classes:
                 context = _class.get('context', {})
                 
                 method_context_inputs = []
                 for method in context.get('method_context', []):
+                    
+                    raw_method_called_by = method.get('called_by', [])
+                    clean_method_called_by = [cb for cb in raw_method_called_by if isinstance(cb, dict)]
+
                     method_context_inputs.append(
                         MethodContextInput(
                             identifier=method.get('identifier'),
                             calls=method.get('calls', []),
-                            called_by=method.get('called_by', []),
+                            called_by=clean_method_called_by, 
                             args=method.get('args', []),
                             docstring=method.get('docstring')
                         )
                     )
 
+                raw_instantiated_by = context.get('instantiated_by', [])
+                clean_instantiated_by = [ib for ib in raw_instantiated_by if isinstance(ib, dict)]
+
                 class_context = ClassContextInput(
                     dependencies = context.get('dependencies', []),
-                    instantiated_by = context.get('instantiated_by', []),
+                    instantiated_by = clean_instantiated_by, 
                     method_context = method_context_inputs
                 )
 
@@ -219,8 +230,6 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
     except Exception as e:
         logging.error(f"Error preparing inputs for Helper LLM: {e}")
         raise
-    
-    logging.info(f"Functions: {len(helper_llm_function_input)}, Classes: {len(helper_llm_class_input)}")
     
     # Initialisiere HelperLLM
     function_prompt_file = 'SystemPrompts/SystemPromptFunctionHelperLLM.txt'
@@ -310,10 +319,14 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
     }
     main_llm_input_json = json.dumps(main_llm_input, indent=2)
     
+    main_llm_input_toon = encode(main_llm_input_json)
+    
+    prompt_file_mainllm = "SystemPrompts/SystemPromptMainLLM.txt"
+    prompt_file_mainllm_toon = "SystemPrompts/SystemPromptMainLLMToon.txt"
     # MainLLM Ausführung
     main_llm = MainLLM(
         api_key=api_key, 
-        prompt_file_path="SystemPrompts/SystemPromptMainLLM.txt",
+        prompt_file_path=prompt_file_mainllm_toon,
         model_name=main_model,
         ollama_base_url=ollama_base_url,
     )
@@ -330,7 +343,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         total_main_time = 0
         logging.info("\n--- Generating Final Report ---")
         t_start_main = time.time()
-        final_report = main_llm.call_llm(main_llm_input_json)
+        final_report = main_llm.call_llm(main_llm_input_toon)
         #for token in main_llm.stream_llm(main_llm_input_json):
         #    full_response += token    
         #    final_report = full_response
