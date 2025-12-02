@@ -1,0 +1,7 @@
+[server]
+maxMessageSize = 1000 # Setzt das Limit auf ca. 1GB (Standard ist 200MB)
+enableCORS = false
+enableXsrfProtection = false
+
+[browser]
+gatherUsageStats = false
