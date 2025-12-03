@@ -76,6 +76,7 @@ but if there is mermaid syntax in your input json display it here
         *   *Description:* [Method `overall` description]
         *   *Parameters:* [List name/type/desc]
         *   *Returns:* [List name/type/desc]
+        *   **Usage:** [From `usage_context.calls` and `called_by`]
 
 [If the file contains Standalone Functions:]
 #### Function: `function_name`
