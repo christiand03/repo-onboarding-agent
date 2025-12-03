@@ -2,141 +2,135 @@ import ast
 import networkx as nx
 import os 
 
+from pathlib import Path
 from typing import Dict
-from .getRepo import RepoFile, GitRepository
+
+from getRepo import GitRepository
+
+import ast
+import networkx as nx
+import os
+from pathlib import Path
+from typing import Dict
+
+from getRepo import GitRepository
 
 class CallGraph(ast.NodeVisitor):
-    """
-    Visitor, der Funktionsaufrufe im AST sammelt und Kanten für den Call-Graph erstellt.
-    """
     def __init__(self, filename: str):
-        """
-        Initialisiert den Visitor mit einem Platzhalter für die aktuelle Funktion.
-        """
         self.filename = filename
         self.current_function = None
         self.current_class = None
-
+        
+        self.local_defs: dict[str, str] = {}
         self.graph = nx.DiGraph()
         self.import_mapping: dict[str, str] = {}
         self.function_set: set[str] = set()
         self.edges: Dict[str, set[str]] = {}
 
-    def _recursive_call(self, node) -> list[str]:
-        all_calls = []
+    def _recursive_call(self, node):
+        """
+        Liefert eine Liste der Namenskomponenten als dotted string z.B. ['pkg', 'mod', 'Class', 'method']
+        """
         if isinstance(node, ast.Call):
             return self._recursive_call(node.func)
-        elif isinstance(node, ast.Name):
-            all_calls.append(node.id)
-            return all_calls
-        elif isinstance(node, ast.Attribute):
-            all_calls.append(node.attr)
-            return all_calls
-        return all_calls
-            
-    def _resolve_all_callee_names(self, callee_nodes: list[str]) -> list[str]:
-        resolved_callees = []
-        for raw_callee in callee_nodes:
-            if not self.current_class:
-                resolved_callee = f"{self.filename}::{raw_callee}"
-            else:
-                resolved_callee = f"{self.filename}::{self.current_class}::{raw_callee}"
-            resolved_callees.append(resolved_callee)
-        return resolved_callees
+        if isinstance(node, ast.Name):
+            return [node.id]
+        if isinstance(node, ast.Attribute):
+            parts = self._recursive_call(node.value)
+            parts.append(node.attr)
+            return parts
+        return []
 
-    def _make_full_name(self, basename: str, class_name: str | None = None)-> str:
+    def _resolve_all_callee_names(self, callee_nodes: list[list[str]]) -> list[str]:
+        """
+        callee_nodes ist jetzt eine Liste von Listen (Name-Steps).
+        Wir prüfen zuerst lokale Definitionen, dann import_mapping.
+        """
+        resolved = []
+        for parts in callee_nodes:
+            if not parts:
+                continue
+            simple = parts[-1]
+            dotted = ".".join(parts[-2:]) if len(parts) >= 2 else simple
+
+            if simple in self.local_defs:
+                resolved.append(self.local_defs[simple])
+                continue
+            if dotted in self.local_defs:
+                resolved.append(self.local_defs[dotted])
+                continue
+
+            first = parts[0]
+            if first in self.import_mapping:
+                mod = self.import_mapping[first]
+                rest = "::".join(parts[1:]) if len(parts) > 1 else simple
+                resolved.append(f"{mod}::{rest}")
+                continue
+
+            if self.current_class:
+                resolved.append(f"{self.filename}::{parts[0]}::{simple}" if len(parts)==1 else f"{self.filename}::{'::'.join(parts)}")
+            else:
+                resolved.append(f"{self.filename}::{ '::'.join(parts)}")
+        return resolved
+
+    def _make_full_name(self, basename: str, class_name: str | None = None) -> str:
         if class_name:
             return f"{self.filename}::{class_name}::{basename}"
         return f"{self.filename}::{basename}"
     
-    def _current_caller(self)-> str:
+    def _current_caller(self) -> str:
         if self.current_function:
             return self.current_function
-        return f"<{self.filename}>" if self.filename else"<global-scope>"
+        return f"<{self.filename}>" if self.filename else "<global-scope>"
 
-    # def visit_Import(self, node):
-    #     for alias in node.names:
-    #         module_name = alias.name
-    #         module_asname = (alias.asname if alias.asname else module_name)
-    #         self.import_mapping[module_asname] = module_name
-    #     self.generic_visit(node)
+    def visit_Import(self, node):
+        for alias in node.names:
+            module_name = alias.name
+            module_asname = alias.asname if alias.asname else module_name
+            self.import_mapping[module_asname] = module_name
+        self.generic_visit(node)
 
-    # def visit_ImportFrom(self, node):
-    #     module_name = node.module
-    #     level_depth = node.level
-        
-    #     module_base = module_name.split(".")[0]
-    #     for alias in node.names:
-    #         import_name = (alias.asname if alias.asname else alias.name)
-    #         self.import_mapping[import_name] = module_base
-    #     # TODO: level depth und relative import From resolven
+    def visit_ImportFrom(self, node):
+        module_name = node.module.split(".")[-1] if node.module else ""
+        for alias in node.names:
+            self.import_mapping[alias.asname or alias.name] = f"{module_name}" if module_name else alias.name
 
     def visit_ClassDef(self, node: ast.ClassDef):
         prev_class = self.current_class
         self.current_class = node.name
-        for function in node.body:
-            self.visit(function)
+        self.generic_visit(node)
         self.current_class = prev_class
         
     def visit_FunctionDef(self, node):
-        """ 
-        Besucht eine normale Funktionsdefinition.
-
-        Setzt `self.current_function`, erstellt den Knoten im Graphen und 
-        traversiert rekursiv den Funktionskörper.
-        """
+        prev_function = self.current_function
+        full_name = self._make_full_name(node.name, self.current_class)
+        self.local_defs[node.name] = full_name
         if self.current_class:
-            self.current_function = self._make_full_name(node.name, class_name=self.current_class)
-        else:
-            self.current_function = self._make_full_name(node.name) 
+            self.local_defs[f"{self.current_class}.{node.name}"] = full_name
+
+        self.current_function = full_name
         self.graph.add_node(self.current_function)
         self.generic_visit(node)
         self.function_set.add(self.current_function)
-        self.current_function = None
+        self.current_function = prev_function
 
     def visit_AsyncFunctionDef(self, node):
-        """
-        Besucht eine asynchrone Funktionsdefinition (`async def`).
-
-        Funktioniert analog zu `visit_FunctionDef`.
-        """
         self.visit_FunctionDef(node)
 
     def visit_Call(self, node):
-        """
-        Besucht einen Funktions- oder Methodenaufruf und behandelt komplexe Fälle
-        mit einer detaillierten Warnung, anstatt abzustürzen.
-        """             
         caller = self._current_caller()
-        raw_callees: list[str] = []
-        try:
-            # benutze die Helferfunktion, um Namen zu extrahieren
-            raw_callees = self._recursive_call(node)
-            # falls _recursive_call ein leeres array oder None zurückgibt, sicherstellen, dass es list ist
-            if raw_callees is None:
-                raw_callees = []
+        parts = self._recursive_call(node)
+        resolved_callees = self._resolve_all_callee_names([parts])
 
-            resolved_callees = self._resolve_all_callee_names(raw_callees)
+        if caller not in self.edges:
+            self.edges[caller] = set()
 
-            # sicherstellen, dass caller als Key existiert und ein Set ist
-            if caller not in self.edges:
-                self.edges[caller] = set()
-
-            for resolved_callee in resolved_callees:
-                if resolved_callee:
-                    self.edges[caller].add(resolved_callee)
-        except Exception as e:
-            print(f"Unerwarteter Fehler bei der Verarbeitung eines Funktionsaufrufs: {e} in Datei {self.filename}")
+        for callee in resolved_callees:
+            if callee:
+                self.edges[caller].add(callee)
         self.generic_visit(node)
 
     def visit_If(self, node):
-        """
-        Prüft auf `if __name__ == "__main__"`-Blöcke, um globale Aufrufe innerhalb
-        dieses Blocks separat als <main_block> im Call-Graphen darzustellen.
-
-        Alle Funktionsaufrufe innerhalb des Blocks werden dann von <main_block> aus
-        als Caller-Knoten erfasst.
-        """
         if (isinstance(node.test, ast.Compare) and
             isinstance(node.test.left, ast.Name) and 
             node.test.left.id == "__name__"):
@@ -147,101 +141,96 @@ class CallGraph(ast.NodeVisitor):
         else:
             self.generic_visit(node)
 
-def build_callGraph(tree: ast.AST, filename: str) -> nx.DiGraph:
-    """ 
-    Erstellt einen Call-Graphen aus einem gegebenen Python-AST.
+# def build_callGraph(tree: ast.AST, filename: str, repo_root) -> nx.DiGraph:
+#     visitor = CallGraph(filename, repo_root)
+#     visitor.visit(tree)
+#     graph = visitor.graph
 
-    Der Graph ist ein gerichteter Graph (networkx.DiGraph), in dem:
-      - Knoten: Funktionen, Methoden und der globale Scope (<module>) bzw. <main_block> für `if __name__ == "__main__"`-Code
-      - Kanten: Funktions-/Methodenaufrufe zwischen diesen Knoten
+#     for caller, callees in visitor.edges.items():
+#         for callee in callees:
+#             graph.add_node(callee)
+#             graph.add_edge(caller, callee)
 
-    Args:
-        tree (ast.AST): Der AST der zu analysierenden Python-Datei.
-        filename (str, optional): Der Name der analysierten Datei, z. B. `"main.py"` oder `"src/utils.py"`.
+#     return graph
 
-    Returns:
-        nx.DiGraph: Der vollständige Call-Graph.
-    """
-    visitor = CallGraph(filename)
-    visitor.visit(tree)
-    graph = visitor.graph
+# def build_global_callgraph(repo: GitRepository, repo_root) -> nx.DiGraph:
+#     all_files = repo.get_all_files()
+#     global_graph = nx.DiGraph()
 
-# add all edges from dictionary to the graph at once
-    for caller, callees in visitor.edges.items():
-        for callee in callees:
-            # if callee in visitor.function_set:
-                graph.add_edge(caller, callee)
+#     # Zunächst alle Funktionen aller Dateien erfassen
+#     file_function_mapping = {}
+#     for file in all_files:
+#         if not file.path.endswith(".py"):
+#             continue
+#         filename = Path(file.path).stem
+#         tree = ast.parse(file.content)
+#         visitor = CallGraph(filename, repo_root)
+#         visitor.visit(tree)
+#         file_function_mapping[filename] = visitor.function_set
+#         for node in visitor.graph.nodes:
+#             global_graph.add_node(node)
+#         for caller, callees in visitor.edges.items():
+#             if caller not in global_graph:
+#                 global_graph.add_node(caller)
+#             for callee in callees:
+#                 global_graph.add_node(callee)
+#                 global_graph.add_edge(caller, callee)
 
-    return graph
+#     return global_graph
 
-# --- NEUE FUNKTION HINZUGEFÜGT ---
-def graph_to_adj_list(graph: nx.DiGraph) -> Dict[str, list[str]]:
-    """
-    Konvertiert einen networkx.DiGraph in eine Adjazenzliste (Dict),
-    die JSON-serialisierbar ist.
-
-    Args:
-        graph (nx.DiGraph): Der zu konvertierende Call-Graph.
-
-    Returns:
-        Dict[str, List[str]]: Eine Adjazenzliste, bei der jeder Schlüssel
-                              ein aufrufender Knoten (caller) und der Wert
-                              eine Liste der aufgerufenen Knoten (callees) ist.
-    """
-    adj_list = {}
-    # Wir sortieren die Knoten für eine konsistente Ausgabe
-    for node in sorted(list(graph.nodes())):
-        # Wir holen alle Nachfolger (aufgerufene Funktionen) und sortieren sie ebenfalls
-        successors = sorted(list(graph.successors(node)))
-        if successors:  # Nur Knoten aufnehmen, die auch wirklich andere aufrufen
-            adj_list[node] = successors
-    return adj_list
-
-# Globale Darstellung des Callgraphen
-
-def build_global_callgraph(repo: GitRepository)-> nx.DiGraph:
-    all_files = repository.get_all_files()
-    global_graph = nx.DiGraph()
-
-    for file in all_files: 
-        if not file.path.endswith(".py"):
-            continue
-        filename = str(os.path.basename(file.path)).removesuffix(".py")
-        tree = ast.parse(file.content)
-        graph = build_callGraph(tree, filename)
-        
-        for node in graph.nodes:
-            global_graph.add_node(node)
-            
-        for caller, callee in graph.edges:
-            if callee:
-                global_graph.add_node(callee)
-                global_graph.add_edge(caller, callee)
-    
-    return global_graph
-
-
-   
 def make_safe_dot(graph: nx.DiGraph, out_path: str):
     mapping = {}
     H = graph.copy()
     for i, n in enumerate(list(graph.nodes())):
         safe = f"n{i}"           
         mapping[n] = safe
-
     H = nx.relabel_nodes(H, mapping)
     for orig, safe in mapping.items():
         H.nodes[safe]["label"] = orig
-
     nx.drawing.nx_pydot.write_dot(H, out_path)
+
+
+def build_filtered_callgraph(repo: GitRepository) -> nx.DiGraph:
+    """
+    Baut den globalen Call-Graphen und filtert ihn auf selbst geschriebene Funktionen.
+    """
+    all_file_objects = repo.get_all_files()
+    own_functions = set()
+    file_trees = {}
+
+    for file in all_file_objects:
+        if not file.path.endswith(".py"):
+            continue
+        filename = Path(file.path).stem
+        tree = ast.parse(file.content)
+        file_trees[filename] = tree
+        visitor = CallGraph(filename)
+        visitor.visit(tree)
+        own_functions.update(visitor.function_set)
+
+    # Globalen Call-Graph bauen
+    global_graph = nx.DiGraph()
+    for filename, tree in file_trees.items():
+        visitor = CallGraph(filename)
+        visitor.visit(tree)
+        for caller, callees in visitor.edges.items():
+            if caller not in own_functions:
+                continue 
+            for callee in callees:
+                if callee in own_functions:
+                    global_graph.add_edge(caller, callee)
+                    global_graph.add_node(caller)
+                    global_graph.add_node(callee)
+    return global_graph
+
 
 if __name__ == "__main__":
     from getRepo import GitRepository
     from basic_info import ProjektInfoExtractor
     import os
 
-    repo_url = "https://github.com/christiand03/repo-onboarding-agent"
-    #repo_url = "https://github.com/pallets/flask"    
+    # repo_url = "https://github.com/christiand03/repo-onboarding-agent"
+    repo_url = "https://github.com/pallets/flask"    
 
     with GitRepository(repo_url) as repository:
         print(f"Repository von {repository.repo_url} erfolgreich geklont. Es liegt im Ornder {repository.temp_dir}")
@@ -259,5 +248,5 @@ if __name__ == "__main__":
 
         print("\n--- Starte nun die detaillierte Code-Analyse... ---")
         print(f"Insgesamt {len(all_file_objects)} Dateien im Repository für die Analyse gefunden.")               
-        global_graph = build_global_callgraph(repository)
-        make_safe_dot(global_graph, f"repo.dot")
+        filtered_graph = build_filtered_callgraph(repository)
+        make_safe_dot(filtered_graph, f"filtered_repo_callgraph_repo-agent-3.dot")
