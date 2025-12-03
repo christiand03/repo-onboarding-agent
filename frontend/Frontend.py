@@ -328,9 +328,8 @@ if st.session_state["authentication_status"]:
                  # Fallback (sollte durch load_data abgefangen sein)
                  st.session_state.active_chat = "Chat 1" 
 
-        with st.container(border=None, gap=None,height="content"):
+        with st.container(border=None, gap=None,height=400):
             # --- CHAT MANAGEMENT ---
-            st.caption("---")
             if st.button("➕ Neuer Chat", width="content", type="tertiary"):
                 # Namen generieren
                 base_name = "Chat"
@@ -362,7 +361,6 @@ if st.session_state["authentication_status"]:
                     st.session_state.active_chat = chat_name
                     st.rerun()
 
-            st.markdown("---")
 
         with st.container(border=None, gap=None,height="content"):
             if st.button("🗑️ aktuellen Chat löschen", width="content", type="tertiary"):
