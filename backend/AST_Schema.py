@@ -2,7 +2,9 @@ import ast
 import networkx as nx
 import os
 
-from .callgraph import build_callGraph
+from .callgraph import build_filtered_callgraph
+from .getRepo import GitRepository
+
 
 def path_to_module(filepath, project_root):
     """Wandelt einen Dateipfad in einen Python-Modulpfad um."""
@@ -148,7 +150,7 @@ class ASTAnalyzer:
         
         return full_schema
 
-    def analyze_repository(self, files: list) -> dict:
+    def analyze_repository(self, files: list, repo: GitRepository) -> dict:
         full_schema = {
             "files": {}
         }
@@ -160,6 +162,11 @@ class ASTAnalyzer:
         project_root = os.path.commonpath(all_paths)
         if os.path.isfile(project_root):
             project_root = os.path.dirname(project_root)
+
+        try:
+            global_filtered_callgraph = build_filtered_callgraph(repo)
+        except ValueError as e:
+            print("Callgraph konnte nicht erstellt werden!")
 
         for file_obj in files:
             if not file_obj.path.endswith('.py'):
@@ -180,11 +187,9 @@ class ASTAnalyzer:
                 visitor.visit(tree)
                 file_schema_nodes = visitor.schema
 
-                call_graph = build_callGraph(tree, filename=file_obj.path)
-
                 self._enrich_schema_with_callgraph(
                     file_schema_nodes, 
-                    call_graph, 
+                    global_filtered_callgraph, 
                     file_obj.path
                 )
 

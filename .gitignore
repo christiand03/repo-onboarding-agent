@@ -1,4 +1,5 @@
 # Virtuelle Umgebung ignorieren
+.venv/
 venv/
 __pycache__/
 

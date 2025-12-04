@@ -18,8 +18,7 @@ from keyword import iskeyword
 from pathlib import Path
 
 from getRepo import GitRepository
-from backend.callgraph import make_safe_dot
-
+from callgraph import make_safe_dot
 class FileDependencyGraph(NodeVisitor):
 
     import_dependencies: dict[str, set[str]] = {}
@@ -43,16 +42,14 @@ class FileDependencyGraph(NodeVisitor):
         names = [alias.name for alias in node.names]  
         all_files = get_all_temp_files(self.repo_root)  
 
-        # Suche die aktuelle Datei (self.filename -> modulname ohne .py oder auch Pfad)
         candidates = [p for p in all_files if p.stem == Path(self.filename).stem or p.name == f"{self.filename}.py"]
 
         if not candidates:
             raise ImportError(f"Kann aktuelle Datei '{self.filename}' im Repo nicht finden.")
 
-        # Wähle die plausibelste Datei (flachster Pfad)
-        candidates.sort(key=lambda p: len(p.parts))
-        current_rel_path = candidates[0]  # z.B. package/subpkg/module.py
 
+        candidates.sort(key=lambda p: len(p.parts))
+        current_rel_path = candidates[0]
         base_dir = current_rel_path.parent
         if level_depth <= 0:
             raise ImportError("Erwarteter relativer Import (level >= 1).")
@@ -230,12 +227,12 @@ def nx_to_mermaid_with_folders(G: nx.DiGraph):
     return "\n".join(lines)
 
 if __name__ == "__main__":
-    repo_url = "https://github.com/christiand03/repo-onboarding-agent"
-    # repo_url = "https://github.com/pallets/flask"
+    # repo_url = "https://github.com/christiand03/repo-onboarding-agent"
+    repo_url = "https://github.com/pallets/flask"
     with GitRepository(repo_url) as repo:
         global_graph = build_repository_graph(repo)
-        # make_safe_dot(global_graph, f"FDG_repo_{repo.__str__()}.dot")
-        mermaid_code = nx_to_mermaid_with_folders(global_graph)
-        with open("dependency_graph.md", "w") as f:
-            f.write(mermaid_code)
+        make_safe_dot(global_graph, f"FDG_repo.dot")
+        # mermaid_code = nx_to_mermaid_with_folders(global_graph)
+        # with open("dependency_graph.md", "w") as f:
+        #     f.write(mermaid_code)
         
