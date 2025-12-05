@@ -113,7 +113,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
 
     # URL Extraktion
     repo_url = None
-    url_pattern = r"https?://[^\s]+"
+    url_pattern = r"https?://(?:www\.)?github\.com/[^\s]+"
     match = re.search(url_pattern, user_input)
 
     if match:
