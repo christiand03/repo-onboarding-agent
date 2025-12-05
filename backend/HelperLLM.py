@@ -107,6 +107,9 @@ class LLMHelper:
         
         elif model_name == "gemini-flash-latest":
             self.batch_size = 10
+
+        elif model_name == "gemini-2.5-flash":
+            self.batch_size = 10
             
         elif model_name == "gemini-2.5-pro":
             self.batch_size = 2
