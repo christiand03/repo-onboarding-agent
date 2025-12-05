@@ -87,6 +87,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
     scadsllm_api_key = api_keys.get("scadsllm")
     scadsllm_base_url = api_keys.get("scadsllm_base_url")
     ollama_base_url = api_keys.get("ollama")
+    base_url = None
 
     if model_names["helper"].startswith("gpt-"):
         helper_api_key = openai_api_key

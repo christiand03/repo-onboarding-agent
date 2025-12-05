@@ -8,3 +8,5 @@ __pycache__/
 
 # VS Code spezifische Dateien
 .vscode/
+
+frontend/.streamlit/secrets.toml
