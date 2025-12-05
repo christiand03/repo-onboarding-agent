@@ -84,12 +84,20 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
     # API Key & Ollama Base URL aus Frontend holen
     gemini_api_key = api_keys.get("gemini")
     openai_api_key = api_keys.get("gpt")
+    scadsllm_api_key = api_keys.get("scadsllm")
+    scadsllm_base_url = api_keys.get("scadsllm_base_url")
     ollama_base_url = api_keys.get("ollama")
 
     if model_names["helper"].startswith("gpt-"):
         helper_api_key = openai_api_key
     elif model_names["helper"].startswith("gemini-"):
         helper_api_key = gemini_api_key
+    elif "/" in model_names["helper"] or model_names["helper"].startswith("alias-") or any(x in model_names["helper"] for x in ["DeepSeek", "Teuken", "Llama", "Qwen", "gpt-oss", "openGPT"]):
+        helper_api_key = scadsllm_api_key
+        base_url = scadsllm_base_url
+    else:
+        helper_api_key = None
+        base_url = ollama_base_url
     if model_names["main"].startswith("gpt-"):
         api_key = openai_api_key
     elif model_names["main"].startswith("gemini-"):
@@ -169,7 +177,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
     update_status("🌳 Erstelle Abstract Syntax Tree (AST)...")
     try:        
         ast_analyzer = ASTAnalyzer()   
-        ast_schema = ast_analyzer.analyze_repository(files=repo_files)
+        ast_schema = ast_analyzer.analyze_repository(files=repo_files, repo=repo)
         logging.info("AST schema created")
     except Exception as e:
         logging.error(f"Error retrieving repository files: {e}")
@@ -198,11 +206,9 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
             functions = ast_nodes.get('functions', [])
             classes = ast_nodes.get('classes', [])
 
-            # --- 1. Funktionen verarbeiten ---
             for function in functions:
                 context = function.get('context', {})
                 
-                # BEREINIGUNG: Nur Dictionaries (CallInfo) zulassen
                 raw_called_by = context.get('called_by', [])
                 clean_called_by = [cb for cb in raw_called_by if isinstance(cb, dict)]
 
@@ -221,15 +227,12 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
                 
                 helper_llm_function_input.append(function_input)
 
-            # --- 2. Klassen verarbeiten ---
             for _class in classes:
                 context = _class.get('context', {})
                 
-                # Method Context inputs erstellen und bereinigen
                 method_context_inputs = []
                 for method in context.get('method_context', []):
                     
-                    # BEREINIGUNG: Nur Dictionaries (CallInfo) zulassen
                     raw_method_called_by = method.get('called_by', [])
                     clean_method_called_by = [cb for cb in raw_method_called_by if isinstance(cb, dict)]
 
@@ -243,7 +246,6 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
                         )
                     )
 
-                # BEREINIGUNG: Instantiated_by filtern
                 raw_instantiated_by = context.get('instantiated_by', [])
                 clean_instantiated_by = [ib for ib in raw_instantiated_by if isinstance(ib, dict)]
 
@@ -276,7 +278,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         function_prompt_path=function_prompt_file, 
         class_prompt_path=class_prompt_file,
         model_name=helper_model,
-        ollama_base_url=ollama_base_url,
+        base_url=base_url,
     )
     
     if ollama_base_url:
@@ -321,7 +323,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
             # Rate Limit Sleep für Gemini Modelle
             if llm_helper.model_name.startswith("gemini-") & (len(helper_llm_function_input) > 0):
                 update_status("💤 Wartezeit eingelegt, um Rate Limits einzuhalten...")
-                time.sleep(90)
+                time.sleep(65)
             
             update_status(f"🤖 Helper LLM: Analysiere {len(helper_llm_class_input)} Klassen ({helper_model})...")
             
@@ -430,11 +432,8 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
             f.write(final_report)
         logging.info(f"Final report saved to '{report_filepath}'.")
         
-        # --- NEU: Speichern des Savings-Diagramms ---
-        # Nur wenn wir valide Savings Daten haben
         if savings_data:
             try:
-                # Dateiname ableiten: "savings_" statt "report_" und Endung .png
                 savings_filename = report_filename.replace("report_", "savings_").replace(".md", ".png")
                 savings_filepath = os.path.join(stats_dir, savings_filename)
                 
@@ -466,4 +465,4 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
 
 if __name__ == "__main__":
     user_input = "https://github.com/christiand03/repo-onboarding-agent"
-    main_workflow(user_input, api_keys={"gemini": os.getenv("GEMINI_API_KEY")}, model_names={"helper": "gemini-2.5-flash-lite", "main": "gemini-2.5-pro"})
+    main_workflow(user_input, api_keys={"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model_names={"helper": "alias-ha", "main": "gemini-2.5-pro"})

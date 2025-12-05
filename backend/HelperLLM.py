@@ -25,14 +25,15 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+SCADS_AI_KEY = os.getenv("SCADS_AI_KEY")
+SCADSLLM_URL = os.getenv("SCADSLLM_URL")
 
 class LLMHelper:
     """
     A class to interact with Google Gemini for generating code snippet documentation.
     It centralizes API interaction, error handling, and validates I/O using Pydantic.
     """
-    def __init__(self, api_key: str, function_prompt_path: str, class_prompt_path: str, model_name: str = "gemini-2.0-flash-lite", ollama_base_url: str = None):
+    def __init__(self, api_key: str, function_prompt_path: str, class_prompt_path: str, model_name: str = "gemini-2.0-flash-lite", base_url: str = None):
         if not api_key:
             raise ValueError("Gemini API Key must be set.")
         
@@ -55,6 +56,7 @@ class LLMHelper:
         self.model_name = model_name
         self._configure_batch_settings(model_name)
 
+
         if model_name.startswith("gemini-"):
             base_llm = ChatGoogleGenerativeAI(
                 model=model_name,
@@ -62,15 +64,29 @@ class LLMHelper:
                 temperature=0.3, 
             )
         
-        elif model_name.startswith("gpt-"):
+        elif model_name.startswith("gpt-") and "openGPT" not in model_name:
             base_llm = ChatOpenAI(
-                model_name=model_name,
+                model=model_name,
                 api_key=api_key,
                 temperature=0.3,
             )
 
+        elif "/" in model_name or model_name.startswith("alias-") or any(x in model_name for x in ["DeepSeek", "Teuken", "Llama", "Qwen", "gpt-oss", "openGPT"]):
+            if not SCADSLLM_URL:
+                raise ValueError(f"SCADSLLM_URL environment variable is required for model {model_name}")
+            
+            logging.info(f"Connecting to Custom API at {SCADSLLM_URL} for model {model_name}")
+            
+            base_llm = ChatOpenAI(
+                model=model_name,
+                api_key=api_key,
+                base_url=SCADSLLM_URL,
+                temperature=0.3,
+            )
+
         else:
-            target_url = ollama_base_url if ollama_base_url else OLLAMA_BASE_URL
+            target_url = base_url if base_url else OLLAMA_BASE_URL
+            logging.info(f"Using Ollama at {target_url} for model {model_name}")
             base_llm = ChatOllama(
                 model=model_name,
                 temperature=0.3,
@@ -109,6 +125,9 @@ class LLMHelper:
 
         elif model_name == "gpt-5-mini":
             self.batch_size = 500
+
+        elif "/" in model_name or model_name.startswith("alias-") or any(x in model_name for x in ["DeepSeek", "Teuken", "Llama", "Qwen", "gpt-oss", "openGPT"]):
+            self.batch_size = 500
             
         else:
             logging.warning(f"Unknown model '{model_name}', using conservative defaults.")
@@ -118,7 +137,7 @@ class LLMHelper:
         """Generates and validates documentation for a batch of functions."""
 
         BATCH_SIZE = self.batch_size
-        WAITING_TIME = 70
+        WAITING_TIME = 62
 
         if not function_inputs:
             return []
@@ -141,7 +160,7 @@ class LLMHelper:
             logging.info(f"Calling LLM {self.model_name} API for Batch {i // BATCH_SIZE + 1} (Items {i+1} to {min(i + BATCH_SIZE, total_items)} of {total_items})...")            
         
             try:
-                batch_results = self.function_llm.batch(batch_conversations)
+                batch_results = self.function_llm.batch(batch_conversations, config={"max_concurrency": self.batch_size})
                 all_validated_functions.extend(batch_results)
                 logging.info("Batch call successful.")
 
@@ -164,7 +183,7 @@ class LLMHelper:
             return []
         
         BATCH_SIZE = self.batch_size
-        WAITING_TIME = 70
+        WAITING_TIME = 62
 
         # Create a list of JSON payloads from the input models
         json_payloads = [
@@ -183,7 +202,7 @@ class LLMHelper:
             logging.info(f"Calling LLM {self.model_name} API for Batch {i // BATCH_SIZE + 1} (Items {i+1} to {min(i + BATCH_SIZE, total_items)} of {total_items})...")            
 
             try:
-                batch_results = self.class_llm.batch(batch_conversations)
+                batch_results = self.class_llm.batch(batch_conversations , config={"max_concurrency": self.batch_size})
                 all_validated_classes.extend(batch_results)
                 logging.info("Batch call successful.")
 
