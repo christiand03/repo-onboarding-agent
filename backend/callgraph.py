@@ -7,13 +7,7 @@ from typing import Dict
 
 from .getRepo import GitRepository
 
-import ast
-import networkx as nx
-import os
-from pathlib import Path
-from typing import Dict
 
-from .getRepo import GitRepository
 
 class CallGraph(ast.NodeVisitor):
     def __init__(self, filename: str):
