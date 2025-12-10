@@ -7,14 +7,6 @@ from typing import Dict
 
 from .getRepo import GitRepository
 
-import ast
-import networkx as nx
-import os
-from pathlib import Path
-from typing import Dict
-
-from .getRepo import GitRepository
-
 class CallGraph(ast.NodeVisitor):
     def __init__(self, filename: str):
         self.filename = filename
@@ -249,4 +241,4 @@ if __name__ == "__main__":
         print("\n--- Starte nun die detaillierte Code-Analyse... ---")
         print(f"Insgesamt {len(all_file_objects)} Dateien im Repository für die Analyse gefunden.")               
         filtered_graph = build_filtered_callgraph(repository)
-        make_safe_dot(filtered_graph, f"filtered_repo_callgraph_repo-agent-3.dot")
+        make_safe_dot(filtered_graph, "filtered_repo_callgraph_repo-agent-3.dot")

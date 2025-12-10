@@ -192,46 +192,13 @@ def get_all_temp_files(directory: str) -> list[Path]:
 
     return all_files
 
-from collections import defaultdict
-
-def nx_to_mermaid_with_folders(G: nx.DiGraph):
-    # Ordner → Liste der Dateien
-    folder_map = defaultdict(list)
-    for node in G.nodes:
-        parts = node.split("/")
-        folder = "/".join(parts[:-1])  # alles außer Datei = Ordner
-        folder_map[folder].append(parts[-1])  # nur der Dateiname als Knoten
-
-    lines = ["graph TD"]
-
-    # Subgraphs erstellen
-    for folder, files in folder_map.items():
-        if folder:  # nur wenn es einen Ordner gibt
-            lines.append(f"    subgraph {folder.replace('/', '_')}")
-            for f in files:
-                node_id = f"{folder}/{f}".replace('/', '_')
-                lines.append(f'        {node_id}["{f}"]')
-            lines.append("    end")
-        else:
-            # Dateien im Root
-            for f in files:
-                node_id = f.replace('/', '_')
-                lines.append(f'    {node_id}["{f}"]')
-
-    # Kanten
-    for caller, callee in G.edges:
-        caller_id = caller.replace('/', '_')
-        callee_id = callee.replace('/', '_')
-        lines.append(f'    {caller_id} --> {callee_id}')
-
-    return "\n".join(lines)
 
 if __name__ == "__main__":
     # repo_url = "https://github.com/christiand03/repo-onboarding-agent"
     repo_url = "https://github.com/pallets/flask"
     with GitRepository(repo_url) as repo:
         global_graph = build_repository_graph(repo)
-        make_safe_dot(global_graph, f"FDG_repo.dot")
+        make_safe_dot(global_graph, "FDG_repo.dot")
         # mermaid_code = nx_to_mermaid_with_folders(global_graph)
         # with open("dependency_graph.md", "w") as f:
         #     f.write(mermaid_code)
