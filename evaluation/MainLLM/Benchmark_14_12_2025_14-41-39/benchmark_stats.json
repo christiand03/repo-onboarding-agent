@@ -1,0 +1,16 @@
+[
+    {
+        "main_model": "gemini-2.5-flash-lite",
+        "helper_model": "alias-code",
+        "evaluator_model": "gemini-2.5-flash-lite",
+        "score": 0,
+        "duration_gen_sec": 52.82,
+        "duration_eval_sec": 105.24,
+        "timestamp": "2025-12-14 14:46:29",
+        "files": {
+            "input": "input_data_14-42-46.toon",
+            "report": "Report_gemini-2-5-flash-lite.md",
+            "evaluation": "Eval_gemini-2-5-flash-lite.md"
+        }
+    }
+]
