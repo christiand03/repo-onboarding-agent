@@ -27,6 +27,11 @@ EVALUATOR_MODEL = "gemini-2.5-flash"
 
 
 MAIN_MODELS_TO_TEST = [
+
+    #Google Gemini
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+
     #SCADS  
     #Aliases
     "alias-reasoning",
@@ -330,7 +335,7 @@ def benchmark_loop():
                     f.write(report_content)
 
                 if EVALUATOR_MODEL.startswith("gemini-"):
-                    logging.info("⏳ Warte 65s für Evaluator Rate-Limit...")
+                    logging.info("Warte 65s für Evaluator Rate-Limit...")
                     time.sleep(65)
 
                 evaluator = EvaluatorLLM(
@@ -340,7 +345,7 @@ def benchmark_loop():
                     base_url=eval_base_url
                 )
                 
-                logging.info(f"⚖️ Evaluiere...")
+                logging.info(f"Evaluiere...")
                 start_eval = time.time()
                 eval_result = evaluator.evaluate(report_content, input_toon)
                 current_stat["duration_eval_sec"] = round(time.time() - start_eval, 2)
