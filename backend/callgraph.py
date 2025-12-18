@@ -7,6 +7,7 @@ from typing import Dict
 
 from .getRepo import GitRepository
 
+
 class CallGraph(ast.NodeVisitor):
     def __init__(self, filename: str):
         self.filename = filename

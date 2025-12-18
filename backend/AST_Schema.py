@@ -149,6 +149,7 @@ class ASTAnalyzer:
         if os.path.isfile(project_root):
             project_root = os.path.dirname(project_root)
 
+
         for file_obj in files:
             if not file_obj.path.endswith('.py'):
                 continue
