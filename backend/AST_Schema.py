@@ -167,6 +167,7 @@ class ASTAnalyzer:
             global_filtered_callgraph = build_filtered_callgraph(repo)
         except ValueError as e:
             print("Callgraph konnte nicht erstellt werden!")
+            print(e)
 
         for file_obj in files:
             if not file_obj.path.endswith('.py'):
