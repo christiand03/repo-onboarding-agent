@@ -50,7 +50,8 @@ def insert_user(username: str, name: str, password: str):
         "name": name, 
         "hashed_password": stauth.Hasher.hash(password),
         "gemini_api_key": "",
-        "ollama_base_url": ""
+        "ollama_base_url": "",
+        "gpt_api_key": ""
     }
     result = dbusers.insert_one(user)
     return result.inserted_id
@@ -70,6 +71,11 @@ def update_user_name(username: str, new_name: str):
 def update_gemini_key(username: str, gemini_api_key: str):
     encrypted_key = encrypt_text(gemini_api_key.strip())
     result = dbusers.update_one({"_id": username}, {"$set": {"gemini_api_key": encrypted_key}})
+    return result.modified_count
+
+def update_gpt_key(username: str, gpt_api_key: str):
+    encrypted_key = encrypt_text(gpt_api_key.strip())
+    result = dbusers.update_one({"_id": username}, {"$set": {"gpt_api_key": encrypted_key}})
     return result.modified_count
 
 def update_ollama_url(username: str, ollama_base_url: str):
@@ -92,7 +98,8 @@ def get_decrypted_api_keys(username: str):
     if not user: return None, None
     gemini_plain = decrypt_text(user.get("gemini_api_key", ""))
     ollama_plain = user.get("ollama_base_url", "")
-    return gemini_plain, ollama_plain
+    gpt_plain = decrypt_text(user.get("gpt_api_key", ""))
+    return gemini_plain, ollama_plain, gpt_plain
 
 # --- chats ---
 
@@ -141,7 +148,8 @@ def rename_chat_fully(username: str, old_name: str, new_name: str):
 dbexchanges = client.AI4AA.exchanges
 
 def insert_exchange(question: str, answer: str, feedback: str, username: str, chat_name: str, 
-                    helper_used: str="", main_used: str="", total_time: str="", helper_time: str="", main_time: str=""):
+                    helper_used: str="", main_used: str="", total_time: str="", helper_time: str="", main_time: str="",
+                    json_tokens=0, toon_tokens=0, savings_percent=0.0):
     new_id = str(uuid.uuid4())
     exchange = {
         "_id": new_id,
@@ -156,6 +164,9 @@ def insert_exchange(question: str, answer: str, feedback: str, username: str, ch
         "total_time": total_time,
         "helper_time": helper_time,
         "main_time": main_time,
+        "json_tokens": json_tokens,
+        "toon_tokens": toon_tokens,
+        "savings_percent": savings_percent,
         "created_at": datetime.now()
     }
     try:

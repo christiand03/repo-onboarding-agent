@@ -16,12 +16,14 @@ load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+SCADS_AI_KEY = os.getenv("SCADS_AI_KEY")
+SCADSLLM_URL = os.getenv("SCADSLLM_URL")
 
 class MainLLM:
     """
     Hauptklasse für die Interaktion mit dem LLM.
     """
-    def __init__(self, api_key: str, prompt_file_path: str, model_name: str = "gemini-2.5-pro", ollama_base_url: str = None):
+    def __init__(self, api_key: str, prompt_file_path: str, model_name: str = "gemini-2.5-pro", base_url: str = None):
         if not api_key:
             raise ValueError("Gemini API Key must be set.")
         
@@ -47,9 +49,21 @@ class MainLLM:
                 api_key=api_key,
                 temperature=1.0, 
             )
+        elif "/" in model_name or model_name.startswith("alias-") or any(x in model_name for x in ["DeepSeek", "Teuken", "Llama", "Qwen", "gpt-oss", "openGPT"]):
+            if not SCADSLLM_URL:
+                raise ValueError(f"SCADSLLM_URL environment variable is required for model {model_name}")
+            
+            logging.info(f"Connecting to Custom API at {SCADSLLM_URL} for model {model_name}")
+            
+            self.llm = ChatOpenAI(
+                model=model_name,
+                api_key=api_key,
+                base_url=SCADSLLM_URL,
+                temperature=1.0,
+            )
 
         else:
-            target_url = ollama_base_url if ollama_base_url else OLLAMA_BASE_URL
+            target_url = base_url if base_url else OLLAMA_BASE_URL
             self.llm = ChatOllama(
                 model=model_name,
                 temperature=1.0,

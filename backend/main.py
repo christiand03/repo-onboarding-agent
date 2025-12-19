@@ -100,9 +100,15 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         helper_api_key = None
         base_url = ollama_base_url
     if model_names["main"].startswith("gpt-"):
-        api_key = openai_api_key
+        main_api_key = openai_api_key
     elif model_names["main"].startswith("gemini-"):
-        api_key = gemini_api_key
+        main_api_key = gemini_api_key
+    elif "/" in model_names["main"] or model_names["main"].startswith("alias-") or any(x in model_names["main"] for x in ["DeepSeek", "Teuken", "Llama", "Qwen", "gpt-oss", "openGPT"]):
+        main_api_key = scadsllm_api_key
+        base_url = scadsllm_base_url
+    else:
+        main_api_key = None
+        base_url = ollama_base_url
 
     # Standardeinstellungen für Modelle
     helper_model = model_names.get("helper", "gpt-5-mini")
@@ -389,10 +395,10 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
     prompt_file_mainllm_toon = "SystemPrompts/SystemPromptMainLLMToon.txt"
     # MainLLM Ausführung
     main_llm = MainLLM(
-        api_key=api_key, 
+        api_key=main_api_key, 
         prompt_file_path=prompt_file_mainllm_toon,
         model_name=main_model,
-        ollama_base_url=ollama_base_url,
+        base_url=base_url,
     )
 
 
@@ -456,7 +462,11 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         "main_time": round(total_main_time, 2),
         "total_time": round(total_active_time, 2),
         "helper_model": helper_model,
-        "main_model": main_model
+        "main_model": main_model,
+        "json_tokens": savings_data['json_tokens'] if savings_data else None,
+        "toon_tokens": savings_data['toon_tokens'] if savings_data else None,
+        "savings_percent": round(savings_data['savings_percent'], 2) if savings_data else None
+    
     }
 
     return {
@@ -466,4 +476,4 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
 
 if __name__ == "__main__":
     user_input = "https://github.com/christiand03/repo-onboarding-agent"
-    main_workflow(user_input, api_keys={"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model_names={"helper": "alias-ha", "main": "gemini-2.5-pro"})
+    main_workflow(user_input, api_keys={"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model_names={"helper": "alias-code", "main": "alias-ha"})
