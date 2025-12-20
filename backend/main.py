@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
 
-from .getRepo import GitRepository, RepoFile
+from .getRepo import GitRepository
 from .AST_Schema import ASTAnalyzer
 from .MainLLM import MainLLM
 from .basic_info import ProjektInfoExtractor
@@ -22,6 +22,8 @@ from .relationship_analyzer import ProjectAnalyzer
 from schemas.types import FunctionContextInput, FunctionAnalysisInput, ClassContextInput, ClassAnalysisInput, MethodContextInput
 
 from toon_format import encode, count_tokens, estimate_savings, compare_formats
+
+from .converter import process_repo_notebooks
 
 
 # --- Konfiguration & Logging ---
@@ -474,6 +476,107 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         "metrics": metrics
     }
 
+
+def notebook_workflow(input, api_key, model, status_callback=None):
+
+    def update_status(msg):
+        if status_callback:
+            status_callback(msg)
+        logging.info(msg)
+
+    base_url = None
+
+    if model.startswith("gpt-"):
+        input_api_key = api_key.get("gpt")
+    elif model.startswith("gemini-"):
+        input_api_key = api_key.get("gemini")
+    elif "/" in model or model.startswith("alias-") or any(x in model for x in ["DeepSeek", "Teuken", "Llama", "Qwen", "gpt-oss", "openGPT"]):
+        input_api_key = api_key.get("scadsllm")
+        base_url = api_key.get("scadsllm_base_url")
+    else:
+        input_api_key = None
+        base_url = api_key.get("ollama")
+
+    update_status("🔍 Analysiere Input...")
+
+    # URL Extraktion
+    repo_url = None
+    url_pattern = r"https?://(?:www\.)?github\.com/[^\s]+"
+    match = re.search(url_pattern, input)
+
+    if match:
+        repo_url = match.group(0)
+        logging.info(f"Extracted repository URL: {repo_url}")
+    else:
+        raise ValueError("Could not find a valid URL in the provided input.")
+    
+    # Repo klonen und Dateien extrahieren
+    update_status(f"⬇️ Klone Repository: {repo_url} ...")
+
+    try: 
+        with GitRepository(repo_url) as repo:
+            repo_files = repo.get_all_files()
+    except Exception as e:
+        logging.error(f"Error cloning repository: {e}")
+        raise
+    
+    update_status(f"🔗 Bereite Input vor...")
+
+    # convert to XML
+    processed_data = process_repo_notebooks(repo_files)
+
+    
+    # Extrahiere Basic Infos
+    update_status("ℹ️ Extrahiere Basis-Informationen...")
+    try:
+        info_extractor = ProjektInfoExtractor()
+        basic_project_info = info_extractor.extrahiere_info(dateien=repo_files, repo_url=repo_url)
+        logging.info("Basic project info extracted")
+    except Exception as e:
+        logging.error(f"Error extracting basic project info: {e}")
+
+    llm_input = {
+        "basic_info": basic_project_info,
+        "notebook_xml": processed_data
+    }
+
+    prompt_file_notebook_llm = "SystemPrompts/SystemPromptNotebookLLM.txt"
+    # MainLLM Ausführung
+    notebook_llm = MainLLM(
+        api_key=input_api_key, 
+        prompt_file_path=prompt_file_notebook_llm,
+        model_name=model,
+        base_url=base_url,
+    )
+
+    #print(llm_input)
+
+    update_status(f"🧠 Generiere Notebook Report...")
+    try:
+        logging.info("\n--- Generating Final Report ---")
+        final_report = notebook_llm.call_llm(llm_input)
+    except Exception as e:
+        logging.error(f"Error during report generation: {e}")
+        raise
+
+    
+    # --- Speichern der Ergebnisse ---
+    output_dir = "result"
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Dateiname für Report
+    timestamp = datetime.now().strftime("%d_%m_%Y_%H-%M-%S")
+    report_filename = f"notebook_report_{timestamp}_NotebookLLM_{notebook_llm.model_name}.md"
+    report_filepath = os.path.join(output_dir, report_filename)
+    
+    if final_report:
+        with open(report_filepath, "w", encoding="utf-8") as f:
+            f.write(final_report)
+        logging.info(f"Final report saved to '{report_filepath}'.")
+
 if __name__ == "__main__":
-    user_input = "https://github.com/christiand03/repo-onboarding-agent"
-    main_workflow(user_input, api_keys={"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model_names={"helper": "alias-code", "main": "alias-ha"})
+    #user_input = "https://github.com/christiand03/repo-onboarding-agent"
+    #main_workflow(user_input, api_keys={"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model_names={"helper": "alias-code", "main": "alias-ha"})
+
+    notebook_input = "https://github.com/christiand03/predicting-power-consumption-uni"
+    notebook_workflow(notebook_input, api_key= {"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model= "gemini-2.0-flash")
