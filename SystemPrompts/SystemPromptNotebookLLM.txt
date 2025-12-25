@@ -36,7 +36,7 @@ df = pd.read_sql("SELECT * FROM PROD.SALES", conn)
 <OutputFormat>
 Your output must be a single Markdown string. Do not wrap the output in JSON. The report must follow this structure:
 
-# Notebook Documentation: [Notebook Name]
+# Notebook: [Notebook Name]
 
 ## 1. Executive Summary
 [Synthesize a 3-5 sentence abstract. Explain what business problem this notebook solves, the methodology used, and the final outcome.]

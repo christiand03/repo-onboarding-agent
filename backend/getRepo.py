@@ -1,12 +1,9 @@
 import tempfile
-import shutil
 from git import Repo, GitCommandError
 import logging
 import os
 
-# ==============================================================================
-# Klasse 1: Das Datenobjekt, das eine einzelne Datei repräsentiert
-# ==============================================================================
+
 class RepoFile:
     """
     Repräsentiert eine einzelne Datei in einem Git-Repository.
@@ -24,7 +21,7 @@ class RepoFile:
         self.path = file_path
         self._tree = commit_tree
         
-        # Attribute für Lazy Loading (werden erst bei Bedarf gefüllt)
+
         self._blob = None
         self._content = None
         self._size = None
@@ -75,9 +72,9 @@ class RepoFile:
         return data
 
 
-# ==============================================================================
-# Klasse 2: Der Manager für das gesamte Git-Repository
-# ==============================================================================
+
+
+
 class GitRepository:
     """
     Verwaltet ein Git-Repository, einschließlich Klonen in ein temporäres
@@ -115,7 +112,6 @@ class GitRepository:
         """Löscht das temporäre Verzeichnis und dessen Inhalt."""
         if self.temp_dir:
             print(f"\nLösche temporäres Verzeichnis: {self.temp_dir}")
-            #shutil.rmtree(self.temp_dir)
             self.temp_dir = None
             
     def __enter__(self):

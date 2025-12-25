@@ -163,6 +163,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         logging.info("Basic project info extracted")
     except Exception as e:
         logging.error(f"Error extracting basic project info: {e}")
+        basic_project_info = "Could not extract basic info."
 
     # Erstelle Repository Dateibaum
     update_status("🌲 Erstelle Repository Dateibaum...")
@@ -171,6 +172,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         logging.info("Repository file tree constructed")
     except Exception as e:
         logging.error(f"Error constructing repository file tree: {e}")
+        repo_file_tree = "Could not create file tree."
 
     # Relationship Analyse durchführen
     update_status("🔗 Analysiere Beziehungen (Calls & Instanziierungen)...")
@@ -534,11 +536,13 @@ def notebook_workflow(input, api_key, model, status_callback=None):
         logging.info("Basic project info extracted")
     except Exception as e:
         logging.error(f"Error extracting basic project info: {e}")
+        basic_project_info = "Could not extract basic info."
 
     llm_input = {
         "basic_info": basic_project_info,
         "notebook_xml": processed_data
     }
+    notebook_llm_input_json = json.dumps(llm_input, indent=2)
 
     prompt_file_notebook_llm = "SystemPrompts/SystemPromptNotebookLLM.txt"
     # MainLLM Ausführung
@@ -554,7 +558,7 @@ def notebook_workflow(input, api_key, model, status_callback=None):
     update_status(f"🧠 Generiere Notebook Report...")
     try:
         logging.info("\n--- Generating Final Report ---")
-        final_report = notebook_llm.call_llm(llm_input)
+        final_report = notebook_llm.call_llm(notebook_llm_input_json)
     except Exception as e:
         logging.error(f"Error during report generation: {e}")
         raise
@@ -579,4 +583,4 @@ if __name__ == "__main__":
     #main_workflow(user_input, api_keys={"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model_names={"helper": "alias-code", "main": "alias-ha"})
 
     notebook_input = "https://github.com/christiand03/predicting-power-consumption-uni"
-    notebook_workflow(notebook_input, api_key= {"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model= "gemini-2.0-flash")
+    notebook_workflow(notebook_input, api_key= {"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model= "gemini-2.5-flash")
