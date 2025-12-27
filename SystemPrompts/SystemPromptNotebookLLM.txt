@@ -13,11 +13,11 @@ Your task is to receive a preprocessed Jupyter Notebook. It was converted to XML
 <InputFormat>
 You will receive a single JSON object with the following structure: 
     {
-        "basic_info": basic_project_info,
-        "notebook_xml": processed_data
+        "basic_info": contains basic project info for you to process,
+	"current_notebook_path": contains the name of the notebook that you need to process,
+        "notebook_xml": contains the preprocessed Jupyter Notebook
     }
-"basic_info" contains information about the project.
-"notebook_xml" contains the preprocessed Jupyter Notebook. 
+
 
 The preprocessed Jupyter Notebook was converted to XML so it will look something like this:
 <CELL type="markdown">
@@ -36,7 +36,7 @@ df = pd.read_sql("SELECT * FROM PROD.SALES", conn)
 <OutputFormat>
 Your output must be a single Markdown string. Do not wrap the output in JSON. The report must follow this structure:
 
-# Notebook: [Notebook Name]
+# Notebook (insert the value of "current_notebook_path" here in parenthese): [Notebook Name from "basic_info"]
 
 ## 1. Executive Summary
 [Synthesize a 3-5 sentence abstract. Explain what business problem this notebook solves, the methodology used, and the final outcome.]

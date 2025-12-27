@@ -479,6 +479,9 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
     }
 
 
+
+
+
 def notebook_workflow(input, api_key, model, status_callback=None):
 
     def update_status(msg):
@@ -538,14 +541,9 @@ def notebook_workflow(input, api_key, model, status_callback=None):
         logging.error(f"Error extracting basic project info: {e}")
         basic_project_info = "Could not extract basic info."
 
-    llm_input = {
-        "basic_info": basic_project_info,
-        "notebook_xml": processed_data
-    }
-    notebook_llm_input_json = json.dumps(llm_input, indent=2)
+
 
     prompt_file_notebook_llm = "SystemPrompts/SystemPromptNotebookLLM.txt"
-    # MainLLM Ausführung
     notebook_llm = MainLLM(
         api_key=input_api_key, 
         prompt_file_path=prompt_file_notebook_llm,
@@ -553,15 +551,34 @@ def notebook_workflow(input, api_key, model, status_callback=None):
         base_url=base_url,
     )
 
-    #print(llm_input)
+    notebook_reports = []
+    total_notebooks = len(processed_data)
+    
+    logging.info(f"Starting sequential processing of {total_notebooks} notebooks...")
 
-    update_status(f"🧠 Generiere Notebook Report...")
-    try:
-        logging.info("\n--- Generating Final Report ---")
-        final_report = notebook_llm.call_llm(notebook_llm_input_json)
-    except Exception as e:
-        logging.error(f"Error during report generation: {e}")
-        raise
+    # Iterate over each notebook file individually
+    for index, (nb_path, nb_xml) in enumerate(processed_data.items(), 1):
+        
+        update_status(f"🧠 Generiere Report ({index}/{total_notebooks}): {os.path.basename(nb_path)}")
+        
+        llm_input = {
+            "basic_info": basic_project_info,
+            "current_notebook_path": nb_path,
+            "notebook_xml": nb_xml 
+        }
+
+        notebook_llm_input_json = json.dumps(llm_input, indent=2)
+
+        try:
+            single_report = notebook_llm.call_llm(notebook_llm_input_json)
+            notebook_reports.append(single_report)
+            
+        except Exception as e:
+            logging.error(f"Error generating report for {nb_path}: {e}")
+            notebook_reports.append(f"# Error processing {nb_path}\n\nError: {str(e)}\n\n---\n")
+
+    # Concatenate all reports
+    final_report = "\n\n<br>\n<br>\n<br>\n\n".join(notebook_reports)
 
     
     # --- Speichern der Ergebnisse ---
@@ -582,5 +599,6 @@ if __name__ == "__main__":
     #user_input = "https://github.com/christiand03/repo-onboarding-agent"
     #main_workflow(user_input, api_keys={"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model_names={"helper": "alias-code", "main": "alias-ha"})
 
-    notebook_input = "https://github.com/christiand03/predicting-power-consumption-uni"
+    #notebook_input = "https://github.com/christiand03/predicting-power-consumption-uni"
+    notebook_input = "https://github.com/christiand03/clustering-and-classification-uni"
     notebook_workflow(notebook_input, api_key= {"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model= "gemini-2.5-flash")
