@@ -489,6 +489,59 @@ def notebook_workflow(input, api_key, model, status_callback=None):
             status_callback(msg)
         logging.info(msg)
 
+    def gemini_payload(basic_info, nb_path, xml_content, images):
+        
+        intro_json = json.dumps({
+            "basic_info": basic_info,
+            "current_notebook_path": nb_path
+        }, indent=2)
+        
+        payload_content = []
+
+        payload_content.append({
+            "type": "text",
+            "text": f"Context Information:\n{intro_json}\n\nNotebook XML Structure:\n"
+        })
+
+        # Regex to find: <IMAGE_PLACEHOLDER index="0" mime="image/png"/>
+        pattern = r'(<IMAGE_PLACEHOLDER index="(\d+)" mime="([^"]+)"/>)'
+        last_pos = 0
+        
+        for match in re.finditer(pattern, xml_content):
+            text_segment = xml_content[last_pos:match.start()]
+            if text_segment.strip():
+                payload_content.append({
+                    "type": "text",
+                    "text": text_segment
+                })
+                
+            image_index = int(match.group(2))
+            mime_type = match.group(3)
+            
+            if image_index < len(images):
+                img_data = images[image_index]
+                b64_string = img_data['data']
+                
+                payload_content.append({
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:{mime_type};base64,{b64_string}"
+                    }
+                })
+                
+            last_pos = match.end()
+
+        # Add any remaining text after the last image
+        remaining_text = xml_content[last_pos:]
+        if remaining_text.strip():
+            payload_content.append({
+                "type": "text",
+                "text": remaining_text
+            })
+
+        return payload_content
+
+
     base_url = None
 
     if model.startswith("gpt-"):
@@ -515,7 +568,6 @@ def notebook_workflow(input, api_key, model, status_callback=None):
     else:
         raise ValueError("Could not find a valid URL in the provided input.")
     
-    # Repo klonen und Dateien extrahieren
     update_status(f"⬇️ Klone Repository: {repo_url} ...")
 
     try: 
@@ -557,20 +609,17 @@ def notebook_workflow(input, api_key, model, status_callback=None):
     logging.info(f"Starting sequential processing of {total_notebooks} notebooks...")
 
     # Iterate over each notebook file individually
-    for index, (nb_path, nb_xml) in enumerate(processed_data.items(), 1):
+    for index, (nb_path, nb_data) in enumerate(processed_data.items(), 1):
         
         update_status(f"🧠 Generiere Report ({index}/{total_notebooks}): {os.path.basename(nb_path)}")
         
-        llm_input = {
-            "basic_info": basic_project_info,
-            "current_notebook_path": nb_path,
-            "notebook_xml": nb_xml 
-        }
+        nb_xml = nb_data['xml']
+        nb_images = nb_data['images']
 
-        notebook_llm_input_json = json.dumps(llm_input, indent=2)
+        llm_payload = gemini_payload(basic_project_info, nb_path, nb_xml, nb_images)
 
         try:
-            single_report = notebook_llm.call_llm(notebook_llm_input_json)
+            single_report = notebook_llm.call_llm(llm_payload)
             notebook_reports.append(single_report)
             
         except Exception as e:
@@ -599,6 +648,6 @@ if __name__ == "__main__":
     #user_input = "https://github.com/christiand03/repo-onboarding-agent"
     #main_workflow(user_input, api_keys={"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model_names={"helper": "alias-code", "main": "alias-ha"})
 
-    #notebook_input = "https://github.com/christiand03/predicting-power-consumption-uni"
-    notebook_input = "https://github.com/christiand03/clustering-and-classification-uni"
+    notebook_input = "https://github.com/christiand03/predicting-power-consumption-uni"
+    #notebook_input = "https://github.com/christiand03/clustering-and-classification-uni"
     notebook_workflow(notebook_input, api_key= {"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model= "gemini-2.5-flash")
