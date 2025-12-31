@@ -37,13 +37,30 @@ class ProjectAnalyzer:
             
         self.file_asts.clear()
         
-        return self.get_formatted_results()
+        return self.call_graph
+
+    def get_raw_relationships(self):
+
+        outgoing = defaultdict(set)
+        incoming = defaultdict(set)
+
+        for callee_id, callers_info_list in self.call_graph.items():
+            for info in callers_info_list:
+                caller_id = info['caller']
+                
+                if caller_id and callee_id:
+                    outgoing[caller_id].add(callee_id)
+                    incoming[callee_id].add(caller_id)
+        
+        return {
+            "outgoing": {k: sorted(list(v)) for k, v in outgoing.items()},
+            "incoming": {k: sorted(list(v)) for k, v in incoming.items()}
+        }
 
     def _find_py_files(self):
         py_files = []
         for root, dirs, files in os.walk(self.project_root):
             dirs[:] = [d for d in dirs if d not in self.ignore_dirs]
-            
             for file in files:
                 if file.endswith(".py"):
                     py_files.append(os.path.join(root, file))
@@ -56,7 +73,6 @@ class ProjectAnalyzer:
                 tree = ast.parse(source, filename=filepath)
                 
             self.file_asts[filepath] = tree
-            
             module_path = path_to_module(filepath, self.project_root)
             
             for node in ast.walk(tree):
@@ -75,7 +91,7 @@ class ProjectAnalyzer:
         except Exception as e:
             logging.error(f"Error collecting definitions in {filepath}: {e}")
             self.file_asts[filepath] = None
-            
+
     def _get_parent(self, tree, node):
         for parent in ast.walk(tree):
             for child in ast.iter_child_nodes(parent):
@@ -91,42 +107,12 @@ class ProjectAnalyzer:
         try:
             resolver = CallResolverVisitor(filepath, self.project_root, self.definitions)
             resolver.visit(tree)
-            for callee_pathname, caller_info in resolver.calls.items():
-                self.call_graph[callee_pathname].extend(caller_info)
+            
+            for callee_pathname, caller_info_list in resolver.calls.items():
+                self.call_graph[callee_pathname].extend(caller_info_list)
         except Exception as e:
             logging.error(f"Error resolving calls in {filepath}: {e}")
 
-    def get_formatted_results(self):
-        output_list = []
-        
-        for callee_pathname, calls in self.call_graph.items():
-            if callee_pathname in self.definitions:
-                def_info = self.definitions[callee_pathname]
-                
-                definition_dict = {
-                    "identifier": callee_pathname,
-                    "mode": def_info.get('type', 'unknown'),
-                    "origin": os.path.basename(def_info['file']),
-                    "origin_line": def_info['line'],
-                    "called_by": [] 
-                }
-                
-                unique_calls = {}
-                for call in calls:
-                    key = (call['file'], call['line'], call['caller'])
-                    if key not in unique_calls:
-                        unique_calls[key] = {
-                            "file": call['file'],
-                            "function": call['caller'],
-                            "mode": call.get('caller_type', 'unknown'),
-                            "line": call['line']
-                        }
-
-                if unique_calls:
-                    definition_dict["called_by"] = sorted(unique_calls.values(), key=lambda x: (x['file'], x['line']))
-                    output_list.append(definition_dict)
-                    
-        return output_list
 
 class CallResolverVisitor(ast.NodeVisitor):
     def __init__(self, filepath, project_root, definitions):
@@ -140,20 +126,31 @@ class CallResolverVisitor(ast.NodeVisitor):
         self.calls = defaultdict(list)
 
     def visit_ClassDef(self, node):
-        old_class_name, self.current_class_name = self.current_class_name, node.name
+        old_class_name = self.current_class_name
+        self.current_class_name = node.name
         self.generic_visit(node)
         self.current_class_name = old_class_name
 
     def visit_FunctionDef(self, node):
-        old_caller_name, self.current_caller_name = self.current_caller_name, node.name
+        old_caller = self.current_caller_name
+        
+        if self.current_class_name:
+            full_identifier = f"{self.module_path}.{self.current_class_name}.{node.name}"
+        else:
+            full_identifier = f"{self.module_path}.{node.name}"
+            
+        self.current_caller_name = full_identifier
         self.generic_visit(node)
-        self.current_caller_name = old_caller_name
+        self.current_caller_name = old_caller
 
     def visit_Call(self, node):
         callee_pathname = self._resolve_call_qname(node.func)
         if callee_pathname and callee_pathname in self.definitions:
+            
             if self.current_caller_name == self.module_path:
                 caller_type = 'module'
+            elif '.<locals>.' in self.current_caller_name:
+                caller_type = 'local_function'
             elif self.current_class_name:
                 caller_type = 'method'
             else:

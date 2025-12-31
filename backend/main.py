@@ -178,11 +178,14 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
     update_status("🔗 Analysiere Beziehungen (Calls & Instanziierungen)...")
     try:
         rel_analyzer = ProjectAnalyzer(project_root=local_repo_path)
-        relationship_results = rel_analyzer.analyze()
-        logging.info(f"Relationships analyzed. Found definitions: {len(relationship_results)}")
+        rel_analyzer.analyze()
+        
+        raw_relationships = rel_analyzer.get_raw_relationships()
+        
+        logging.info(f"Relationships analyzed.")
     except Exception as e:
         logging.error(f"Error in relationship analyzer: {e}")
-        relationship_results = []
+        raw_relationships = {"outgoing": {}, "incoming": {}}
 
     # Erstelle AST Schema
     update_status("🌳 Erstelle Abstract Syntax Tree (AST)...")
@@ -197,7 +200,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
     # Anreichern des AST Schemas mit Relationship Daten
     update_status("➕ Reiche AST mit Beziehungsdaten an...")            
     try:   
-        ast_schema = ast_analyzer.merge_relationship_data(ast_schema, relationship_results)
+        ast_schema = ast_analyzer.merge_relationship_data(ast_schema, raw_relationships)
         logging.info("AST schema created and enriched")
 
     except Exception as e:
@@ -645,9 +648,9 @@ def notebook_workflow(input, api_key, model, status_callback=None):
         logging.info(f"Final report saved to '{report_filepath}'.")
 
 if __name__ == "__main__":
-    #user_input = "https://github.com/christiand03/repo-onboarding-agent"
-    #main_workflow(user_input, api_keys={"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model_names={"helper": "alias-code", "main": "alias-ha"})
+    user_input = "https://github.com/christiand03/repo-onboarding-agent"
+    main_workflow(user_input, api_keys={"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model_names={"helper": "alias-code", "main": "alias-ha"})
 
-    notebook_input = "https://github.com/christiand03/predicting-power-consumption-uni"
+    #notebook_input = "https://github.com/christiand03/predicting-power-consumption-uni"
     #notebook_input = "https://github.com/christiand03/clustering-and-classification-uni"
-    notebook_workflow(notebook_input, api_key= {"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model= "gemini-2.5-flash")
+    #notebook_workflow(notebook_input, api_key= {"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model= "gemini-2.5-flash")
