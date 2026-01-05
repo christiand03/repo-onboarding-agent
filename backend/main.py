@@ -486,7 +486,8 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
 
 
 def notebook_workflow(input, api_keys, model, status_callback=None):
-
+    t_start = time.time()
+    final_report = "keine Notebooks gefunden"
     def update_status(msg):
         if status_callback:
             status_callback(msg)
@@ -623,14 +624,18 @@ def notebook_workflow(input, api_keys, model, status_callback=None):
 
         try:
             single_report = notebook_llm.call_llm(llm_payload)
-            notebook_reports.append(single_report)
+            if single_report and isinstance(single_report, str):
+                notebook_reports.append(single_report)
+            else:
+                logging.warning(f"LLM lieferte kein Ergebnis für {nb_path}")
+                notebook_reports.append(f"## Analyse für {os.path.basename(nb_path)}\nFehler: Das Modell lieferte keine Antwort.")
             
         except Exception as e:
             logging.error(f"Error generating report for {nb_path}: {e}")
             notebook_reports.append(f"# Error processing {nb_path}\n\nError: {str(e)}\n\n---\n")
 
     # Concatenate all reports
-    final_report = "\n\n<br>\n<br>\n<br>\n\n".join(notebook_reports)
+    final_report = "\n\n<br>\n<br>\n<br>\n\n".join([str(r) for r in notebook_reports if r is not None])
 
     
     # --- Speichern der Ergebnisse ---
@@ -647,10 +652,31 @@ def notebook_workflow(input, api_keys, model, status_callback=None):
             f.write(final_report)
         logging.info(f"Final report saved to '{report_filepath}'.")
 
+    # Am Ende der Funktion nach dem Speichern:
+    total_time = time.time() - t_start
+    
+    # Metriken für das Frontend bauen
+    metrics = {
+        "helper_time": "0", # Notebook-Workflow hat meist keinen separaten Helper
+        "main_time": round(total_time, 2),
+        "total_time": round(total_time, 2),
+        "helper_model": "None",
+        "main_model": model,
+        "json_tokens": 0,
+        "toon_tokens": 0,
+        "savings_percent": 0
+    }
+
+    return {
+        "report": final_report,
+        "metrics": metrics
+    }
+
 if __name__ == "__main__":
-    user_input = "https://github.com/christiand03/repo-onboarding-agent"
-    main_workflow(user_input, api_keys={"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model_names={"helper": "alias-code", "main": "alias-ha"})
+    #user_input = "https://github.com/christiand03/repo-onboarding-agent"
+    #main_workflow(user_input, api_keys={"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model_names={"helper": "alias-code", "main": "alias-ha"})
 
     #notebook_input = "https://github.com/christiand03/predicting-power-consumption-uni"
     #notebook_input = "https://github.com/christiand03/clustering-and-classification-uni"
-    #notebook_workflow(notebook_input, api_keys= {"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model= "gemini-2.5-flash")
+    notebook_input= "https://github.com/Schmarc4/Monarchs"
+    notebook_workflow(notebook_input, api_keys= {"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model= "gemini-2.5-flash")
