@@ -1,0 +1,16 @@
+[
+    {
+        "main_model": "alias-ha",
+        "helper_model": "alias-code",
+        "evaluator_model": "gemini-2.5-flash",
+        "score": 20,
+        "duration_gen_sec": 70.3,
+        "duration_eval_sec": 36.63,
+        "timestamp": "2025-12-14 15:01:35",
+        "files": {
+            "input": "input_data_14-58-32.toon",
+            "report": "Report_alias-ha.md",
+            "evaluation": "Eval_alias-ha.md"
+        }
+    }
+]

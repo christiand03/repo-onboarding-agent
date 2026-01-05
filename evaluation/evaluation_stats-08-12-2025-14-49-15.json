@@ -1,0 +1,98 @@
+[
+    {
+        "model": "alias-reasoning",
+        "tokens_json": 1,
+        "tokens_toon": 0,
+        "duration_gross_sec": 13.3,
+        "duration_net_sec": 13.3,
+        "timestamp": "2025-12-08 14:49:32"
+    },
+    {
+        "model": "alias-ha",
+        "tokens_json": 31415,
+        "tokens_toon": 24200,
+        "duration_gross_sec": 383.38,
+        "duration_net_sec": 383.38,
+        "timestamp": "2025-12-08 14:55:59"
+    },
+    {
+        "model": "alias-code",
+        "tokens_json": 32948,
+        "tokens_toon": 25723,
+        "duration_gross_sec": 76.75,
+        "duration_net_sec": 76.75,
+        "timestamp": "2025-12-08 14:57:20"
+    },
+    {
+        "model": "meta-llama/Llama-3.3-70B-Instruct",
+        "tokens_json": 32839,
+        "tokens_toon": 25441,
+        "duration_gross_sec": 153.71,
+        "duration_net_sec": 153.71,
+        "timestamp": "2025-12-08 14:59:58"
+    },
+    {
+        "model": "meta-llama/Llama-3.1-8B-Instruct",
+        "tokens_json": 29688,
+        "tokens_toon": 21140,
+        "duration_gross_sec": 1145.14,
+        "duration_net_sec": 1145.14,
+        "timestamp": "2025-12-08 15:19:08"
+    },
+    {
+        "model": "meta-llama/Llama-4-Scout-17B-16E-Instruct",
+        "tokens_json": 28064,
+        "tokens_toon": 20869,
+        "duration_gross_sec": 235.15,
+        "duration_net_sec": 235.15,
+        "timestamp": "2025-12-08 15:23:07"
+    },
+    {
+        "model": "deepseek-ai/DeepSeek-R1",
+        "tokens_json": 1,
+        "tokens_toon": 0,
+        "duration_gross_sec": 14.17,
+        "duration_net_sec": 14.17,
+        "timestamp": "2025-12-08 15:52:23"
+    },
+    {
+        "model": "deepseek-ai/DeepSeek-V3.2-Exp",
+        "tokens_json": 16024,
+        "tokens_toon": 11652,
+        "duration_gross_sec": 348.93,
+        "duration_net_sec": 348.93,
+        "timestamp": "2025-12-08 15:58:16"
+    },
+    {
+        "model": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+        "tokens_json": 33609,
+        "tokens_toon": 26235,
+        "duration_gross_sec": 69.05,
+        "duration_net_sec": 69.05,
+        "timestamp": "2025-12-08 15:59:29"
+    },
+    {
+        "model": "Qwen/Qwen2-VL-7B-Instruct",
+        "tokens_json": 27553,
+        "tokens_toon": 20311,
+        "duration_gross_sec": 802.04,
+        "duration_net_sec": 802.04,
+        "timestamp": "2025-12-08 16:12:55"
+    },
+    {
+        "model": "openGPT-X/Teuken-7B-instruct-research-v0.4",
+        "tokens_json": 28015,
+        "tokens_toon": 20835,
+        "duration_gross_sec": 139.85,
+        "duration_net_sec": 139.85,
+        "timestamp": "2025-12-08 16:15:19"
+    },
+    {
+        "model": "openai/gpt-oss-120b",
+        "tokens_json": 36203,
+        "tokens_toon": 29432,
+        "duration_gross_sec": 79.32,
+        "duration_net_sec": 79.32,
+        "timestamp": "2025-12-08 16:16:43"
+    }
+]

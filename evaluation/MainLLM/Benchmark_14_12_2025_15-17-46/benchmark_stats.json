@@ -1,0 +1,100 @@
+[
+    {
+        "main_model": "alias-ha",
+        "helper_model": "alias-code",
+        "evaluator_model": "gemini-2.5-flash",
+        "score": 22,
+        "duration_gen_sec": 57.65,
+        "duration_eval_sec": 36.7,
+        "timestamp": "2025-12-14 15:22:28",
+        "files": {
+            "input": "input_data_15-19-38.toon",
+            "report": "Report_alias-ha.md",
+            "evaluation": "Eval_alias-ha.md"
+        }
+    },
+    {
+        "main_model": "meta-llama/Llama-3.3-70B-Instruct",
+        "helper_model": "alias-code",
+        "evaluator_model": "gemini-2.5-flash",
+        "score": 25,
+        "duration_gen_sec": 83.88,
+        "duration_eval_sec": 58.89,
+        "timestamp": "2025-12-14 15:34:06",
+        "files": {
+            "input": "input_data_15-19-38.toon",
+            "report": "Report_meta-llama_Llama-3-3-70B-Instruct.md",
+            "evaluation": "Eval_meta-llama_Llama-3-3-70B-Instruct.md"
+        }
+    },
+    {
+        "main_model": "meta-llama/Llama-4-Scout-17B-16E-Instruct",
+        "helper_model": "alias-code",
+        "evaluator_model": "gemini-2.5-flash",
+        "score": 0,
+        "duration_gen_sec": 57.73,
+        "duration_eval_sec": 44.72,
+        "timestamp": "2025-12-14 15:37:04",
+        "files": {
+            "input": "input_data_15-19-38.toon",
+            "report": "Report_meta-llama_Llama-4-Scout-17B-16E-Instruct.md",
+            "evaluation": "Eval_meta-llama_Llama-4-Scout-17B-16E-Instruct.md"
+        }
+    },
+    {
+        "main_model": "deepseek-ai/DeepSeek-V3.2-Exp",
+        "helper_model": "alias-code",
+        "evaluator_model": "gemini-2.5-flash",
+        "score": 15,
+        "duration_gen_sec": 59.58,
+        "duration_eval_sec": 82.27,
+        "timestamp": "2025-12-14 15:40:58",
+        "files": {
+            "input": "input_data_15-19-38.toon",
+            "report": "Report_deepseek-ai_DeepSeek-V3-2-Exp.md",
+            "evaluation": "Eval_deepseek-ai_DeepSeek-V3-2-Exp.md"
+        }
+    },
+    {
+        "main_model": "Qwen/Qwen2-VL-7B-Instruct",
+        "helper_model": "alias-code",
+        "evaluator_model": "gemini-2.5-flash",
+        "score": 26,
+        "duration_gen_sec": 131.74,
+        "duration_eval_sec": 55.38,
+        "timestamp": "2025-12-14 15:53:20",
+        "files": {
+            "input": "input_data_15-19-38.toon",
+            "report": "Report_Qwen_Qwen2-VL-7B-Instruct.md",
+            "evaluation": "Eval_Qwen_Qwen2-VL-7B-Instruct.md"
+        }
+    },
+    {
+        "main_model": "openGPT-X/Teuken-7B-instruct-research-v0.4",
+        "helper_model": "alias-code",
+        "evaluator_model": "gemini-2.5-flash",
+        "score": 45,
+        "duration_gen_sec": 54.09,
+        "duration_eval_sec": 44.54,
+        "timestamp": "2025-12-14 15:56:04",
+        "files": {
+            "input": "input_data_15-19-38.toon",
+            "report": "Report_openGPT-X_Teuken-7B-instruct-research-v0-4.md",
+            "evaluation": "Eval_openGPT-X_Teuken-7B-instruct-research-v0-4.md"
+        }
+    },
+    {
+        "main_model": "openai/gpt-oss-120b",
+        "helper_model": "alias-code",
+        "evaluator_model": "gemini-2.5-flash",
+        "score": 26,
+        "duration_gen_sec": 55.11,
+        "duration_eval_sec": 57.72,
+        "timestamp": "2025-12-14 15:59:01",
+        "files": {
+            "input": "input_data_15-19-38.toon",
+            "report": "Report_openai_gpt-oss-120b.md",
+            "evaluation": "Eval_openai_gpt-oss-120b.md"
+        }
+    }
+]
