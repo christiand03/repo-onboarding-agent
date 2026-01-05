@@ -141,12 +141,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
 
         with GitRepository(repo_url) as repo:
             repo_files = repo.get_all_files()
-            if hasattr(repo, 'local_path'):
-                local_repo_path = repo.local_path
-            elif hasattr(repo, 'working_dir'):
-                local_repo_path = repo.working_dir
-            else:
-                local_repo_path = os.path.dirname(os.path.commonpath([f.path for f in repo_files]))
+            local_repo_path = repo.temp_dir
 
             logging.info(f"Total files retrieved: {len(repo_files)}")
 
