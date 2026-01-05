@@ -485,7 +485,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
 
 
 
-def notebook_workflow(input, api_key, model, status_callback=None):
+def notebook_workflow(input, api_keys, model, status_callback=None):
 
     def update_status(msg):
         if status_callback:
@@ -548,15 +548,15 @@ def notebook_workflow(input, api_key, model, status_callback=None):
     base_url = None
 
     if model.startswith("gpt-"):
-        input_api_key = api_key.get("gpt")
+        input_api_key = api_keys.get("gpt")
     elif model.startswith("gemini-"):
-        input_api_key = api_key.get("gemini")
+        input_api_key = api_keys.get("gemini")
     elif "/" in model or model.startswith("alias-") or any(x in model for x in ["DeepSeek", "Teuken", "Llama", "Qwen", "gpt-oss", "openGPT"]):
-        input_api_key = api_key.get("scadsllm")
-        base_url = api_key.get("scadsllm_base_url")
+        input_api_key = api_keys.get("scadsllm")
+        base_url = api_keys.get("scadsllm_base_url")
     else:
         input_api_key = None
-        base_url = api_key.get("ollama")
+        base_url = api_keys.get("ollama")
 
     update_status("🔍 Analysiere Input...")
 
@@ -653,4 +653,4 @@ if __name__ == "__main__":
 
     #notebook_input = "https://github.com/christiand03/predicting-power-consumption-uni"
     #notebook_input = "https://github.com/christiand03/clustering-and-classification-uni"
-    #notebook_workflow(notebook_input, api_key= {"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model= "gemini-2.5-flash")
+    #notebook_workflow(notebook_input, api_keys= {"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model= "gemini-2.5-flash")
