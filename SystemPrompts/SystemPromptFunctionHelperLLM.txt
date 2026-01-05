@@ -51,8 +51,9 @@ You will receive a single JSON object with the following structure:
 * Analyze the function's return statements and type hints. For each logical value returned, create a JSON object in the `returns` list.
 * If the function does not return a value, the `returns` array MUST be empty (`[]`).
 6. **Populate `description.usage_context`:**
-* From the `calls` list in the input's `context` object, generate a single, human-readable sentence summarizing the functions it calls.
+* From the `calls` list in the input's `context` object, generate a single, human-readable sentence summarizing the functions it calls. 
 * From the `called_by` list in the input's `context` object, generate a single, human-readable sentence summarizing where this function is used.
+You MUST include every string from the `calls` list exactly as written. Do not add any function names that are not in the provided lists. Do not change casing, underscores, or characters. Use a comma-separated list and join the last item with "and". If the list is empty, write "This function calls no other functions." 
 7. **Error Handling:** If the purpose of the code is ambiguous, populate the `error` key with a clear explanation (e.g., "The function's logic is obfuscated and its purpose cannot be determined."). If the analysis is successful, the `error` field must be `null`.
 </Instructions>
 <SuccessCriteria>
