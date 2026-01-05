@@ -477,6 +477,7 @@ if st.session_state["authentication_status"]:
                 handle_delete_chat(current_user, st.session_state.active_chat)        
             
             with st.popover("⚙️ Einstellungen", type="tertiary"):
+                st.toggle("Notebook modus", key="notebook_mode", help="ermöglicht die Dokumentation von Jupyter Notebooks wenn aktiviert, sonst können nur .py files ausgewertet werden", value=False)
                 st.caption("🤖 Modelle")
                 
                 cat_helper = st.selectbox(
@@ -639,15 +640,24 @@ if st.session_state["authentication_status"]:
         workflow_success = False
         response = ""
         metrics = {}
-
+        
         try:
-            # Hier läuft der Prozess (5-6 Minuten)
-            result_data = main.main_workflow(
-                input=prompt, 
-                api_keys=api_keys, 
-                model_names=model_config,
-                status_callback=status.write 
-            )
+            if not st.session_state.notebook_mode: 
+                # Hier läuft der Prozess (5-6 Minuten)
+                result_data = main.main_workflow(
+                    input=prompt, 
+                    api_keys=api_keys, 
+                    model_names=model_config,
+                    status_callback=status.write 
+                )
+            elif st.session_state.notebook_mode:  
+                # Hier läuft der Prozess (5-6 Minuten)
+                result_data = main.notebook_workflow(
+                    input=prompt, 
+                    api_keys=api_keys, 
+                    model_names=model_config,
+                    status_callback=status.write 
+                )  
             
             logging.info(f"Workflow finished. Keys: {result_data.keys()}")
             response = result_data["report"]
