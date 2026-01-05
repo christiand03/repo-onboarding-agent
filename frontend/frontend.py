@@ -19,11 +19,122 @@ import streamlit as st
 import streamlit_authenticator as stauth
 
 # ----------------------------------------
+# MODEL CONFIGURATION
+# ----------------------------------------
+# 1. Rohdaten definieren
+RAW_MAIN_MODELS = [
+    # Google Gemini
+    "gemini-2.5-flash", "gemini-2.5-flash-lite",
+    # Alias
+    "alias-reasoning", "alias-ha", "alias-code",
+    # Llama
+    "meta-llama/Llama-3.3-70B-Instruct", "meta-llama/Llama-3.1-8B-Instruct", "meta-llama/Llama-4-Scout-17B-16E-Instruct", "llama3",
+    # DeepSeek
+    "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct", "deepseek-ai/DeepSeek-R1", "deepseek-ai/DeepSeek-V3.2-Exp",
+    # Qwen
+    "Qwen/Qwen3-Coder-30B-A3B-Instruct", "Qwen/Qwen2-VL-7B-Instruct",
+    # Andere
+    "openGPT-X/Teuken-7B-instruct-research-v0.4", "openai/gpt-oss-120b", 
+]
+
+RAW_HELPER_MODELS = [
+    # Alias
+    "alias-reasoning", "alias-ha", "alias-code",
+    # Llama
+    "meta-llama/Llama-3.3-70B-Instruct", "meta-llama/Llama-3.1-8B-Instruct", "meta-llama/Llama-4-Scout-17B-16E-Instruct", "llama3",
+    # DeepSeek
+    "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct", "deepseek-ai/DeepSeek-R1", "deepseek-ai/DeepSeek-V3.2-Exp",
+    # Qwen
+    "Qwen/Qwen3-Coder-30B-A3B-Instruct", "Qwen/Qwen2-VL-7B-Instruct",
+    # Andere
+    "openGPT-X/Teuken-7B-instruct-research-v0.4", "openai/gpt-oss-120b",   
+]
+
+# 2. Bereinigung und Listen-Erstellung
+def clean_names(model_list):
+    return [m.split("/")[-1] for m in model_list]
+
+HELPER_MODELS = clean_names(RAW_HELPER_MODELS)
+MAIN_MODELS = clean_names(RAW_MAIN_MODELS)
+
+STANDARD_MODELS = [
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-pro",
+    "gemini-2.5-flash",
+    "gemini-3-flash",
+    "gpt-5.1",
+    "gpt-5-mini",
+
+]
+
+
+# Alle Modelle kombiniert
+ALL_MODELS = STANDARD_MODELS + MAIN_MODELS + HELPER_MODELS
+ALL_HELPER_MODELS = STANDARD_MODELS + HELPER_MODELS
+ALL_MAIN_MODELS = STANDARD_MODELS + MAIN_MODELS
+
+CATEGORY_KEYWORDS = {
+    "Favoriten": ["STANDARD"], # Zeigt nur STANDARD_MODELS
+    "Google Gemini": ["gemini"],
+    "Meta Llama": ["llama"],
+    "Alias Tools": ["alias"],
+    "DeepSeek/Qwen": ["deepseek", "qwen"],
+    "GPT & Andere": ["gpt", "teuken", "openai"],
+    "Alle anzeigen": [""] # Zeigt alles
+}
+
+def get_filtered_models(source_list, category_name):
+    """Filtert eine Liste basierend auf der gewählten Kategorie."""
+    keywords = CATEGORY_KEYWORDS.get(category_name, [""])
+    
+    if "STANDARD" in keywords:
+        # Nur Modelle zurückgeben, die auch in der Standard-Liste sind
+        return [m for m in source_list if m in STANDARD_MODELS]
+    
+    filtered = []
+    for model in source_list:
+        # Prüfen ob ein Keyword im Namen steckt
+        if any(k in model.lower() for k in keywords):
+            filtered.append(model)
+            
+    return filtered if filtered else source_list # Fallback falls leer
+
+
+# ----------------------------------------
 # 1. Page Config
 # ----------------------------------------
 st.set_page_config(page_title="Repo Agent", layout="wide", page_icon="🤖")
 
 load_dotenv()
+SCADSLLM_KEY=os.getenv("SCADSLLM_KEY")
+SCADSLLM_HOST=os.getenv("SCADSLLM_HOST")
+# ----------------------------------------
+# CSS: SIDEBAR STICKY FOOTER (FINAL FIX)
+# ----------------------------------------
+st.markdown("""
+    <style>
+        /* 1. Der Bereich für User-Content in der Sidebar */
+        [data-testid="stSidebarUserContent"] {
+            display: flex;
+            flex-direction: column;
+            height: 100vh; /* Volle Höhe */
+            justify-content: flex-start; /* WICHTIG: Alles fängt oben an! */
+        }
+        
+        /* 2. Alle Container außer dem letzten verhalten sich normal */
+        [data-testid="stSidebarUserContent"] > div {
+            width: 100%; /* Sicherstellen, dass sie die Breite füllen */
+        }
+
+        /* 3. NUR das letzte Element (Einstellungen) wird nach unten gedrückt */
+        [data-testid="stSidebarUserContent"] > div:last-of-type {
+            margin-top: auto; /* Das schiebt es an den Boden */
+            padding-bottom: 20px; /* Abstand zum Rand */
+            padding-top: 10px; /* Kleiner Abstand zum Inhalt darüber */
+            border-top: 1px solid rgba(255, 255, 255, 0.1); /* Optional: Trennlinie */
+        }
+    </style>
+""", unsafe_allow_html=True)
 
 # ----------------------------------------
 # CALLBACKS
@@ -278,7 +389,7 @@ if st.session_state["authentication_status"] is not True:
     with st.expander("🆕 Neuen Account erstellen"):
         with st.form("register_form"):
             new_user = st.text_input("Username (bitte nur kleinbuchstaben und zahlen)")
-            new_name = st.text_input("Name")
+            new_name = st.text_input("Display Name")
             new_pass = st.text_input("Passwort", type="password")
             new_pass_confirm = st.text_input("Passwort wiederholen", type="password")
             
@@ -361,29 +472,69 @@ if st.session_state["authentication_status"]:
                     st.session_state.active_chat = chat_name
                     st.rerun()
 
+        
 
-        with st.container(border=None, gap=None,height="content"):
+        with st.container(border=None, gap=None):
             if st.button("🗑️ aktuellen Chat löschen", width="content", type="tertiary"):
                 handle_delete_chat(current_user, st.session_state.active_chat)        
             
-            with st.popover("⚙️ Einstellungen",type="tertiary"):
+            with st.popover("⚙️ Einstellungen", type="tertiary"):
+                st.toggle("Notebook Modus", key="notebook_mode", help="ermöglicht wenn aktiviert die Dokumentation von Jupyter Notebooks, deaktiviert werden .py files ausgewertet", value=False)
                 st.caption("🤖 Modelle")
-                sbhelp = st.selectbox("Helper LLM", 
-                    ("gemini-2.0-flash-lite","gemini-flash-latest","gemini-2.5-pro","llama3"),     
-                )
-                sbmain = st.selectbox("Main LLM", 
-                    ("gemini-2.0-flash-lite","gemini-flash-latest","gemini-2.5-pro","llama3"),
-                )
+                
+                
 
+                sbhelp = "None"
+                # Helper LLM Auswahl
+                if  not st.session_state.notebook_mode:
+                    cat_helper = st.selectbox(
+                    "Kategorie (Helper):", 
+                    list(CATEGORY_KEYWORDS.keys()), 
+                    index=0, 
+                    key="cat_helper"
+                    )
+                    filtered_helpers = get_filtered_models(ALL_HELPER_MODELS, cat_helper)
+
+                    sbhelp = st.selectbox(
+                        "Helper LLM", 
+                        filtered_helpers,
+                        index=0, # Standard auf das erste Element (gemini-2.0-flash-lite)
+                        label_visibility="collapsed"
+                    )
+                
+                cat_main = st.selectbox(
+                    "Kategorie (Main):", 
+                    list(CATEGORY_KEYWORDS.keys()), 
+                    index=0, # Default: Favoriten
+                    key="cat_main"
+                )
+                filtered_mains = get_filtered_models(ALL_MAIN_MODELS, cat_main)
+
+                # Main LLM Auswahl
+                sbmain = st.selectbox(
+                    "Main LLM", 
+                    filtered_mains,
+                    index=2, # Standard z.B. auf gemini-2.5-pro
+                    label_visibility="collapsed"
+                )
+                
+                if not st.session_state.notebook_mode:
+                    st.caption(f"Gewählt: Python Modus mit: \n\n {sbhelp} -> {sbmain}")
+                else:
+                    st.caption(f"Gewählt: Notebook Modus mit: \n\n {sbmain}")
                 st.markdown("---")
 
-                gemini_key, ollama_url = db.get_decrypted_api_keys(current_user)
+                # API Keys holen
+                gemini_key, ollama_url, gpt_key = db.get_decrypted_api_keys(current_user)
                 has_gemini = bool(gemini_key)
                 has_ollama = bool(ollama_url)
+                has_gpt = bool(gpt_key)
 
                 st.caption("API Keys Configuration")
-
-                # Gemini
+                
+                # Logik: Zeige Inputs nur für Modelle, die User-Keys brauchen
+                
+                # 1. Check für Gemini
                 if sbhelp.startswith("gemini") or sbmain.startswith("gemini"):
                     status_icon = "✅" if has_gemini else "❌"
                     st.markdown(f"**Gemini Key**: {status_icon} {'Gesetzt' if has_gemini else 'Fehlt'}")
@@ -395,7 +546,7 @@ if st.session_state["authentication_status"]:
                             time.sleep(0.5)
                             st.rerun() 
 
-                # Ollama
+                # 2. Check für Ollama (Lokal)
                 if sbhelp == "llama3" or sbmain == "llama3":
                     status_icon = "✅" if has_ollama else "❌"
                     st.markdown(f"**Llama URL**: {status_icon} {'Gesetzt' if has_ollama else 'Fehlt'}")
@@ -408,6 +559,21 @@ if st.session_state["authentication_status"]:
                                 st.success("Gespeichert!")
                                 time.sleep(0.5)
                                 st.rerun()
+
+                # 3. Check für GPT (OpenAI)
+                if sbhelp.startswith("gpt-5") or sbmain.startswith("gpt-5"):
+                    
+                    status_icon = "✅" if has_gpt else "❌"
+                    st.markdown(f"**GPT Key**: {status_icon} {'Gesetzt' if has_gpt else 'Fehlt'}")
+                    with st.form("gpt_form"):
+                        new_gpt = st.text_input("GPT Key ändern", type="password")
+                        if st.form_submit_button("Speichern") and new_gpt:
+                            db.update_gpt_key(current_user, new_gpt)
+                            st.success("Gespeichert!")
+                            time.sleep(0.5)
+                            st.rerun()
+                
+               
 
     # ----------------------------------------
     # CHAT AREA
@@ -476,22 +642,31 @@ if st.session_state["authentication_status"]:
         
         status = st.status(f"⏳ Analysiere Repository in '{working_chat_name}'...", expanded=True)
 
-        dec_gemini, dec_ollama = db.get_decrypted_api_keys(current_user)
-        api_keys = {"gemini": dec_gemini, "ollama": dec_ollama}
+        dec_gemini, dec_ollama, dec_gpt = db.get_decrypted_api_keys(current_user)
+        api_keys = {"gemini": dec_gemini, "ollama": dec_ollama, "gpt": dec_gpt, "scadsllm": SCADSLLM_KEY, "scadsllm_base_url": SCADSLLM_HOST}
         model_config = {"helper": sbhelp, "main": sbmain}
 
         workflow_success = False
         response = ""
         metrics = {}
-
+        
         try:
-            # Hier läuft der Prozess (5-6 Minuten)
-            result_data = main.main_workflow(
-                input=prompt, 
-                api_keys=api_keys, 
-                model_names=model_config,
-                status_callback=status.write 
-            )
+            if not st.session_state.notebook_mode: 
+                # Hier läuft der Prozess (5-6 Minuten)
+                result_data = main.main_workflow(
+                    input=prompt, 
+                    api_keys=api_keys, 
+                    model_names=model_config,
+                    status_callback=status.write 
+                )
+            elif st.session_state.notebook_mode:  
+                # Hier läuft der Prozess (5-6 Minuten)
+                result_data = main.notebook_workflow(
+                    input=prompt, 
+                    api_keys=api_keys, 
+                    model_names=model_config["main"],
+                    status_callback=status.write 
+                )  
             
             logging.info(f"Workflow finished. Keys: {result_data.keys()}")
             response = result_data["report"]
@@ -537,7 +712,10 @@ if st.session_state["authentication_status"]:
                 main_used=metrics["main_model"],
                 total_time=str(metrics["total_time"]),
                 helper_time=str(metrics["helper_time"]),
-                main_time=str(metrics["main_time"])
+                main_time=str(metrics["main_time"]),
+                json_tokens=metrics.get("json_tokens", 0),
+                toon_tokens=metrics.get("toon_tokens", 0),
+                savings_percent=metrics.get("savings_percent", 0.0)
             )
             
             new_ex = {
@@ -550,6 +728,9 @@ if st.session_state["authentication_status"]:
                 "username": current_user,
                 "helper_used": metrics["helper_model"],
                 "main_used": metrics["main_model"],
+                "json_tokens": metrics.get("json_tokens", 0),
+                "toon_tokens": metrics.get("toon_tokens", 0),
+                "savings_percent": metrics.get("savings_percent", 0.0),
                 "datetime": datetime.now()
             }
             

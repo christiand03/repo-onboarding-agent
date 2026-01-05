@@ -13,7 +13,7 @@ from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
 
-from .getRepo import GitRepository, RepoFile
+from .getRepo import GitRepository
 from .AST_Schema import ASTAnalyzer
 from .MainLLM import MainLLM
 from .basic_info import ProjektInfoExtractor
@@ -23,6 +23,8 @@ from schemas.types import FunctionContextInput, FunctionAnalysisInput, ClassCont
 from .EvaluatorLLM import EvaluatorLLM
 
 from toon_format import encode, count_tokens, estimate_savings, compare_formats
+
+from .converter import process_repo_notebooks
 
 
 # --- Konfiguration & Logging ---
@@ -162,6 +164,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         logging.info("Basic project info extracted")
     except Exception as e:
         logging.error(f"Error extracting basic project info: {e}")
+        basic_project_info = "Could not extract basic info."
 
     # Erstelle Repository Dateibaum
     update_status("🌲 Erstelle Repository Dateibaum...")
@@ -170,16 +173,20 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         logging.info("Repository file tree constructed")
     except Exception as e:
         logging.error(f"Error constructing repository file tree: {e}")
+        repo_file_tree = "Could not create file tree."
 
     # Relationship Analyse durchführen
     update_status("🔗 Analysiere Beziehungen (Calls & Instanziierungen)...")
     try:
         rel_analyzer = ProjectAnalyzer(project_root=local_repo_path)
-        relationship_results = rel_analyzer.analyze()
-        logging.info(f"Relationships analyzed. Found definitions: {len(relationship_results)}")
+        rel_analyzer.analyze()
+        
+        raw_relationships = rel_analyzer.get_raw_relationships()
+        
+        logging.info(f"Relationships analyzed.")
     except Exception as e:
         logging.error(f"Error in relationship analyzer: {e}")
-        relationship_results = []
+        raw_relationships = {"outgoing": {}, "incoming": {}}
 
     # Erstelle AST Schema
     update_status("🌳 Erstelle Abstract Syntax Tree (AST)...")
@@ -194,7 +201,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
     # Anreichern des AST Schemas mit Relationship Daten
     update_status("➕ Reiche AST mit Beziehungsdaten an...")            
     try:   
-        ast_schema = ast_analyzer.merge_relationship_data(ast_schema, relationship_results)
+        ast_schema = ast_analyzer.merge_relationship_data(ast_schema, raw_relationships)
         logging.info("AST schema created and enriched")
 
     except Exception as e:
@@ -519,6 +526,10 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         "total_time": round(total_active_time, 2),
         "helper_model": helper_model,
         "main_model": main_model,
+        "json_tokens": savings_data['json_tokens'] if savings_data else None,
+        "toon_tokens": savings_data['toon_tokens'] if savings_data else None,
+        "savings_percent": round(savings_data['savings_percent'], 2) if savings_data else None
+    
         "evaluator_model": evaluator_model
     }
 
@@ -528,6 +539,176 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         "metrics": metrics
     }
 
+
+
+
+
+def notebook_workflow(input, api_keys, model, status_callback=None):
+
+    def update_status(msg):
+        if status_callback:
+            status_callback(msg)
+        logging.info(msg)
+
+    def gemini_payload(basic_info, nb_path, xml_content, images):
+        
+        intro_json = json.dumps({
+            "basic_info": basic_info,
+            "current_notebook_path": nb_path
+        }, indent=2)
+        
+        payload_content = []
+
+        payload_content.append({
+            "type": "text",
+            "text": f"Context Information:\n{intro_json}\n\nNotebook XML Structure:\n"
+        })
+
+        # Regex to find: <IMAGE_PLACEHOLDER index="0" mime="image/png"/>
+        pattern = r'(<IMAGE_PLACEHOLDER index="(\d+)" mime="([^"]+)"/>)'
+        last_pos = 0
+        
+        for match in re.finditer(pattern, xml_content):
+            text_segment = xml_content[last_pos:match.start()]
+            if text_segment.strip():
+                payload_content.append({
+                    "type": "text",
+                    "text": text_segment
+                })
+                
+            image_index = int(match.group(2))
+            mime_type = match.group(3)
+            
+            if image_index < len(images):
+                img_data = images[image_index]
+                b64_string = img_data['data']
+                
+                payload_content.append({
+                    "type": "image_url",
+                    "image_url": {
+                        "url": f"data:{mime_type};base64,{b64_string}"
+                    }
+                })
+                
+            last_pos = match.end()
+
+        # Add any remaining text after the last image
+        remaining_text = xml_content[last_pos:]
+        if remaining_text.strip():
+            payload_content.append({
+                "type": "text",
+                "text": remaining_text
+            })
+
+        return payload_content
+
+
+    base_url = None
+
+    if model.startswith("gpt-"):
+        input_api_key = api_keys.get("gpt")
+    elif model.startswith("gemini-"):
+        input_api_key = api_keys.get("gemini")
+    elif "/" in model or model.startswith("alias-") or any(x in model for x in ["DeepSeek", "Teuken", "Llama", "Qwen", "gpt-oss", "openGPT"]):
+        input_api_key = api_keys.get("scadsllm")
+        base_url = api_keys.get("scadsllm_base_url")
+    else:
+        input_api_key = None
+        base_url = api_keys.get("ollama")
+
+    update_status("🔍 Analysiere Input...")
+
+    # URL Extraktion
+    repo_url = None
+    url_pattern = r"https?://(?:www\.)?github\.com/[^\s]+"
+    match = re.search(url_pattern, input)
+
+    if match:
+        repo_url = match.group(0)
+        logging.info(f"Extracted repository URL: {repo_url}")
+    else:
+        raise ValueError("Could not find a valid URL in the provided input.")
+    
+    update_status(f"⬇️ Klone Repository: {repo_url} ...")
+
+    try: 
+        with GitRepository(repo_url) as repo:
+            repo_files = repo.get_all_files()
+    except Exception as e:
+        logging.error(f"Error cloning repository: {e}")
+        raise
+    
+    update_status(f"🔗 Bereite Input vor...")
+
+    # convert to XML
+    processed_data = process_repo_notebooks(repo_files)
+
+    
+    # Extrahiere Basic Infos
+    update_status("ℹ️ Extrahiere Basis-Informationen...")
+    try:
+        info_extractor = ProjektInfoExtractor()
+        basic_project_info = info_extractor.extrahiere_info(dateien=repo_files, repo_url=repo_url)
+        logging.info("Basic project info extracted")
+    except Exception as e:
+        logging.error(f"Error extracting basic project info: {e}")
+        basic_project_info = "Could not extract basic info."
+
+
+
+    prompt_file_notebook_llm = "SystemPrompts/SystemPromptNotebookLLM.txt"
+    notebook_llm = MainLLM(
+        api_key=input_api_key, 
+        prompt_file_path=prompt_file_notebook_llm,
+        model_name=model,
+        base_url=base_url,
+    )
+
+    notebook_reports = []
+    total_notebooks = len(processed_data)
+    
+    logging.info(f"Starting sequential processing of {total_notebooks} notebooks...")
+
+    # Iterate over each notebook file individually
+    for index, (nb_path, nb_data) in enumerate(processed_data.items(), 1):
+        
+        update_status(f"🧠 Generiere Report ({index}/{total_notebooks}): {os.path.basename(nb_path)}")
+        
+        nb_xml = nb_data['xml']
+        nb_images = nb_data['images']
+
+        llm_payload = gemini_payload(basic_project_info, nb_path, nb_xml, nb_images)
+
+        try:
+            single_report = notebook_llm.call_llm(llm_payload)
+            notebook_reports.append(single_report)
+            
+        except Exception as e:
+            logging.error(f"Error generating report for {nb_path}: {e}")
+            notebook_reports.append(f"# Error processing {nb_path}\n\nError: {str(e)}\n\n---\n")
+
+    # Concatenate all reports
+    final_report = "\n\n<br>\n<br>\n<br>\n\n".join(notebook_reports)
+
+    
+    # --- Speichern der Ergebnisse ---
+    output_dir = "result"
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Dateiname für Report
+    timestamp = datetime.now().strftime("%d_%m_%Y_%H-%M-%S")
+    report_filename = f"notebook_report_{timestamp}_NotebookLLM_{notebook_llm.model_name}.md"
+    report_filepath = os.path.join(output_dir, report_filename)
+    
+    if final_report:
+        with open(report_filepath, "w", encoding="utf-8") as f:
+            f.write(final_report)
+        logging.info(f"Final report saved to '{report_filepath}'.")
+
 if __name__ == "__main__":
     user_input = "https://github.com/christiand03/repo-onboarding-agent"
-    main_workflow(user_input, api_keys={"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model_names={"helper": "alias-code", "main": "gemini-2.5-flash"})
+    main_workflow(user_input, api_keys={"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model_names={"helper": "alias-code", "main": "alias-ha"})
+
+    #notebook_input = "https://github.com/christiand03/predicting-power-consumption-uni"
+    #notebook_input = "https://github.com/christiand03/clustering-and-classification-uni"
+    #notebook_workflow(notebook_input, api_keys= {"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model= "gemini-2.5-flash")

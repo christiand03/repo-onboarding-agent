@@ -1,5 +1,6 @@
 import re
 import os
+
 import tomllib
 
 from typing import List, Dict, Any, Optional
@@ -28,6 +29,12 @@ class ProjektInfoExtractor:
             }
         }
 
+    def _clean_content(self, content: str) -> str:
+        """Entfernt Null-Bytes, die durch Encoding-Fehler (UTF-16 als UTF-8 gelesen) entstehen."""
+        if not content:
+            return ""
+        return content.replace('\x00', '')
+
     def _finde_datei(self, patterns: List[str], dateien: List[Any]) -> Optional[Any]:
         """Sucht case-insensitiv nach einer Datei, die einem der Muster entspricht."""
         for datei in dateien:
@@ -39,14 +46,6 @@ class ProjektInfoExtractor:
     def _extrahiere_sektion_aus_markdown(self, inhalt: str, keywords: List[str]) -> Optional[str]:
         """
         Extrahiert den Text unter einer Markdown-Überschrift (##).
-        
-        Args:
-            inhalt (str): Der gesamte Markdown-Text.
-            keywords (list): Eine Liste von alternativen Schlüsselwörtern für den Titel 
-                             der Sektion (z.B. ["Installation", "Setup"]).
-        
-        Returns:
-            str: Der extrahierte Textabschnitt oder None.
         """
         # Erstellt ein Regex-Pattern, das auf jedes der Schlüsselwörter reagiert
         keyword_pattern = "|".join(re.escape(k) for k in keywords)
@@ -63,18 +62,18 @@ class ProjektInfoExtractor:
 
     def _parse_readme(self, inhalt: str):
         """Parst den Inhalt einer README-Datei."""
+        inhalt = self._clean_content(inhalt)
+
         if self.info["projekt_uebersicht"]["titel"] == self.INFO_NICHT_GEFUNDEN:
             title_match = re.search(r"^\s*#\s*(.*)", inhalt)
             if title_match:
                 self.info["projekt_uebersicht"]["titel"] = title_match.group(1).strip()
 
         # Beschreibung (Fallback)
-        # Nimmt den Text nach dem Titel bis zur nächsten Überschrift
         if self.info["projekt_uebersicht"]["beschreibung"] == self.INFO_NICHT_GEFUNDEN:
             desc_match = re.search(r"^\s*#\s*.*\n+([^#\n].*)", inhalt, re.DOTALL)
             if desc_match:
                  self.info["projekt_uebersicht"]["beschreibung"] = desc_match.group(1).strip().split('\n\n')[0]
-
 
         # Key Features
         features = self._extrahiere_sektion_aus_markdown(inhalt, ["Features", "Key Features", "Merkmale"])
@@ -103,6 +102,8 @@ class ProjektInfoExtractor:
 
     def _parse_toml(self, inhalt: str):
         """Parst den Inhalt einer pyproject.toml-Datei."""
+        inhalt = self._clean_content(inhalt)
+
         if not tomllib:
             print("Warnung: 'tomli' ist nicht installiert. pyproject.toml kann nicht analysiert werden.")
             return
@@ -116,13 +117,14 @@ class ProjektInfoExtractor:
             if "description" in project_data:
                 self.info["projekt_uebersicht"]["beschreibung"] = project_data["description"]
             if "dependencies" in project_data:
-                # Überschreibt 'dependencies' immer, da toml als primäre Quelle gilt
                 self.info["installation"]["dependencies"] = project_data["dependencies"]
         except tomllib.TOMLDecodeError as e:
             print(f"Warnung: Fehler beim Parsen der pyproject.toml: {e}")
 
     def _parse_requirements(self, inhalt: str):
         """Parst den Inhalt einer requirements.txt-Datei."""
+        inhalt = self._clean_content(inhalt)
+
         # Nur füllen, wenn noch keine Dependencies aus toml gefunden wurden
         if self.info["installation"]["dependencies"] == self.INFO_NICHT_GEFUNDEN:
             lines = inhalt.splitlines()
@@ -135,20 +137,14 @@ class ProjektInfoExtractor:
 
     def extrahiere_info(self, dateien: List[Any], repo_url: str) -> Dict[str, Any]:
         """
-        Orchestriert die Extraktion von Informationen aus einer Liste von RepoFile-Objekten.
-        
-        Die Reihenfolge der Verarbeitung ist wichtig, um Prioritäten zu setzen:
-        1. pyproject.toml (höchste Priorität für Metadaten)
-        2. requirements.txt (Fallback für Dependencies)
-        3. README (für beschreibende Texte und als Fallback)
-        4. Titel wird am Ende basierend auf der URL überschrieben.
+        Orchestriert die Extraktion von Informationen.
         """
-        # 1. Relevante Dateien finden
+        # Relevante Dateien finden
         readme_datei = self._finde_datei(["readme.md", "readme.rst", "readme.txt", "readme"], dateien)
         toml_datei = self._finde_datei(["pyproject.toml"], dateien)
         req_datei = self._finde_datei(["requirements.txt"], dateien)
 
-        # 2. Dateien parsen (mit Priorisierung)
+        # Dateien parsen (mit Priorisierung)
         if toml_datei:
             self._parse_toml(toml_datei.content)
 
@@ -158,7 +154,7 @@ class ProjektInfoExtractor:
         if readme_datei:
             self._parse_readme(readme_datei.content)
             
-        # 3. Finale Formatierung der Dependencies
+        # Finale Formatierung der Dependencies
         deps = self.info["installation"]["dependencies"]
         if isinstance(deps, list):
             if not deps:
@@ -166,7 +162,11 @@ class ProjektInfoExtractor:
             else:
                 self.info["installation"]["dependencies"] = "\n".join(f"- {dep}" for dep in deps)
         
-        repo_name = os.path.basename(repo_url.removesuffix('.git'))
-        self.info["projekt_uebersicht"]["titel"] = f"{repo_name} documentation"
+        # Titel aus URL ableiten, falls nichts gefunden wurde (oder als Zusatzinfo)
+        if repo_url:
+            repo_name = os.path.basename(repo_url.removesuffix('.git'))
+            # Wenn noch kein Titel da ist oder er generisch war
+            if self.info["projekt_uebersicht"]["titel"] == self.INFO_NICHT_GEFUNDEN:
+                 self.info["projekt_uebersicht"]["titel"] = f"{repo_name} documentation"
 
         return self.info

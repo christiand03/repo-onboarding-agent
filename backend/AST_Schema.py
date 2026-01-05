@@ -1,10 +1,6 @@
 import ast
-import networkx as nx
 import os
-
-from .callgraph import build_filtered_callgraph
 from .getRepo import GitRepository
-
 
 def path_to_module(filepath, project_root):
     """Wandelt einen Dateipfad in einen Python-Modulpfad um."""
@@ -17,10 +13,8 @@ def path_to_module(filepath, project_root):
         rel_path = rel_path[:-3]
     
     module_path = rel_path.replace(os.path.sep, '.')
-    
     if module_path.endswith('.__init__'):
         return module_path[:-9]
-        
     return module_path
 
 class ASTVisitor(ast.NodeVisitor):
@@ -44,7 +38,6 @@ class ASTVisitor(ast.NodeVisitor):
 
     def visit_ClassDef(self, node):
         class_identifier = f"{self.module_path}.{node.name}"
-
         class_info = {
             "mode": "class_analysis",
             "identifier": class_identifier,
@@ -60,7 +53,6 @@ class ASTVisitor(ast.NodeVisitor):
             },   
         }
         self.schema["classes"].append(class_info)
-        
         self._current_class = class_info 
         self.generic_visit(node)
         self._current_class = None
@@ -96,57 +88,51 @@ class ASTVisitor(ast.NodeVisitor):
                 }
             }
             self.schema["functions"].append(func_info)
-            
         self.generic_visit(node)
     
     def visit_AsyncFunctionDef(self, node):
         self.visit_FunctionDef(node)
+
 
 class ASTAnalyzer:
 
     def __init__(self):
         pass
 
-    @staticmethod
-    def _enrich_schema_with_callgraph(schema: dict, call_graph: nx.DiGraph, filename: str):
-        for func in schema["functions"]:
-            func_name_key = f"{filename}::{func['name']}"
-            if func_name_key in call_graph:
-                func['context']['calls'] = sorted(list(call_graph.successors(func_name_key)))
-                func['context']['called_by'] = sorted(list(call_graph.predecessors(func_name_key)))
+    def merge_relationship_data(self, full_schema: dict, raw_relationships: dict) -> dict:
 
-        for cls in schema["classes"]:
-            for method_context in cls["context"]["method_context"]:
-                func_name_key = f"{filename}::{cls['name']}::{method_context['name']}"
-                if func_name_key in call_graph:
-                    calls = sorted(list(call_graph.successors(func_name_key)))
-                    called_by = sorted(list(call_graph.predecessors(func_name_key)))
-                    
-                    method_context['calls'] = calls
-                    method_context['called_by'] = called_by
-
-    def merge_relationship_data(self, full_schema: dict, relationship_data: list) -> dict:
-        
-        rel_lookup = {item['identifier']: item.get('called_by', []) for item in relationship_data}
+        outgoing_calls = raw_relationships.get("outgoing", {})
+        incoming_calls = raw_relationships.get("incoming", {})
 
         for file_path, file_data in full_schema.get("files", {}).items():
             ast_nodes = file_data.get("ast_nodes", {})
             
             for func in ast_nodes.get("functions", []):
                 func_id = func.get("identifier")
-                if func_id and func_id in rel_lookup:
-                    func["context"]["called_by"] = rel_lookup[func_id]
+                if func_id:
+                    func["context"]["calls"] = outgoing_calls.get(func_id, [])
+                    func["context"]["called_by"] = incoming_calls.get(func_id, [])
 
             for cls in ast_nodes.get("classes", []):
                 cls_id = cls.get("identifier")
                 
-                if cls_id and cls_id in rel_lookup:
-                    cls["context"]["instantiated_by"] = rel_lookup[cls_id]
+                if cls_id:
+                    cls["context"]["instantiated_by"] = incoming_calls.get(cls_id, [])
 
+                class_dependencies = set()
+                
                 for method in cls["context"].get("method_context", []):
                     method_id = method.get("identifier")
-                    if method_id and method_id in rel_lookup:
-                        method["called_by"] = rel_lookup[method_id]
+                    if method_id:
+                        m_calls = outgoing_calls.get(method_id, [])
+                        method["calls"] = m_calls
+                        method["called_by"] = incoming_calls.get(method_id, [])
+                        
+                        for callee in m_calls:
+                            if cls_id and not callee.startswith(f"{cls_id}."):
+                                class_dependencies.add(callee)
+                
+                cls["context"]["dependencies"] = sorted(list(class_dependencies))
         
         return full_schema
 
@@ -163,11 +149,6 @@ class ASTAnalyzer:
         if os.path.isfile(project_root):
             project_root = os.path.dirname(project_root)
 
-        try:
-            global_filtered_callgraph = build_filtered_callgraph(repo)
-        except ValueError as e:
-            print("Callgraph konnte nicht erstellt werden!")
-
         for file_obj in files:
             if not file_obj.path.endswith('.py'):
                 continue
@@ -178,7 +159,6 @@ class ASTAnalyzer:
 
             try:
                 tree = ast.parse(file_content)
-                
                 visitor = ASTVisitor(
                     source_code=file_content, 
                     file_path=file_obj.path, 
@@ -186,12 +166,6 @@ class ASTAnalyzer:
                 )
                 visitor.visit(tree)
                 file_schema_nodes = visitor.schema
-
-                self._enrich_schema_with_callgraph(
-                    file_schema_nodes, 
-                    global_filtered_callgraph, 
-                    file_obj.path
-                )
 
                 if file_schema_nodes["imports"] or file_schema_nodes["functions"] or file_schema_nodes["classes"]:
                     full_schema["files"][file_obj.path] = {
@@ -202,4 +176,3 @@ class ASTAnalyzer:
                 print(f"Warnung: Konnte Datei '{file_obj.path}' nicht parsen. Fehler: {e}")
 
         return full_schema
-    
