@@ -138,9 +138,11 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
     local_repo_path = "" 
 
     try: 
+
         with GitRepository(repo_url) as repo:
             repo_files = repo.get_all_files()
             local_repo_path = repo.temp_dir
+
             logging.info(f"Total files retrieved: {len(repo_files)}")
 
     except Exception as e:
@@ -425,7 +427,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
     output_dir = "result"
     stats_dir = "Statistics" # Neuer Ordner
     os.makedirs(output_dir, exist_ok=True)
-    os.makedirs(stats_dir, exist_ok=True)
+    os.makedirs(stats_dir, exist_ok=True) # Stelle sicher, dass Statistics Ordner existiert
 
     total_active_time = total_helper_time + total_main_time
     
@@ -665,12 +667,11 @@ def notebook_workflow(input, api_keys, model, status_callback=None):
         "metrics": metrics
     }
 
-
 if __name__ == "__main__":
-    user_input = "https://github.com/christiand03/analytics-application-development-uni"
-    main_workflow(user_input, api_keys={"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model_names={"helper": "alias-code", "main": "alias-ha"})
+    #user_input = "https://github.com/christiand03/repo-onboarding-agent"
+    #main_workflow(user_input, api_keys={"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model_names={"helper": "alias-code", "main": "alias-ha"})
 
     #notebook_input = "https://github.com/christiand03/predicting-power-consumption-uni"
     #notebook_input = "https://github.com/christiand03/clustering-and-classification-uni"
-    #notebook_input= "https://github.com/Schmarc4/Monarchs"
-    #notebook_workflow(notebook_input, api_keys= {"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model= "gemini-2.5-flash")
+    notebook_input= "https://github.com/Schmarc4/Monarchs"
+    notebook_workflow(notebook_input, api_keys= {"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model= "gemini-2.5-flash")
