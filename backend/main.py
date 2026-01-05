@@ -20,7 +20,6 @@ from .basic_info import ProjektInfoExtractor
 from .HelperLLM import LLMHelper
 from .relationship_analyzer import ProjectAnalyzer
 from schemas.types import FunctionContextInput, FunctionAnalysisInput, ClassContextInput, ClassAnalysisInput, MethodContextInput
-from .EvaluatorLLM import EvaluatorLLM
 
 from toon_format import encode, count_tokens, estimate_savings, compare_formats
 
@@ -428,79 +427,25 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         logging.error(f"Error during Main LLM final report generation: {e}")
         raise
 
-    evaluation_report = None
-    total_eval_time = 0
     
-    # EvaluatorLLM Ausführung
-    evaluator_model = model_names.get("evaluator", model_names.get("main")) 
-    
-    update_status(f"⚖️ Evaluator LLM: Bewerte Dokumentation ({evaluator_model})...")
-    
-    
-    prompt_file_evaluator = "SystemPrompts/SystemPromptEvaluatorLLM.txt"
-        
-    if evaluator_model.startswith("gpt-"):
-        eval_api_key = openai_api_key
-    elif evaluator_model.startswith("gemini-"):
-        eval_api_key = gemini_api_key
-    elif "/" in evaluator_model or evaluator_model.startswith("alias-") or any(x in evaluator_model for x in ["DeepSeek", "Teuken", "Llama", "Qwen", "gpt-oss", "openGPT"]):
-        eval_api_key = scadsllm_api_key
-        base_url = scadsllm_base_url
-    else:
-        eval_api_key = "ollama"
-
-    evaluator = EvaluatorLLM(
-        api_key=eval_api_key,
-        prompt_file_path=prompt_file_evaluator,
-        model_name=evaluator_model,
-        base_url=base_url
-    )
-
-    if evaluator_model.startswith("gemini-"):
-        time.sleep(65)
-    try:
-        t_start_eval = time.time()
-        evaluation_report = evaluator.evaluate(
-            generated_documentation=final_report, 
-            source_context_toon=main_llm_input_toon
-        )
-        t_end_eval = time.time()
-        total_eval_time = t_end_eval - t_start_eval
-
-    except Exception as e:
-        logging.error(f"Error during Evaluation: {e}")
-        evaluation_report = f"Evaluation failed: {e}"
-
-
     # --- Speichern der Ergebnisse ---
     output_dir = "result"
-    stats_dir = "Statistics" 
+    stats_dir = "Statistics" # Neuer Ordner
     os.makedirs(output_dir, exist_ok=True)
-    os.makedirs(stats_dir, exist_ok=True)
+    os.makedirs(stats_dir, exist_ok=True) # Stelle sicher, dass Statistics Ordner existiert
 
-    total_active_time = total_helper_time + total_main_time + total_eval_time
+    total_active_time = total_helper_time + total_main_time
     
+    # Dateiname für Report
     timestamp = datetime.now().strftime("%d_%m_%Y_%H-%M-%S")
-    safe_helper_name = llm_helper.model_name.replace("/", "_").replace("\\", "_")
-    safe_main_name = main_llm.model_name.replace("/", "_").replace("\\", "_")
-    
-    report_filename = f"report_{timestamp}_Helper_{safe_helper_name}_MainLLM_{safe_main_name}.md"
-
+    report_filename = f"report_{timestamp}_Helper_{llm_helper.model_name}_MainLLM_{main_llm.model_name}.md"
     report_filepath = os.path.join(output_dir, report_filename)
     
-    # Speichern des Evaluierungsberichts
-    eval_filename = f"EVALUATION_{timestamp}.md"
-    eval_filepath = os.path.join(output_dir, eval_filename)
-
     if final_report:
         with open(report_filepath, "w", encoding="utf-8") as f:
             f.write(final_report)
         logging.info(f"Final report saved to '{report_filepath}'.")
         
-        if evaluation_report:
-            with open(eval_filepath, "w", encoding="utf-8") as f:
-                f.write(evaluation_report)
-            logging.info(f"Evaluation report saved to '{eval_filepath}'.")        
         if savings_data:
             try:
                 savings_filename = report_filename.replace("report_", "savings_").replace(".md", ".png")
@@ -522,7 +467,6 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
     metrics = {
         "helper_time": round(total_helper_time, 2),
         "main_time": round(total_main_time, 2),
-        "eval_time": round(total_eval_time, 2),
         "total_time": round(total_active_time, 2),
         "helper_model": helper_model,
         "main_model": main_model,
@@ -530,12 +474,10 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         "toon_tokens": savings_data['toon_tokens'] if savings_data else None,
         "savings_percent": round(savings_data['savings_percent'], 2) if savings_data else None
     
-        "evaluator_model": evaluator_model
     }
 
     return {
         "report": final_report,
-        "evaluation": evaluation_report,
         "metrics": metrics
     }
 
@@ -544,7 +486,8 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
 
 
 def notebook_workflow(input, api_keys, model, status_callback=None):
-
+    t_start = time.time()
+    final_report = "keine Notebooks gefunden"
     def update_status(msg):
         if status_callback:
             status_callback(msg)
@@ -681,14 +624,18 @@ def notebook_workflow(input, api_keys, model, status_callback=None):
 
         try:
             single_report = notebook_llm.call_llm(llm_payload)
-            notebook_reports.append(single_report)
+            if single_report and isinstance(single_report, str):
+                notebook_reports.append(single_report)
+            else:
+                logging.warning(f"LLM lieferte kein Ergebnis für {nb_path}")
+                notebook_reports.append(f"## Analyse für {os.path.basename(nb_path)}\nFehler: Das Modell lieferte keine Antwort.")
             
         except Exception as e:
             logging.error(f"Error generating report for {nb_path}: {e}")
             notebook_reports.append(f"# Error processing {nb_path}\n\nError: {str(e)}\n\n---\n")
 
     # Concatenate all reports
-    final_report = "\n\n<br>\n<br>\n<br>\n\n".join(notebook_reports)
+    final_report = "\n\n<br>\n<br>\n<br>\n\n".join([str(r) for r in notebook_reports if r is not None])
 
     
     # --- Speichern der Ergebnisse ---
@@ -705,10 +652,31 @@ def notebook_workflow(input, api_keys, model, status_callback=None):
             f.write(final_report)
         logging.info(f"Final report saved to '{report_filepath}'.")
 
+    # Am Ende der Funktion nach dem Speichern:
+    total_time = time.time() - t_start
+    
+    # Metriken für das Frontend bauen
+    metrics = {
+        "helper_time": "0", # Notebook-Workflow hat meist keinen separaten Helper
+        "main_time": round(total_time, 2),
+        "total_time": round(total_time, 2),
+        "helper_model": "None",
+        "main_model": model,
+        "json_tokens": 0,
+        "toon_tokens": 0,
+        "savings_percent": 0
+    }
+
+    return {
+        "report": final_report,
+        "metrics": metrics
+    }
+
 if __name__ == "__main__":
-    user_input = "https://github.com/christiand03/repo-onboarding-agent"
-    main_workflow(user_input, api_keys={"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model_names={"helper": "alias-code", "main": "alias-ha"})
+    #user_input = "https://github.com/christiand03/repo-onboarding-agent"
+    #main_workflow(user_input, api_keys={"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model_names={"helper": "alias-code", "main": "alias-ha"})
 
     #notebook_input = "https://github.com/christiand03/predicting-power-consumption-uni"
     #notebook_input = "https://github.com/christiand03/clustering-and-classification-uni"
-    #notebook_workflow(notebook_input, api_keys= {"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model= "gemini-2.5-flash")
+    notebook_input= "https://github.com/Schmarc4/Monarchs"
+    notebook_workflow(notebook_input, api_keys= {"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model= "gemini-2.5-flash")

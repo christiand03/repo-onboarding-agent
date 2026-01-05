@@ -15,11 +15,11 @@ OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL")
 
 class EvaluatorLLM:
     """
-    Klasse für die Bewertung der generierten Dokumentation gegen den Source-Code-Kontext.
+    Klasse für die Bewertung von LLM-Outputs.
     """
     def __init__(self, api_key: str, prompt_file_path: str, model_name: str = "gpt-4o", base_url: str = None):
         if not api_key:
-            pass 
+            pass # Error handling handled by caller usually
         
         try:
             with open(prompt_file_path, 'r', encoding='utf-8') as f:
@@ -29,18 +29,19 @@ class EvaluatorLLM:
             raise
         
         self.model_name = model_name
-
+        
+        # Konfiguration der Clients
         if model_name.startswith("gemini-"):
             self.llm = ChatGoogleGenerativeAI(
                 model=model_name,
                 api_key=api_key,
-                temperature=0.2, 
+                temperature=0.0, # Wichtig für Reproduzierbarkeit bei Evaluation
             )
         elif model_name.startswith("gpt-") and "openGPT" not in model_name:
             self.llm = ChatOpenAI(
                 model=model_name,
                 api_key=api_key,
-                temperature=0.2,
+                temperature=0.0,
             )
         elif "/" in model_name or model_name.startswith("alias-") or any(x in model_name for x in ["DeepSeek", "Teuken", "Llama", "Qwen", "gpt-oss", "openGPT"]):
              if not SCADSLLM_URL:
@@ -51,56 +52,73 @@ class EvaluatorLLM:
                 model=model_name,
                 api_key=api_key,
                 base_url=SCADSLLM_URL,
-                temperature=0.2,
+                temperature=0.0,
             )
         else:
             target_url = base_url if base_url else OLLAMA_BASE_URL
             self.llm = ChatOllama(
                 model=model_name,
-                temperature=0.2,
+                temperature=0.0,
                 base_url=target_url,
             )
 
         logging.info(f"Evaluator LLM initialized with model '{model_name}'.")
 
     def evaluate(self, generated_documentation: str, source_context_toon: str):
-        
+        """Standard Evaluation für MainLLM (Markdown Reports)"""
         user_input_content = f"""
                 I require a forensic audit of the following documentation.
                 
                 === DATA START ===
-                
-                *** PART 1: GROUND TRUTH (Structured Context: AST, FileTree, Analysis) ***
-                [NOTE: This data represents the absolute truth about the code.]
+                *** PART 1: GROUND TRUTH (Structured Context) ***
                 {source_context_toon}
                 
-                *** PART 2: CANDIDATE DOCUMENTATION (Markdown to Evaluate) ***
+                *** PART 2: CANDIDATE DOCUMENTATION (Markdown) ***
                 {generated_documentation}
-                
                 === DATA END ===
 
                 COMMAND: 
-                Perform the evaluation based on the System Prompt rules. 
-                Focus strictly on whether PART 2 accurately reflects the structures defined in PART 1.
+                Perform the evaluation based on the System Prompt rules.
                 """
+        return self._invoke_llm(user_input_content)
 
+    def evaluate_helper_analysis(self, original_source_code_json: str, generated_analysis_json: str):
+        """
+        Methode für das HelperLLM: Vergleicht Raw-Code (Input) mit generiertem JSON (Output).
+        """
+        user_input_content = f"""
+                I require a forensic audit of the Code-to-JSON transformation.
+
+                === DATA START ===
+
+                *** PART 1: INPUT DATA (Ground Truth) ***
+                This JSON defines the strict boundaries for the analysis.
+                Pay close attention to the 'context' keys (calls, called_by).
+                {original_source_code_json}
+
+                *** PART 2: GENERATED ANALYSIS (Candidate) ***
+                {generated_analysis_json}
+
+                === DATA END ===
+
+                COMMAND:
+                Compare PART 2 against PART 1 based on the System Prompt rules.
+                
+                IMPORTANT: 
+                When checking 'calls' or 'relationships', TRUST ONLY THE 'context' OBJECT IN PART 1. 
+                Do NOT manually parse the source code to find new calls (like 'len', 'st.metric', etc.) if they are not listed in PART 1 context.
+                """
+        
+        return self._invoke_llm(user_input_content)
+
+    def _invoke_llm(self, content: str):
         messages = [
             SystemMessage(content=self.system_prompt),
-            HumanMessage(content=user_input_content)
+            HumanMessage(content=content)
         ]
-        
-        logging.info("Calling Evaluator LLM...")
-
         try:
             response = self.llm.invoke(messages)
-            content = response.content
-            
-            if len(content) > len(generated_documentation) * 0.8 and "# Project Documentation" in content:
-                logging.warning("Evaluator appears to have echoed the input. Marking as failed.")
-                return "Error: Evaluator echoed input instead of grading."
-                
-            logging.info("Evaluation successful.")
-            return content
+            return response.content
         except Exception as e:
             logging.error(f"Error during Evaluator LLM call: {e}")
             return f"Error: Could not perform evaluation. {e}"

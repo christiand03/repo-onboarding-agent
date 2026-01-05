@@ -1,150 +1,172 @@
-import json
-import math
-import logging
 import os
-import re
+import json
+import logging
 import time
-import math
+import re
 from datetime import datetime
-import matplotlib.pyplot as plt
-import csv
-
-
-from datetime import datetime
-from pathlib import Path
 from dotenv import load_dotenv
 
-from .getRepo import GitRepository, RepoFile
-from .AST_Schema import ASTAnalyzer
-from .MainLLM import MainLLM
-from .basic_info import ProjektInfoExtractor
-from .HelperLLM import LLMHelper
-from .relationship_analyzer import ProjectAnalyzer
+# Stelle sicher, dass find_project_root in relationship_analyzer.py existiert!
+from backend.getRepo import GitRepository
+from backend.AST_Schema import ASTAnalyzer
+from backend.relationship_analyzer import ProjectAnalyzer, find_project_root
+from backend.HelperLLM import LLMHelper
+from backend.EvaluatorLLM import EvaluatorLLM
 from schemas.types import FunctionContextInput, FunctionAnalysisInput, ClassContextInput, ClassAnalysisInput, MethodContextInput
-from .main import calculate_net_time
 
-from toon_format import encode, count_tokens, estimate_savings, compare_formats
-
-
-# Setup Logging
+# --- Konfiguration & Logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 load_dotenv()
 
-def evaluation(input, api_keys: dict, model_names: dict, status_callback=None):
-    
-    user_input = input
-    
-    # API Key & Ollama Base URL aus Frontend holen
-    gemini_api_key = api_keys.get("gemini")
-    openai_api_key = api_keys.get("gpt")
-    scadsllm_api_key = api_keys.get("scadsllm")
-    scadsllm_base_url = api_keys.get("scadsllm_base_url")
-    ollama_base_url = api_keys.get("ollama")
-    base_url = None
+REPO_URL_TO_TEST = "https://github.com/christiand03/analytics-application-development-uni" 
 
-    if model_names["helper"].startswith("gpt-"):
-        helper_api_key = openai_api_key
-    elif model_names["helper"].startswith("gemini-"):
-        helper_api_key = gemini_api_key
-    elif "/" in model_names["helper"] or model_names["helper"].startswith("alias-") or any(x in model_names["helper"] for x in ["DeepSeek", "Teuken", "Llama", "Qwen", "gpt-oss", "openGPT"]):
-        helper_api_key = scadsllm_api_key
-        base_url = scadsllm_base_url
+HELPER_MODELS_TO_TEST = [
+    # #Google Gemini
+    # "gemini-2.5-flash",
+    # "gemini-2.5-flash-lite",
+
+    # #SCADS  
+    # #Aliases
+    # "alias-reasoning",
+    # "alias-ha",
+    "alias-code",
+    
+    # #Llama
+    # "meta-llama/Llama-3.3-70B-Instruct",
+    # "meta-llama/Llama-3.1-8B-Instruct",
+    # "meta-llama/Llama-4-Scout-17B-16E-Instruct",
+    
+    # # DeepSeek
+    # "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct",
+    # "deepseek-ai/DeepSeek-R1",
+    # "deepseek-ai/DeepSeek-V3.2-Exp",
+    
+    # # Qwen
+    # "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+    # "Qwen/Qwen2-VL-7B-Instruct",
+    
+    # # Andere
+    # "openGPT-X/Teuken-7B-instruct-research-v0.4",
+    # "openai/gpt-oss-120b", 
+]
+
+EVALUATOR_MODEL = "gemini-2.5-flash"
+
+PROMPT_FUNC_HELPER = 'SystemPrompts/SystemPromptFunctionHelperLLM.txt'
+PROMPT_CLASS_HELPER = 'SystemPrompts/SystemPromptClassHelperLLM.txt'
+PROMPT_EVALUATOR_HELPER = 'SystemPrompts/SystemPromptEvaluatorHelper.txt'
+
+
+def get_api_keys():
+    return {
+        "gemini": os.getenv("GEMINI_API_KEY"),
+        "gpt": os.getenv("OPENAI_API_KEY"),
+        "scadsllm": os.getenv("SCADS_AI_KEY"),
+        "scadsllm_base_url": os.getenv("SCADSLLM_URL"),
+        "ollama": os.getenv("OLLAMA_BASE_URL")
+    }
+
+def get_keys_for_model(model_name, all_keys):
+    """Wählt den richtigen Key basierend auf dem Modellnamen."""
+    if model_name.startswith("gpt-") and "oss" not in model_name: 
+        return all_keys["gpt"], None
+    elif model_name.startswith("gemini-"):
+        return all_keys["gemini"], None
+    elif "/" in model_name or model_name.startswith("alias-") or any(x in model_name for x in ["DeepSeek", "Teuken", "Llama", "Qwen", "gpt-oss"]): 
+        return all_keys["scadsllm"], all_keys["scadsllm_base_url"]
     else:
-        helper_api_key = None
-        base_url = ollama_base_url
-    if model_names["main"].startswith("gpt-"):
-        api_key = openai_api_key
-    elif model_names["main"].startswith("gemini-"):
-        api_key = gemini_api_key
+        return "ollama", all_keys["ollama"]
 
-    # Standardeinstellungen für Modelle
-    helper_model = model_names.get("helper", "gpt-5-mini")
-    main_model = model_names.get("main", "gpt-5.1")
-
-    # Error Handling für fehlende API Keys
-    if not gemini_api_key and "gemini" in helper_model:
-        raise ValueError("Gemini API Key was not provided in api_keys dictionary.")
-
-    # URL Extraktion
-    repo_url = None
-    url_pattern = r"https?://(?:www\.)?github\.com/[^\s]+"
-    match = re.search(url_pattern, user_input)
-
+def extract_score_from_eval(eval_text):
+    if not eval_text:
+        return 0
+    match = re.search(r"TOTAL SCORE:.*?(\d+)\s*\/", eval_text, re.IGNORECASE | re.DOTALL)
     if match:
-        repo_url = match.group(0)
-        logging.info(f"Extracted repository URL: {repo_url}")
-    else:
-        raise ValueError("Could not find a valid URL in the provided input.")
+        try:
+            return int(match.group(1))
+        except ValueError:
+            return 0
+    return 0
+
+def create_benchmark_dirs():
+    """Erstellt die Ordnerstruktur: evaluation/HelperLLM/Benchmark_Datum_Zeit/..."""
+    timestamp = datetime.now().strftime("%d_%m_%Y_%H-%M-%S")
+    base_dir = os.path.join("evaluation", "HelperLLM", f"Benchmark_{timestamp}")
     
-    # Repo klonen und Dateien extrahieren
+    dirs = {
+        "base": base_dir,
+        "input": os.path.join(base_dir, "Input"),
+        "output": os.path.join(base_dir, "Output"),
+        "evaluations": os.path.join(base_dir, "Evaluations"),
+        "stats_file": os.path.join(base_dir, "benchmark_stats.json")
+    }
+    
+    for d in [dirs["input"], dirs["output"], dirs["evaluations"]]:
+        os.makedirs(d, exist_ok=True)
+        
+    logging.info(f"Benchmark-Verzeichnisse erstellt: {base_dir}")
+    return dirs
+
+def prepare_live_input(repo_url):
+    """
+    Klont das Repo, führt AST- und Relationship-Analyse durch und erstellt 
+    die HelperLLM Inputs. (Analog zum main_workflow)
+    """
+    logging.info(f"Erstelle Live-Input aus: {repo_url}")
     
     repo_files = []
-    local_repo_path = "" 
+    detected_project_root = "" 
 
     try: 
-
         with GitRepository(repo_url) as repo:
             repo_files = repo.get_all_files()
-            if hasattr(repo, 'local_path'):
-                local_repo_path = repo.local_path
-            elif hasattr(repo, 'working_dir'):
-                local_repo_path = repo.working_dir
+            
+            # --- START LÖSUNG 2: Automatische Root-Erkennung ---
+            start_search_path = ""
+            
+            # 1. Versuche den Pfad vom Repo-Objekt zu bekommen
+            if hasattr(repo, 'local_path') and repo.local_path:
+                start_search_path = repo.local_path
+            # 2. Fallback: Nimm den Pfad der ersten gefundenen Datei
+            elif repo_files:
+                start_search_path = repo_files[0].path
             else:
-                local_repo_path = os.path.dirname(os.path.commonpath([f.path for f in repo_files]))
+                raise Exception("Keine Dateien im Repository gefunden, kann Root nicht bestimmen.")
 
-            logging.info(f"Total files retrieved: {len(repo_files)}")
+            # Automatische Ermittlung des Roots (sucht nach .git, .venv, requirements.txt)
+            detected_project_root = find_project_root(start_search_path)
+            logging.info(f"Repository Root erkannt: {detected_project_root}")
+            # --- ENDE LÖSUNG 2 ---
 
     except Exception as e:
         logging.error(f"Error cloning repository: {e}")
         raise 
 
-
-    # Extrahiere Basic Infos
+    logging.info("Analysiere Beziehungen...")
     try:
-        info_extractor = ProjektInfoExtractor()
-        basic_project_info = info_extractor.extrahiere_info(dateien=repo_files, repo_url=repo_url)
-        logging.info("Basic project info extracted")
-    except Exception as e:
-        logging.error(f"Error extracting basic project info: {e}")
-
-    # Erstelle Repository Dateibaum
-    try:
-        repo_file_tree = repo.get_file_tree()
-        logging.info("Repository file tree constructed")
-    except Exception as e:
-        logging.error(f"Error constructing repository file tree: {e}")
-
-    # Relationship Analyse durchführen
-    try:
-        rel_analyzer = ProjectAnalyzer(project_root=local_repo_path)
-        relationship_results = rel_analyzer.analyze()
-        logging.info(f"Relationships analyzed. Found definitions: {len(relationship_results)}")
+        # Hier nutzen wir nun den korrekt erkannten Root-Pfad
+        rel_analyzer = ProjectAnalyzer(project_root=detected_project_root)
+        rel_analyzer.analyze()
+        raw_relationships = rel_analyzer.get_raw_relationships()
     except Exception as e:
         logging.error(f"Error in relationship analyzer: {e}")
-        relationship_results = []
+        raw_relationships = {"outgoing": {}, "incoming": {}}
 
-    # Erstelle AST Schema
+    logging.info("Erstelle AST...")
     try:        
         ast_analyzer = ASTAnalyzer()   
         ast_schema = ast_analyzer.analyze_repository(files=repo_files, repo=repo)
-        logging.info("AST schema created")
+        ast_schema = ast_analyzer.merge_relationship_data(ast_schema, raw_relationships)
     except Exception as e:
-        logging.error(f"Error retrieving repository files: {e}")
+        logging.error(f"Error creating AST: {e}")
         raise
 
-    # Anreichern des AST Schemas mit Relationship Daten           
-    try:   
-        ast_schema = ast_analyzer.merge_relationship_data(ast_schema, relationship_results)
-        logging.info("AST schema created and enriched")
-
-    except Exception as e:
-        logging.error(f"Error processing repository: {e}")
-        raise
-
-    # Vorbereitung der HelperLLM Eingaben
+    logging.info("Konvertiere AST in HelperLLM Inputs...")
     
     helper_llm_function_input = []
     helper_llm_class_input = []
+    
+    raw_input_json = {"functions": [], "classes": []}
 
     try:
         for filename, file_data in ast_schema['files'].items():
@@ -155,7 +177,6 @@ def evaluation(input, api_keys: dict, model_names: dict, status_callback=None):
 
             for function in functions:
                 context = function.get('context', {})
-                
                 raw_called_by = context.get('called_by', [])
                 clean_called_by = [cb for cb in raw_called_by if isinstance(cb, dict)]
 
@@ -173,13 +194,13 @@ def evaluation(input, api_keys: dict, model_names: dict, status_callback=None):
                 )
                 
                 helper_llm_function_input.append(function_input)
+                raw_input_json["functions"].append(function_input.model_dump())
 
             for _class in classes:
                 context = _class.get('context', {})
                 
                 method_context_inputs = []
                 for method in context.get('method_context', []):
-                    
                     raw_method_called_by = method.get('called_by', [])
                     clean_method_called_by = [cb for cb in raw_method_called_by if isinstance(cb, dict)]
 
@@ -211,257 +232,132 @@ def evaluation(input, api_keys: dict, model_names: dict, status_callback=None):
                 )
                 
                 helper_llm_class_input.append(class_input)
+                raw_input_json["classes"].append(class_input.model_dump())
 
     except Exception as e:
-        logging.error(f"Error preparing inputs for Helper LLM: {e}")
+        logging.error(f"Error converting to Input objects: {e}")
         raise
 
-    function_prompt_file = 'SystemPrompts/SystemPromptFunctionHelperLLM.txt'
-    class_prompt_file = 'SystemPrompts/SystemPromptClassHelperLLM.txt'
-    
-    llm_helper = LLMHelper(
-        api_key=helper_api_key, 
-        function_prompt_path=function_prompt_file, 
-        class_prompt_path=class_prompt_file,
-        model_name=helper_model,
-        base_url=base_url,
-    )
-    
-    if ollama_base_url:
-        os.environ["OLLAMA_BASE_URL"] = ollama_base_url
+    return helper_llm_function_input, helper_llm_class_input, raw_input_json
 
-    # Ergebnis-Container
-    analysis_results = {}
-    
-    # Zeitmessung Variablen
-    net_time_func = 0
-    gross_time_func = 0
-    net_time_class = 0
-    gross_time_class = 0
+def benchmark_loop():
+    dirs = create_benchmark_dirs()
+    keys = get_api_keys()
 
     try:
-        if len(helper_llm_function_input) > 0:
-            t_start_func = time.time()    
-            function_analysis_results = llm_helper.generate_for_functions(helper_llm_function_input)    
-            t_end_func = time.time()
-            
-            gross_time_func = t_end_func - t_start_func
-            net_time_func = calculate_net_time(t_start_func, t_end_func, len(helper_llm_function_input), llm_helper.batch_size, helper_model)
-
-        if function_analysis_results:
-            for doc in function_analysis_results:
-                if doc:
-                    if "functions" not in analysis_results:
-                        analysis_results["functions"] = {}
-                    analysis_results["functions"][doc.identifier] = doc.model_dump() 
-    except Exception as e:
-        logging.error(f"Error during Helper LLM function analysis: {e}")
-        raise
-
-    try:
-        if len(helper_llm_class_input) > 0:
-            sleep_offset = 0
-            # Rate Limit Sleep logic
-            if llm_helper.model_name.startswith("gemini-") and (len(helper_llm_function_input) > 0):
-                time.sleep(65)
-                sleep_offset = 65
-
-            
-            t_start_class = time.time()
-            class_analysis_results = llm_helper.generate_for_classes(helper_llm_class_input)
-            t_end_class = time.time()
-            
-            gross_time_class = (t_end_class - t_start_class) + sleep_offset
-            net_time_class = calculate_net_time(t_start_class, t_end_class, len(helper_llm_class_input), llm_helper.batch_size, helper_model)
-
-        if class_analysis_results:
-            for doc in class_analysis_results:
-                if doc:
-                    if "classes" not in analysis_results:
-                        analysis_results["classes"] = {}
-                    analysis_results["classes"][doc.identifier] = doc.model_dump() 
-    except Exception as e:
-        logging.error(f"Error during Helper LLM class analysis: {e}")
-        raise
-
-
-    total_net_time = net_time_func + net_time_class
-    total_gross_time = gross_time_func + gross_time_class
-    
-    # Token Evaluation mit TOON
-    json_tokens = 0
-    toon_tokens = 0
-    savings_percent = 0
-
-    try:
-        logging.info("--- Evaluierung der Token-Ersparnis ---")
-        savings_data = estimate_savings(analysis_results)
+        func_inputs, class_inputs, raw_input_json = prepare_live_input(REPO_URL_TO_TEST)
         
-        json_tokens = savings_data.get('json_tokens', 0)
-        toon_tokens = savings_data.get('toon_tokens', 0)
-        savings_percent = savings_data.get('savings_percent', 0)
-
-        logging.info(f"JSON Tokens: {json_tokens}")
-        logging.info(f"TOON Tokens: {toon_tokens}")
-        logging.info(f"Ersparnis:   {savings_percent:.2f}%")
+        input_file_path = os.path.join(dirs["input"], "generated_input.json")
+        with open(input_file_path, "w", encoding="utf-8") as f:
+            json.dump(raw_input_json, f, indent=2)
+            
+        logging.info(f"Input erfolgreich erstellt und gespeichert: {len(func_inputs)} Funktionen, {len(class_inputs)} Klassen.")
         
+        raw_input_str = json.dumps(raw_input_json, indent=2)
+
     except Exception as e:
-        logging.warning(f"Token evaluation could not be performed: {e}") 
+        logging.error(f"CRITICAL: Konnte Input nicht erstellen. Abbruch. {e}")
+        return
 
-    logging.info(f"Analysis Complete. Net: {total_net_time:.2f}s, Gross: {total_gross_time:.2f}s")
+    stats = []
 
-    # Rückgabe an den Runner
-    return {
-        "results": analysis_results,
-        "metrics": {
-            "model": helper_model,
-            "json_tokens": json_tokens,
-            "toon_tokens": toon_tokens,
-            "duration_gross": total_gross_time,
-            "duration_net": total_net_time
-        }
-    }
-
-
-
-
-INPUT_REPO_URL = "https://github.com/christiand03/repo-onboarding-agent" 
-
-BASE_EVAL_DIR = "Evaluation"
-
-# API Keys aus .env laden
-api_keys = {
-    "gemini": os.getenv("GEMINI_API_KEY"),
-    "gpt": os.getenv("OPENAI_API_KEY"),
-    "ollama": os.getenv("OLLAMA_BASE_URL"),
-    "scadsllm": os.getenv("SCADS_AI_KEY"),
-    "scadsllm_base_url": os.getenv("SCADSLLM_URL")
-}
-
-# Liste der Modelle, die durchlaufen werden sollen
-MODELS_TO_TEST = [
-    # Gemini
-    #"gemini-2.0-flash-lite",
-    #"gemini-2.5-flash",
-    #"gemini-2.0-flash",
-    #"gemini-2.5-flash-lite",
-
-    # #scadsllm Modelle
-    # # Aliases
-    "alias-reasoning",
-    "alias-ha",
-    "alias-code",
-    
-    # # Llama
-    "meta-llama/Llama-3.3-70B-Instruct",
-    "meta-llama/Llama-3.1-8B-Instruct",
-    "meta-llama/Llama-4-Scout-17B-16E-Instruct",
-    
-    # DeepSeek
-    "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct",
-    "deepseek-ai/DeepSeek-R1",
-    "deepseek-ai/DeepSeek-V3.2-Exp",
-    
-    # Qwen (Code & Instruct)
-    "Qwen/Qwen3-Coder-30B-A3B-Instruct",
-    "Qwen/Qwen2-VL-7B-Instruct",
-    
-    # Andere
-    "openGPT-X/Teuken-7B-instruct-research-v0.4",
-    "openai/gpt-oss-120b",    
-
-]
-
-def save_stats_to_run_file(metrics, filepath):
-
-    data = []
-    
-    if os.path.exists(filepath):
-        try:
-            with open(filepath, 'r', encoding='utf-8') as f:
-                content = f.read()
-                if content.strip():
-                    data = json.loads(content)
-        except Exception as e:
-            logging.error(f"Fehler beim Lesen der aktuellen Stats-Datei: {e}")
-
-    new_entry = {
-        "model": metrics["model"],
-        "tokens_json": metrics["json_tokens"],
-        "tokens_toon": metrics["toon_tokens"],
-        "duration_gross_sec": round(metrics["duration_gross"], 2),
-        "duration_net_sec": round(metrics["duration_net"], 2),
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    }
-
-    data.append(new_entry)
-
-    try:
-        with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=4, ensure_ascii=False)
-        logging.info(f"Statistik aktualisiert: {filepath}")
-    except Exception as e:
-        logging.error(f"Fehler beim Schreiben der Stats-Datei: {e}")
-
-def run_evaluation():
-    run_timestamp = datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
-    
-    current_run_output_dir = os.path.join(BASE_EVAL_DIR, f"Output-{run_timestamp}")
-    
-    stats_filename = f"evaluation_stats-{run_timestamp}.json"
-    stats_file_path = os.path.join(BASE_EVAL_DIR, stats_filename)
-
-    os.makedirs(current_run_output_dir, exist_ok=True)
-    
-    logging.info(f"Starte Evaluation.")
-    logging.info(f"Output Ordner: {current_run_output_dir}")
-    logging.info(f"Stats Datei:   {stats_file_path}")
-
-    for model_name in MODELS_TO_TEST:
-        logging.info(f"--------------------------------------------------")
-        logging.info(f"Starte Run für Helper-Model: {model_name}")
-
-        current_model_config = {
-            "helper": model_name,
-            "main": "gpt-5.1" 
+    for model in HELPER_MODELS_TO_TEST:
+        logging.info(f"==================================================")
+        logging.info(f"Starte Test für HelperLLM: {model}")
+        
+        safe_model_name = model.replace("/", "_").replace(":", "").replace(".", "-")
+        
+        helper_api_key, helper_base_url = get_keys_for_model(model, keys)
+        eval_api_key, eval_base_url = get_keys_for_model(EVALUATOR_MODEL, keys)
+        
+        current_stat = {
+            "helper_model": model,
+            "evaluator_model": EVALUATOR_MODEL,
+            "status": "pending",
+            "score": 0,
+            "duration_gen_sec": 0,
+            "duration_eval_sec": 0,
+            "items_processed": 0,
+            "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
 
         try:
-            result_data = evaluation(
-                input=INPUT_REPO_URL,
-                api_keys=api_keys,
-                model_names=current_model_config
+            llm_helper = LLMHelper(
+                api_key=helper_api_key, 
+                function_prompt_path=PROMPT_FUNC_HELPER, 
+                class_prompt_path=PROMPT_CLASS_HELPER,
+                model_name=model,
+                base_url=helper_base_url
             )
-
-            metrics = result_data["metrics"]
-            json_content = result_data["results"]
-
-
-            model_timestamp = datetime.now().strftime("%d-%m-%Y-%H-%M-%S")
-            safe_model_name = model_name.replace("/", "-").replace(":", "") 
             
-            output_filename = f"{safe_model_name}-{model_timestamp}.json"
+            start_gen = time.time()
             
-            output_path = os.path.join(current_run_output_dir, output_filename)
+            analysis_results = {"functions": {}, "classes": {}}
+            
+            if func_inputs:
+                logging.info(f"Analysiere Funktionen mit {model}...")
+                res_funcs = llm_helper.generate_for_functions(func_inputs)
+                for doc in res_funcs:
+                    if doc: analysis_results["functions"][doc.identifier] = doc.model_dump()
 
-            with open(output_path, 'w', encoding='utf-8') as f:
-                json.dump(json_content, f, indent=4, ensure_ascii=False)
+            if class_inputs:
+                if model.startswith("gemini-"):
+                    logging.info("Pause für Rate-Limit...")
+                    time.sleep(65)
+                
+                logging.info(f"Analysiere Klassen mit {model}...")
+                res_classes = llm_helper.generate_for_classes(class_inputs)
+                for doc in res_classes:
+                    if doc: analysis_results["classes"][doc.identifier] = doc.model_dump()
             
-            logging.info(f"Output gespeichert in: {output_path}")
+            current_stat["duration_gen_sec"] = round(time.time() - start_gen, 2)
+            current_stat["items_processed"] = len(analysis_results["functions"]) + len(analysis_results["classes"])
 
-            save_stats_to_run_file(metrics, stats_file_path)
+            generated_json_str = json.dumps(analysis_results, indent=2)
+            output_path = os.path.join(dirs["output"], f"output_{safe_model_name}.json")
+            with open(output_path, "w", encoding="utf-8") as f:
+                f.write(generated_json_str)
+
             
-            time.sleep(2)
+            logging.info(f"Starte Evaluierung mit {EVALUATOR_MODEL}...")
+            
+            evaluator = EvaluatorLLM(
+                api_key=eval_api_key,
+                prompt_file_path=PROMPT_EVALUATOR_HELPER,
+                model_name=EVALUATOR_MODEL,
+                base_url=eval_base_url
+            )
+            
+            if EVALUATOR_MODEL.startswith("gemini-"):
+                time.sleep(65)
+
+            start_eval = time.time()
+            
+            eval_report = evaluator.evaluate_helper_analysis(
+                original_source_code_json=raw_input_str,
+                generated_analysis_json=generated_json_str
+            )
+            
+            current_stat["duration_eval_sec"] = round(time.time() - start_eval, 2)
+            current_stat["score"] = extract_score_from_eval(eval_report)
+            current_stat["status"] = "success"
+
+            eval_path = os.path.join(dirs["evaluations"], f"eval_{safe_model_name}.md")
+            with open(eval_path, "w", encoding="utf-8") as f:
+                f.write(eval_report)
+            
+            logging.info(f"Evaluierung abgeschlossen. Score: {current_stat['score']}/100")
 
         except Exception as e:
-            logging.error(f"Fehler bei Modell {model_name}: {e}")
-            logging.info("Fahre mit dem nächsten Modell fort...")
-            continue
+            logging.error(f"Fehler bei Modell {model}: {e}")
+            current_stat["status"] = "failed"
+            current_stat["error_message"] = str(e)
+        
+        stats.append(current_stat)
+        with open(dirs["stats_file"], "w", encoding="utf-8") as f:
+            json.dump(stats, f, indent=4, ensure_ascii=False)
 
-    logging.info(f"Evaluation abgeschlossen. Ergebnisse in {current_run_output_dir}")
+    logging.info(f"Benchmark vollständig abgeschlossen. Alle Ergebnisse in: {dirs['base']}")
 
 if __name__ == "__main__":
-    if not api_keys.get("scadsllm"):
-        logging.warning("Kein SCADS_AI_KEY gefunden.")
-    
-    run_evaluation()
+    benchmark_loop()
