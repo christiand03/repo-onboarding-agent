@@ -664,7 +664,7 @@ if st.session_state["authentication_status"]:
                 result_data = main.notebook_workflow(
                     input=prompt, 
                     api_keys=api_keys, 
-                    model_names=model_config["main"],
+                    model=model_config["main"],
                     status_callback=status.write 
                 )  
             
