@@ -115,7 +115,7 @@ def prepare_shared_input(repo_url, api_keys, input_dir):
     try:
         repo_instance = GitRepository(repo_url)
         repo_files = repo_instance.get_all_files()
-        local_path = os.path.dirname(os.path.commonpath([f.path for f in repo_files]))
+        local_path = repo_instance.temp_dir
         
         # Basic Info
         info_extractor = ProjektInfoExtractor()

@@ -6,10 +6,9 @@ import re
 from datetime import datetime
 from dotenv import load_dotenv
 
-# Stelle sicher, dass find_project_root in relationship_analyzer.py existiert!
 from backend.getRepo import GitRepository
 from backend.AST_Schema import ASTAnalyzer
-from backend.relationship_analyzer import ProjectAnalyzer, find_project_root
+from backend.relationship_analyzer import ProjectAnalyzer
 from backend.HelperLLM import LLMHelper
 from backend.EvaluatorLLM import EvaluatorLLM
 from schemas.types import FunctionContextInput, FunctionAnalysisInput, ClassContextInput, ClassAnalysisInput, MethodContextInput
@@ -108,44 +107,26 @@ def create_benchmark_dirs():
     return dirs
 
 def prepare_live_input(repo_url):
-    """
-    Klont das Repo, führt AST- und Relationship-Analyse durch und erstellt 
-    die HelperLLM Inputs. (Analog zum main_workflow)
-    """
+
     logging.info(f"Erstelle Live-Input aus: {repo_url}")
     
     repo_files = []
-    detected_project_root = "" 
+    local_repo_path = "" 
 
     try: 
         with GitRepository(repo_url) as repo:
             repo_files = repo.get_all_files()
-            
-            # --- START LÖSUNG 2: Automatische Root-Erkennung ---
-            start_search_path = ""
-            
-            # 1. Versuche den Pfad vom Repo-Objekt zu bekommen
-            if hasattr(repo, 'local_path') and repo.local_path:
-                start_search_path = repo.local_path
-            # 2. Fallback: Nimm den Pfad der ersten gefundenen Datei
-            elif repo_files:
-                start_search_path = repo_files[0].path
-            else:
-                raise Exception("Keine Dateien im Repository gefunden, kann Root nicht bestimmen.")
+            local_repo_path = repo.temp_dir
 
-            # Automatische Ermittlung des Roots (sucht nach .git, .venv, requirements.txt)
-            detected_project_root = find_project_root(start_search_path)
-            logging.info(f"Repository Root erkannt: {detected_project_root}")
-            # --- ENDE LÖSUNG 2 ---
+            logging.info(f"Total files retrieved: {len(repo_files)}")
 
     except Exception as e:
         logging.error(f"Error cloning repository: {e}")
-        raise 
+        raise
 
     logging.info("Analysiere Beziehungen...")
     try:
-        # Hier nutzen wir nun den korrekt erkannten Root-Pfad
-        rel_analyzer = ProjectAnalyzer(project_root=detected_project_root)
+        rel_analyzer = ProjectAnalyzer(project_root=local_repo_path)
         rel_analyzer.analyze()
         raw_relationships = rel_analyzer.get_raw_relationships()
     except Exception as e:
