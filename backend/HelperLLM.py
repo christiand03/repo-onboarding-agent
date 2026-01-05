@@ -55,13 +55,18 @@ class LLMHelper:
         # Batch-Size config
         self.model_name = model_name
         self._configure_batch_settings(model_name)
+        CLIENT_CONFIG = {
+            "max_retries": 0, 
+            "timeout": 240.0
+        }
 
 
         if model_name.startswith("gemini-"):
             base_llm = ChatGoogleGenerativeAI(
                 model=model_name,
                 api_key=api_key,
-                temperature=0.3, 
+                temperature=0.3,
+                request_timeout=240.0 
             )
         
         elif model_name.startswith("gpt-") and "openGPT" not in model_name:
@@ -69,6 +74,7 @@ class LLMHelper:
                 model=model_name,
                 api_key=api_key,
                 temperature=0.3,
+                **CLIENT_CONFIG
             )
 
         elif "/" in model_name or model_name.startswith("alias-") or any(x in model_name for x in ["DeepSeek", "Teuken", "Llama", "Qwen", "gpt-oss", "openGPT"]):
@@ -82,6 +88,7 @@ class LLMHelper:
                 api_key=api_key,
                 base_url=SCADSLLM_URL,
                 temperature=0.3,
+                **CLIENT_CONFIG
             )
 
         else:

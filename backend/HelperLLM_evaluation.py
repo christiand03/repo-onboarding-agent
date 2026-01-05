@@ -24,29 +24,29 @@ HELPER_MODELS_TO_TEST = [
     # "gemini-2.5-flash",
     # "gemini-2.5-flash-lite",
 
-    # #SCADS  
-    # #Aliases
-    # "alias-reasoning",
-    # "alias-ha",
+    #SCADS  
+    #Aliases
+    "alias-reasoning",
+    "alias-ha",
     "alias-code",
     
-    # #Llama
-    # "meta-llama/Llama-3.3-70B-Instruct",
-    # "meta-llama/Llama-3.1-8B-Instruct",
-    # "meta-llama/Llama-4-Scout-17B-16E-Instruct",
+    #Llama
+    "meta-llama/Llama-3.3-70B-Instruct",
+    "meta-llama/Llama-3.1-8B-Instruct",
+    "meta-llama/Llama-4-Scout-17B-16E-Instruct",
     
-    # # DeepSeek
-    # "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct",
-    # "deepseek-ai/DeepSeek-R1",
-    # "deepseek-ai/DeepSeek-V3.2-Exp",
+    # DeepSeek
+    "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct",
+    "deepseek-ai/DeepSeek-R1",
+    "deepseek-ai/DeepSeek-V3.2-Exp",
     
-    # # Qwen
-    # "Qwen/Qwen3-Coder-30B-A3B-Instruct",
-    # "Qwen/Qwen2-VL-7B-Instruct",
+    # Qwen
+    "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+    "Qwen/Qwen2-VL-7B-Instruct",
     
-    # # Andere
-    # "openGPT-X/Teuken-7B-instruct-research-v0.4",
-    # "openai/gpt-oss-120b", 
+    # Andere
+    "openGPT-X/Teuken-7B-instruct-research-v0.4",
+    "openai/gpt-oss-120b", 
 ]
 
 EVALUATOR_MODEL = "gemini-2.5-flash"
@@ -225,6 +225,7 @@ def benchmark_loop():
     dirs = create_benchmark_dirs()
     keys = get_api_keys()
 
+    # Input Vorbereitung
     try:
         func_inputs, class_inputs, raw_input_json = prepare_live_input(REPO_URL_TO_TEST)
         
@@ -232,7 +233,7 @@ def benchmark_loop():
         with open(input_file_path, "w", encoding="utf-8") as f:
             json.dump(raw_input_json, f, indent=2)
             
-        logging.info(f"Input erfolgreich erstellt und gespeichert: {len(func_inputs)} Funktionen, {len(class_inputs)} Klassen.")
+        logging.info(f"Input erfolgreich erstellt: {len(func_inputs)} Funktionen, {len(class_inputs)} Klassen.")
         
         raw_input_str = json.dumps(raw_input_json, indent=2)
 
@@ -259,84 +260,117 @@ def benchmark_loop():
             "duration_gen_sec": 0,
             "duration_eval_sec": 0,
             "items_processed": 0,
+            "error_message": None,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         }
 
         try:
-            llm_helper = LLMHelper(
-                api_key=helper_api_key, 
-                function_prompt_path=PROMPT_FUNC_HELPER, 
-                class_prompt_path=PROMPT_CLASS_HELPER,
-                model_name=model,
-                base_url=helper_base_url
-            )
+            analysis_results = None
+            generated_json_str = None
+            max_retries = 2
             
-            start_gen = time.time()
-            
-            analysis_results = {"functions": {}, "classes": {}}
-            
-            if func_inputs:
-                logging.info(f"Analysiere Funktionen mit {model}...")
-                res_funcs = llm_helper.generate_for_functions(func_inputs)
-                for doc in res_funcs:
-                    if doc: analysis_results["functions"][doc.identifier] = doc.model_dump()
+            for attempt in range(max_retries + 1):
+                try:
+                    logging.info(f"Generiere Analyse (Versuch {attempt + 1}/{max_retries + 1})...")
+                    
+                    llm_helper = LLMHelper(
+                        api_key=helper_api_key, 
+                        function_prompt_path=PROMPT_FUNC_HELPER, 
+                        class_prompt_path=PROMPT_CLASS_HELPER,
+                        model_name=model,
+                        base_url=helper_base_url
+                    )
+                    
+                    start_gen = time.time()
+                    temp_results = {"functions": {}, "classes": {}}
+                    
+                    if func_inputs:
+                        logging.info(f"Analysiere Funktionen mit {model}...")
+                        res_funcs = llm_helper.generate_for_functions(func_inputs)
+                        for doc in res_funcs:
+                            if doc: temp_results["functions"][doc.identifier] = doc.model_dump()
 
-            if class_inputs:
-                if model.startswith("gemini-"):
-                    logging.info("Pause für Rate-Limit...")
-                    time.sleep(65)
+                    if class_inputs:
+                        if model.startswith("gemini-"):
+                            logging.info("Pause für Rate-Limit (Gemini)...")
+                            time.sleep(65)
+                        
+                        logging.info(f"Analysiere Klassen mit {model}...")
+                        res_classes = llm_helper.generate_for_classes(class_inputs)
+                        for doc in res_classes:
+                            if doc: temp_results["classes"][doc.identifier] = doc.model_dump()
+                    
+                    if not temp_results["functions"] and not temp_results["classes"]:
+                        raise ValueError("Leere Antwort vom LLM (keine Funktionen/Klassen generiert)")
+
+                    current_stat["duration_gen_sec"] = round(time.time() - start_gen, 2)
+                    current_stat["items_processed"] = len(temp_results["functions"]) + len(temp_results["classes"])
+                    analysis_results = temp_results
+                    break
+                    
+                except Exception as e:
+                    logging.warning(f"Fehler HelperLLM '{model}' (Versuch {attempt+1}): {e}")
+                    current_stat["error_message"] = str(e)
+                    if attempt < max_retries:
+                        time.sleep(10)
+            
+
+            if not analysis_results:
+                current_stat["status"] = "failed"
+                if not current_stat["error_message"]:
+                    current_stat["error_message"] = "Max retries exceeded / Empty Response"
+                logging.error(f"Modell '{model}' fehlgeschlagen. Schreibe Fehler in Stats.")
+            
+            else:
+                generated_json_str = json.dumps(analysis_results, indent=2)
+                output_path = os.path.join(dirs["output"], f"output_{safe_model_name}.json")
+                with open(output_path, "w", encoding="utf-8") as f:
+                    f.write(generated_json_str)
+
+                logging.info(f"Starte Evaluierung mit {EVALUATOR_MODEL}...")
                 
-                logging.info(f"Analysiere Klassen mit {model}...")
-                res_classes = llm_helper.generate_for_classes(class_inputs)
-                for doc in res_classes:
-                    if doc: analysis_results["classes"][doc.identifier] = doc.model_dump()
-            
-            current_stat["duration_gen_sec"] = round(time.time() - start_gen, 2)
-            current_stat["items_processed"] = len(analysis_results["functions"]) + len(analysis_results["classes"])
+                evaluator = EvaluatorLLM(
+                    api_key=eval_api_key,
+                    prompt_file_path=PROMPT_EVALUATOR_HELPER,
+                    model_name=EVALUATOR_MODEL,
+                    base_url=eval_base_url
+                )
+                
+                if EVALUATOR_MODEL.startswith("gemini-"):
+                    logging.info("Warte 65s für Evaluator Rate-Limit...")
+                    time.sleep(65)
 
-            generated_json_str = json.dumps(analysis_results, indent=2)
-            output_path = os.path.join(dirs["output"], f"output_{safe_model_name}.json")
-            with open(output_path, "w", encoding="utf-8") as f:
-                f.write(generated_json_str)
+                start_eval = time.time()
+                
+                eval_report = evaluator.evaluate_helper_analysis(
+                    original_source_code_json=raw_input_str,
+                    generated_analysis_json=generated_json_str
+                )
+                
+                current_stat["duration_eval_sec"] = round(time.time() - start_eval, 2)
+                current_stat["score"] = extract_score_from_eval(eval_report)
+                current_stat["status"] = "success"
+                current_stat["error_message"] = None
 
-            
-            logging.info(f"Starte Evaluierung mit {EVALUATOR_MODEL}...")
-            
-            evaluator = EvaluatorLLM(
-                api_key=eval_api_key,
-                prompt_file_path=PROMPT_EVALUATOR_HELPER,
-                model_name=EVALUATOR_MODEL,
-                base_url=eval_base_url
-            )
-            
-            if EVALUATOR_MODEL.startswith("gemini-"):
-                time.sleep(65)
-
-            start_eval = time.time()
-            
-            eval_report = evaluator.evaluate_helper_analysis(
-                original_source_code_json=raw_input_str,
-                generated_analysis_json=generated_json_str
-            )
-            
-            current_stat["duration_eval_sec"] = round(time.time() - start_eval, 2)
-            current_stat["score"] = extract_score_from_eval(eval_report)
-            current_stat["status"] = "success"
-
-            eval_path = os.path.join(dirs["evaluations"], f"eval_{safe_model_name}.md")
-            with open(eval_path, "w", encoding="utf-8") as f:
-                f.write(eval_report)
-            
-            logging.info(f"Evaluierung abgeschlossen. Score: {current_stat['score']}/100")
+                eval_path = os.path.join(dirs["evaluations"], f"eval_{safe_model_name}.md")
+                with open(eval_path, "w", encoding="utf-8") as f:
+                    f.write(eval_report)
+                
+                logging.info(f"Evaluierung abgeschlossen. Score: {current_stat['score']}/100")
 
         except Exception as e:
-            logging.error(f"Fehler bei Modell {model}: {e}")
+            logging.error(f"Unerwarteter Absturz bei '{model}': {e}")
             current_stat["status"] = "failed"
-            current_stat["error_message"] = str(e)
+            current_stat["error_message"] = f"Crash: {str(e)}"
         
-        stats.append(current_stat)
-        with open(dirs["stats_file"], "w", encoding="utf-8") as f:
-            json.dump(stats, f, indent=4, ensure_ascii=False)
+        finally:
+            stats.append(current_stat)
+            try:
+                with open(dirs["stats_file"], "w", encoding="utf-8") as f:
+                    json.dump(stats, f, indent=4, ensure_ascii=False)
+                logging.info(f"Stats aktualisiert für '{model}' (Status: {current_stat['status']})")
+            except Exception as e:
+                logging.error(f"FATAL: Konnte Stats-Datei nicht schreiben: {e}")
 
     logging.info(f"Benchmark vollständig abgeschlossen. Alle Ergebnisse in: {dirs['base']}")
 
