@@ -67,6 +67,7 @@ STANDARD_MODELS = [
 
 ]
 
+
 # Alle Modelle kombiniert
 ALL_MODELS = STANDARD_MODELS + MAIN_MODELS + HELPER_MODELS
 ALL_HELPER_MODELS = STANDARD_MODELS + HELPER_MODELS
@@ -105,7 +106,8 @@ def get_filtered_models(source_list, category_name):
 st.set_page_config(page_title="Repo Agent", layout="wide", page_icon="🤖")
 
 load_dotenv()
-
+SCADSLLM_KEY=os.getenv("SCADSLLM_KEY")
+SCADSLLM_HOST=os.getenv("SCADSLLM_HOST")
 # ----------------------------------------
 # CSS: SIDEBAR STICKY FOOTER (FINAL FIX)
 # ----------------------------------------
@@ -477,25 +479,28 @@ if st.session_state["authentication_status"]:
                 handle_delete_chat(current_user, st.session_state.active_chat)        
             
             with st.popover("⚙️ Einstellungen", type="tertiary"):
-                st.toggle("Notebook modus", key="notebook_mode", help="ermöglicht die Dokumentation von Jupyter Notebooks wenn aktiviert, sonst können nur .py files ausgewertet werden", value=False)
+                st.toggle("Notebook Modus", key="notebook_mode", help="ermöglicht wenn aktiviert die Dokumentation von Jupyter Notebooks, deaktiviert werden .py files ausgewertet", value=False)
                 st.caption("🤖 Modelle")
                 
-                cat_helper = st.selectbox(
+                
+
+                sbhelp = "None"
+                # Helper LLM Auswahl
+                if  not st.session_state.notebook_mode:
+                    cat_helper = st.selectbox(
                     "Kategorie (Helper):", 
                     list(CATEGORY_KEYWORDS.keys()), 
                     index=0, 
                     key="cat_helper"
-                )
-                filtered_helpers = get_filtered_models(ALL_HELPER_MODELS, cat_helper)
+                    )
+                    filtered_helpers = get_filtered_models(ALL_HELPER_MODELS, cat_helper)
 
-
-                # Helper LLM Auswahl
-                sbhelp = st.selectbox(
-                    "Helper LLM", 
-                    filtered_helpers,
-                    index=0, # Standard auf das erste Element (gemini-2.0-flash-lite)
-                    label_visibility="collapsed"
-                )
+                    sbhelp = st.selectbox(
+                        "Helper LLM", 
+                        filtered_helpers,
+                        index=0, # Standard auf das erste Element (gemini-2.0-flash-lite)
+                        label_visibility="collapsed"
+                    )
                 
                 cat_main = st.selectbox(
                     "Kategorie (Main):", 
@@ -512,7 +517,11 @@ if st.session_state["authentication_status"]:
                     index=2, # Standard z.B. auf gemini-2.5-pro
                     label_visibility="collapsed"
                 )
-                st.caption(f"Gewählt: {sbhelp} -> {sbmain}")
+                
+                if not st.session_state.notebook_mode:
+                    st.caption(f"Gewählt: Python Modus mit: \n\n {sbhelp} -> {sbmain}")
+                else:
+                    st.caption(f"Gewählt: Notebook Modus mit: \n\n {sbmain}")
                 st.markdown("---")
 
                 # API Keys holen
@@ -634,7 +643,7 @@ if st.session_state["authentication_status"]:
         status = st.status(f"⏳ Analysiere Repository in '{working_chat_name}'...", expanded=True)
 
         dec_gemini, dec_ollama, dec_gpt = db.get_decrypted_api_keys(current_user)
-        api_keys = {"gemini": dec_gemini, "ollama": dec_ollama, "gpt": dec_gpt}
+        api_keys = {"gemini": dec_gemini, "ollama": dec_ollama, "gpt": dec_gpt, "scadsllm": SCADSLLM_KEY, "scadsllm_base_url": SCADSLLM_HOST}
         model_config = {"helper": sbhelp, "main": sbmain}
 
         workflow_success = False
@@ -655,7 +664,7 @@ if st.session_state["authentication_status"]:
                 result_data = main.notebook_workflow(
                     input=prompt, 
                     api_keys=api_keys, 
-                    model_names=model_config,
+                    model_names=model_config["main"],
                     status_callback=status.write 
                 )  
             
