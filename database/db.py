@@ -78,6 +78,15 @@ def update_ollama_url(username: str, ollama_base_url: str):
     result = dbusers.update_one({"_id": username}, {"$set": {"ollama_base_url": ollama_base_url.strip()}})
     return result.modified_count
 
+def update_opensrc_key(username: str, opensrc_api_key: str):
+    encrypted_key = encrypt_text(opensrc_api_key.strip())
+    result = dbusers.update_one({"_id": username}, {"$set": {"opensrc_api_key": encrypted_key}})
+    return result.modified_count
+
+def update_opensrc_url(username: str, opensrc_base_url: str):
+    result = dbusers.update_one({"_id": username}, {"$set": {"opensrc_base_url": opensrc_base_url.strip()}})
+    return result.modified_count
+
 def fetch_gemini_key(username: str):
     user = dbusers.find_one({"_id": username}, {"gemini_api_key": 1, "_id": 0})
     return user.get("gemini_api_key") if user else None
@@ -85,6 +94,18 @@ def fetch_gemini_key(username: str):
 def fetch_ollama_url(username: str):
     user = dbusers.find_one({"_id": username}, {"ollama_base_url": 1, "_id": 0})
     return user.get("ollama_base_url") if user else None
+
+def fetch_gpt_key(username: str):
+    user = dbusers.find_one({"_id": username}, {"gpt_api_key": 1, "_id": 0})
+    return user.get("gpt_api_key") if user else None
+
+def fetch_opensrc_key(username: str):
+    user = dbusers.find_one({"_id": username}, {"opensrc_api_key": 1, "_id": 0})
+    return user.get("opensrc_api_key") if user else None
+
+def fetch_opensrc_url(username: str):
+    user = dbusers.find_one({"_id": username}, {"opensrc_base_url": 1, "_id": 0})
+    return user.get("opensrc_base_url") if user else None
 
 def delete_user(username: str):
     return dbusers.delete_one({"_id": username}).deleted_count
@@ -95,7 +116,9 @@ def get_decrypted_api_keys(username: str):
     gemini_plain = decrypt_text(user.get("gemini_api_key", ""))
     ollama_plain = user.get("ollama_base_url", "")
     gpt_plain = decrypt_text(user.get("gpt_api_key", ""))
-    return gemini_plain, ollama_plain, gpt_plain
+    opensrc_plain = decrypt_text(user.get("opensrc_api_key", ""))
+    opensrc_url = user.get("opensrc_base_url", "")
+    return gemini_plain, ollama_plain, gpt_plain, opensrc_plain, opensrc_url
 
 # --- chats ---
 

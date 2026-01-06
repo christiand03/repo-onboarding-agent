@@ -525,10 +525,12 @@ if st.session_state["authentication_status"]:
                 st.markdown("---")
 
                 # API Keys holen
-                gemini_key, ollama_url, gpt_key = db.get_decrypted_api_keys(current_user)
+                gemini_key, ollama_url, gpt_key , opensrc_key, opensrc_url = db.get_decrypted_api_keys(current_user)
                 has_gemini = bool(gemini_key)
                 has_ollama = bool(ollama_url)
                 has_gpt = bool(gpt_key)
+                has_opensrc_url = bool(opensrc_url)
+                has_opensrc_key = bool(opensrc_key)
 
                 st.caption("API Keys Configuration")
                 
@@ -572,6 +574,23 @@ if st.session_state["authentication_status"]:
                             st.success("Gespeichert!")
                             time.sleep(0.5)
                             st.rerun()
+
+                else:
+                    status_icon = "✅" if has_opensrc_key else "❌"  
+                    st.markdown(f"**Open Source LLM Key**: {status_icon} {'Gesetzt' if has_opensrc_key else 'Fehlt'}")
+                    status_icon_url = "✅" if has_opensrc_url else "❌"
+                    st.markdown(f"**Open Source LLM URL**: {status_icon_url} {'Gesetzt' if has_opensrc_url else 'Fehlt'}")
+                    with st.form("opensrc_form"):
+                        new_opensrc_key = st.text_input("Open Source LLM Key ändern", type="password")
+                        new_opensrc_url = st.text_input("Open Source LLM URL ändern")
+                        if st.form_submit_button("Speichern"):
+                            if new_opensrc_key:
+                                db.update_opensrc_key(current_user, new_opensrc_key)
+                            if new_opensrc_url:
+                                db.update_opensrc_url(current_user, new_opensrc_url)
+                            st.success("Gespeichert!")
+                            time.sleep(0.5)
+                            st.rerun()    
                 
                
 
