@@ -168,10 +168,10 @@ def build_repository_graph(repository: GitRepository) -> nx.DiGraph:
     all_files = repository.get_all_files()
     repo_root = repository.temp_dir
     global_graph = nx.DiGraph()
-
-    for file in all_files: 
-        if not file.path.endswith(".py"):
-            continue
+    filtered_files = [file for file in all_files
+                      if (file.path.endswith(".py")
+                      or "backend" in file.path)]
+    for file in filtered_files[:4]: 
         filename = str(os.path.basename(file.path)).removesuffix(".py")
         tree = parse(file.content)
         graph = build_file_dependency_graph(filename, tree, repo_root)
@@ -194,11 +194,13 @@ def get_all_temp_files(directory: str) -> list[Path]:
 
 
 if __name__ == "__main__":
+    from pathlib import Path
     # repo_url = "https://github.com/christiand03/repo-onboarding-agent"
-    repo_url = "https://github.com/pallets/flask"
+    # repo_url = "https://github.com/pallets/flask"
+    repo_url = Path(__file__).parent.parent.resolve()
     with GitRepository(repo_url) as repo:
         global_graph = build_repository_graph(repo)
-        make_safe_dot(global_graph, "FDG_repo.dot")
+        make_safe_dot(global_graph, "FDG_repo_2.dot")
         # mermaid_code = nx_to_mermaid_with_folders(global_graph)
         # with open("dependency_graph.md", "w") as f:
         #     f.write(mermaid_code)
