@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 sys.path.append(Path(__file__).parent.parent)
-from data_types import (
+from diagram_generation.data_types import (
     CallType,
     RawCall,
     ResolvedCall,

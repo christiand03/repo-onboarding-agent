@@ -3,14 +3,15 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
-
+   
 @dataclass
 class FunctionSymbol:
     name: str
     module: str
     qualname: str
     asynchron: False
-    return_symb: expr
+    input_params: list[str]
+    return_symb: bool
     lineno: int
 
 

@@ -1,4 +1,4 @@
-from data_types import (
+from diagram_generation.data_types import (
     ModuleSymbol,
     ResolvedCall
 )
@@ -15,6 +15,8 @@ class MermaidSequenceEmitter:
 
         for call in sorted(calls, key=lambda c: c.lineno):
             lines.append(self._emit_call(call))
+            if call.callee.return_symb:
+                lines.append(self._emit_response(call))
         lines.append("```")
         return "\n".join(lines)
 
@@ -32,11 +34,18 @@ class MermaidSequenceEmitter:
         return participants
 
 
+    def _emit_response(self, call:ResolvedCall) -> str:
+        resolved_callee = mermaid_id(call.callee.qualname)
+        resolved_caller = mermaid_id(call.caller.qualname)
+        
+        return f"    {resolved_callee} ->> {resolved_caller}: return"
+    
+    
     def _emit_call(self, call: ResolvedCall) -> str:
         caller = mermaid_id(call.caller.qualname)
         if call.callee:
             callee = mermaid_id(call.callee.qualname)
-            label = call.call_type.value
+            label= call.callee.input_params
         else:
             callee = "?"
             label = "unknown"

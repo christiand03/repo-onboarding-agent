@@ -3,23 +3,25 @@ from ast import (
     ClassDef,
     FunctionDef,  
     Name, 
-    NodeVisitor 
+    NodeVisitor,
 )
 from typing import(
     Optional
 )
 
-from data_types import (
+from diagram_generation.data_types import (
     CallContext,
     ClassSymbol,
     FunctionSymbol,
     ModuleSymbol,
-    RawCall
+    RawCall,
+    ProjectIndex
 )
 class TreeVisitor(NodeVisitor):
 
-    def __init__(self, module: ModuleSymbol):
+    def __init__(self, module: ModuleSymbol, project: ProjectIndex):
         self.module = module
+        self.project = project
         self.current_function: Optional[FunctionSymbol] = None
         self.current_class: Optional[ClassSymbol] = None
         self.calls: list[RawCall] = []
@@ -51,7 +53,23 @@ class TreeVisitor(NodeVisitor):
             if node.func.id not in self.module.functions:
                 return
         elif isinstance(node.func, Attribute):
-            if node.func.attr not in self.module.functions:
+            # package = node.func
+            # while isinstance(package, Attribute):
+            #         package = package.value
+            
+            # if not isinstance(package, Name):
+            #     return
+            # all_functions: dict[str, list[str]]
+            # for mod in self.project.modules.values():
+
+            # all_functions = [
+            #     x.name for mod in self.project.modules.values()
+            #     for x in mod.functions.values()
+            #     for c in mod.classes.values()
+            #     for x in c.methods.values()
+            # ]
+            
+            if node.func not in self.project.modules.values():
                 return
         self.calls.append(
             RawCall(
@@ -66,5 +84,4 @@ class TreeVisitor(NodeVisitor):
             )
         )
         self.generic_visit(node)
-
-    
+   
