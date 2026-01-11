@@ -1,6 +1,6 @@
 import ast
 import os
-from .getRepo import GitRepository
+from getRepo import GitRepository
 
 def path_to_module(filepath, project_root):
     """Wandelt einen Dateipfad in einen Python-Modulpfad um."""
@@ -148,7 +148,6 @@ class ASTAnalyzer:
         project_root = os.path.commonpath(all_paths)
         if os.path.isfile(project_root):
             project_root = os.path.dirname(project_root)
-
 
         for file_obj in files:
             if not file_obj.path.endswith('.py'):

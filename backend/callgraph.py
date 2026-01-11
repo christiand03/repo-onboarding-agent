@@ -1,9 +1,6 @@
 import ast
 import networkx as nx
-import os 
-
 from pathlib import Path
-from typing import Dict
 
 from getRepo import GitRepository
 
@@ -18,7 +15,7 @@ class CallGraph(ast.NodeVisitor):
         self.graph = nx.DiGraph()
         self.import_mapping: dict[str, str] = {}
         self.function_set: set[str] = set()
-        self.edges: Dict[str, set[str]] = {}
+        self.edges: dict[str, set[str]] = {}
 
     def _recursive_call(self, node):
         """
@@ -224,8 +221,6 @@ def build_filtered_callgraph(repo: GitRepository) -> nx.DiGraph:
 
 if __name__ == "__main__":
     from getRepo import GitRepository
-    from basic_info import ProjektInfoExtractor
-    import os
     repo_url = Path(__file__).parent.parent.resolve()
     # repo_url = "https://github.com/christiand03/repo-onboarding-agent"
     # repo_url = "https://github.com/pallets/flask"    

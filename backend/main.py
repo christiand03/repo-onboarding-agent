@@ -4,26 +4,28 @@ import logging
 import os
 import re
 import time
-import math
 from datetime import datetime
 import matplotlib.pyplot as plt
+import sys 
 
-
-from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
 
-from .getRepo import GitRepository
-from .AST_Schema import ASTAnalyzer
-from .MainLLM import MainLLM
-from .basic_info import ProjektInfoExtractor
-from .HelperLLM import LLMHelper
-from .relationship_analyzer import ProjectAnalyzer
+sys.path.append(str(Path(__file__).parent))
+from diagram_generation import (
+    generator
+)
+from getRepo import GitRepository
+from AST_Schema import ASTAnalyzer
+from MainLLM import MainLLM
+from basic_info import ProjektInfoExtractor
+from HelperLLM import LLMHelper
+from relationship_analyzer import ProjectAnalyzer
 from schemas.types import FunctionContextInput, FunctionAnalysisInput, ClassContextInput, ClassAnalysisInput, MethodContextInput
 
-from toon_format import encode, count_tokens, estimate_savings, compare_formats
+from ptoon import encode, estimate_savings
 
-from .converter import process_repo_notebooks
+from converter import process_repo_notebooks
 
 
 # --- Konfiguration & Logging ---
@@ -95,7 +97,10 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         helper_api_key = openai_api_key
     elif model_names["helper"].startswith("gemini-"):
         helper_api_key = gemini_api_key
-    elif "/" in model_names["helper"] or model_names["helper"].startswith("alias-") or any(x in model_names["helper"] for x in ["DeepSeek", "Teuken", "Llama", "Qwen", "gpt-oss", "openGPT"]):
+    elif ("/" in model_names["helper"] or 
+          model_names["helper"].startswith("alias-") or 
+          any(x in model_names["helper"] 
+              for x in ["DeepSeek", "Teuken", "Llama", "Qwen", "gpt-oss", "openGPT"])):
         helper_api_key = scadsllm_api_key
         base_url = scadsllm_base_url
     else:
@@ -105,7 +110,10 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         main_api_key = openai_api_key
     elif model_names["main"].startswith("gemini-"):
         main_api_key = gemini_api_key
-    elif "/" in model_names["main"] or model_names["main"].startswith("alias-") or any(x in model_names["main"] for x in ["DeepSeek", "Teuken", "Llama", "Qwen", "gpt-oss", "openGPT"]):
+    elif ("/" in model_names["main"] or 
+          model_names["main"].startswith("alias-") or 
+          any(x in model_names["main"] 
+              for x in ["DeepSeek", "Teuken", "Llama", "Qwen", "openai", "openGPT"])):
         main_api_key = scadsllm_api_key
         base_url = scadsllm_base_url
     else:
@@ -177,7 +185,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         
         raw_relationships = rel_analyzer.get_raw_relationships()
         
-        logging.info(f"Relationships analyzed.")
+        logging.info("Relationships analyzed.")
     except Exception as e:
         logging.error(f"Error in relationship analyzer: {e}")
         raw_relationships = {"outgoing": {}, "incoming": {}}
@@ -319,7 +327,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
                         analysis_results["functions"] = {}
                     analysis_results["functions"][doc.identifier] = doc.model_dump() 
                 else:
-                    logging.warning(f"Failed to generate doc for a function") 
+                    logging.warning("Failed to generate doc for a function") 
     except Exception as e:
         logging.error(f"Error during Helper LLM function analysis: {e}")
         raise
@@ -350,23 +358,24 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
                         analysis_results["classes"] = {}
                     analysis_results["classes"][doc.identifier] = doc.model_dump() 
                 else:
-                    logging.warning(f"Failed to generate doc for a class")
+                    logging.warning("Failed to generate doc for a class")
     except Exception as e:
         logging.error(f"Error during Helper LLM class analysis: {e}")
         raise
 
     total_helper_time = net_time_func + net_time_class
 
+    diagrams = generator.main_diagram_generation(repo_files)
     # MainLLM Input Vorbereitung
     main_llm_input = {
         "basic_info": basic_project_info,
         "file_tree": repo_file_tree,
         "ast_schema": ast_schema,
-        "analysis_results": analysis_results
+        "analysis_results": analysis_results,
     }
 
     # Speichern als JSON (Optional)
-    main_llm_input_json = json.dumps(main_llm_input, indent=2)
+    # main_llm_input_json = json.dumps(main_llm_input, indent=2)
     # with open("output.json", "w", encoding="utf-8") as f:
     #     f.write(main_llm_input_json)
     #     logging.info("JSON-Datei wurde gespeichert.")
@@ -391,9 +400,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
     except Exception as e:
         logging.warning(f"Token evaluation could not be performed: {e}")    
 
-
-
-    prompt_file_mainllm = "SystemPrompts/SystemPromptMainLLM.txt"
+    # prompt_file_mainllm = "SystemPrompts/SystemPromptMainLLM.txt"
     prompt_file_mainllm_toon = "SystemPrompts/SystemPromptMainLLMToon.txt"
     # MainLLM Ausführung
     main_llm = MainLLM(
@@ -402,7 +409,6 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         model_name=main_model,
         base_url=base_url,
     )
-
 
     # RPM Limit Sleep für Gemini Modelle
     if llm_helper.model_name == main_llm.model_name and main_llm.model_name.startswith("gemini-"):
@@ -422,7 +428,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         logging.error(f"Error during Main LLM final report generation: {e}")
         raise
 
-    
+    enriched_final_report = enrich_report_with_diagrams(final_report, diagrams)
     # --- Speichern der Ergebnisse ---
     output_dir = "result"
     stats_dir = "Statistics" # Neuer Ordner
@@ -434,11 +440,11 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
     # Dateiname für Report
     timestamp = datetime.now().strftime("%d_%m_%Y_%H-%M-%S")
     report_filename = f"report_{timestamp}_Helper_{llm_helper.model_name}_MainLLM_{main_llm.model_name}.md"
-    report_filepath = os.path.join(output_dir, report_filename)
-    
+    report_filename = report_filename.replace("/", "-")
+    report_filepath: str = os.path.join(output_dir, report_filename)
     if final_report:
         with open(report_filepath, "w", encoding="utf-8") as f:
-            f.write(final_report)
+            f.write(enriched_final_report)
         logging.info(f"Final report saved to '{report_filepath}'.")
         
         if savings_data:
@@ -472,12 +478,24 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
     }
 
     return {
-        "report": final_report,
+        "report": enriched_final_report,
         "metrics": metrics
     }
+    
 
+def enrich_report_with_diagrams(final_report: str, diagrams: dict) -> str:
+    """Fügt Diagramme aus dem `diagrams`-Dictionary in den `final_report` ein."""
+    report_lines = final_report.splitlines()
+    enriched_report = []
 
+    for line in report_lines:
+        enriched_report.append(line)
+        if "#### Function:" in line:
+            for filename, diagram in diagrams.items():
+                    if filename in line:
+                        enriched_report.append(diagram)
 
+    return "\n".join(enriched_report)
 
 
 def notebook_workflow(input, api_keys, model, status_callback=None):
@@ -576,7 +594,7 @@ def notebook_workflow(input, api_keys, model, status_callback=None):
         logging.error(f"Error cloning repository: {e}")
         raise
     
-    update_status(f"🔗 Bereite Input vor...")
+    update_status("🔗 Bereite Input vor...")
 
     # convert to XML
     processed_data = process_repo_notebooks(repo_files)
@@ -661,17 +679,26 @@ def notebook_workflow(input, api_keys, model, status_callback=None):
         "toon_tokens": 0,
         "savings_percent": 0
     }
-
     return {
         "report": final_report,
         "metrics": metrics
     }
 
 if __name__ == "__main__":
-    #user_input = "https://github.com/christiand03/repo-onboarding-agent"
+    user_input = "https://github.com/christiand03/repo-onboarding-agent"
     #main_workflow(user_input, api_keys={"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model_names={"helper": "alias-code", "main": "alias-ha"})
 
     #notebook_input = "https://github.com/christiand03/predicting-power-consumption-uni"
     #notebook_input = "https://github.com/christiand03/clustering-and-classification-uni"
-    notebook_input= "https://github.com/Schmarc4/Monarchs"
-    notebook_workflow(notebook_input, api_keys= {"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model= "gemini-2.5-flash")
+    # notebook_input= "https://github.com/Schmarc4/Monarchs"
+    # notebook_workflow(notebook_input, api_keys= {"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model= "gemini-2.5-flash")
+    main_workflow(input=user_input,
+                  api_keys={
+                      "scadsllm": os.getenv("SCADS_AI_KEY"), 
+                      "scadsllm_base_url": os.getenv("SCADSLLM_URL")
+                  },
+                  model_names={
+                      "helper": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+                      "main": "openai/gpt-oss-120b"
+                  }
+    )

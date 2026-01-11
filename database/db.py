@@ -26,11 +26,13 @@ else:
 # --- Helper Functions ---
 
 def encrypt_text(text: str) -> str:
-    if not text or not cipher_suite: return text
+    if not text or not cipher_suite: 
+        return text
     return cipher_suite.encrypt(text.strip().encode()).decode()
 
 def decrypt_text(text: str) -> str:
-    if not text or not cipher_suite: return text
+    if not text or not cipher_suite: 
+        return text
     try:
         return cipher_suite.decrypt(text.strip().encode()).decode()
     except Exception:
@@ -112,7 +114,8 @@ def delete_user(username: str):
 
 def get_decrypted_api_keys(username: str):
     user = dbusers.find_one({"_id": username})
-    if not user: return None, None
+    if not user: 
+        return None, None
     gemini_plain = decrypt_text(user.get("gemini_api_key", ""))
     ollama_plain = user.get("ollama_base_url", "")
     gpt_plain = decrypt_text(user.get("gpt_api_key", ""))

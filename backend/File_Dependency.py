@@ -171,7 +171,7 @@ def build_repository_graph(repository: GitRepository) -> nx.DiGraph:
     filtered_files = [file for file in all_files
                       if (file.path.endswith(".py")
                       or "backend" in file.path)]
-    for file in filtered_files[:4]: 
+    for file in filtered_files: 
         filename = str(os.path.basename(file.path)).removesuffix(".py")
         tree = parse(file.content)
         graph = build_file_dependency_graph(filename, tree, repo_root)
