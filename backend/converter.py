@@ -1,6 +1,5 @@
 import logging
 import nbformat
-import base64
 from nbformat.reader import NotJSONError
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

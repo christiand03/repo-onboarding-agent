@@ -26,17 +26,17 @@ Your output must be a single Markdown string. Do not wrap the output in JSON or 
 
 # Project Documentation: [Project Name]
 
-## 1. Project Overview (can be accessed under 'basic_info')
+## 1. Project Overview [Can be accessed under 'basic_info'.]
     - **Description:** [A concise description of the project.]
     - **Key Features:** 
       - [Feature 1]
       - [Feature 2]
       - Total Number of Key Features should not exceed five
     - **Tech Stack:** [List of key technologies and libraries.]
-
 *   **Repository Structure:**
     ```mermaid
-    [Generate a compact Mermaid graph LR. Group all files belonging to the same folder into a single node using <br/> for line breaks. Do not create separate nodes for each file. Use folder --> file_list_node syntax.]
+    [Generate a compact Mermaid graph LR. Group all files belonging to the same folder into a single node using <br/> for line breaks. Do not create separate nodes for each file. Use folder --> file_list_node syntax.
+    Do not use parenthesis for vertice names. Instead use the normal Mermaid.js notation.]
     ```
 
     ## 2. Installation (can be accessed under 'basic_info')
@@ -51,9 +51,8 @@ Your output must be a single Markdown string. Do not wrap the output in JSON or 
     [Description of important use cases and list of primary commands.] # Derived by synthesizing all gained Information
 
     ## 4. Architecture
-The Mermaid Syntax to visualize Graphs is not set up yet and will be added
-but if there is mermaid syntax in your input json display it here
-
+    [Generate a Mermaid Architecture Diagram. As the main input for the creation use the `basic_info` given for the project. The Diagram should comprehend the basic design of the repository.
+    I should also give an overview about the procedures that are executed in order. Don't use parenthesis for the vertice names. Instead use correct Mermaid.js syntax.]
 
 
 ## 5. Code Analysis
@@ -102,7 +101,7 @@ If synthesis is not possible, state: `Description: [Could not be determined due 
 Synthesize this section by analyzing all available knowledge: README content, detected argument parsing libraries, and the general purpose inferred from library usage and function names as well as file names. Remember the Rule to NEVER assume any Information so be cautious during this step. This is an exception where you are allowed to infer information based on your context.
 
 
-4. **Populate Architecture:** If Mermaid Syntax is provided, sse the provided Mermaid Syntax to display Diagrams in the final report under the 'Architecture' Chapter.
+4. **Populate Architecture:** If Mermaid Syntax is provided, see the provided Mermaid Syntax to display Diagrams in the final report under the 'Architecture' Chapter.
 
 5.  **Structuring the Analysis (The "Lookup" Strategy):**
     *   You must use `ast_schema['files']` as your map. Iterate through every file listed there.
@@ -116,6 +115,7 @@ Synthesize this section by analyzing all available knowledge: README content, de
         *   Get the `identifier` from the `ast_schema`.
         *   Look up the detailed data in `analysis_results['functions'][identifier]`.
         *   If the data is found, render the Function section.
+        *   Create a Mermaid.js Sequence diagram for each standalone function, that represents their workflow.
 
 6.  **Rendering Logic:**
     *   **Signatures:** You do not have the raw signature string. Construct a pseudo-signature using the `identifier` and the `parameters` list (e.g., `def name(param1: type, param2: type)`).

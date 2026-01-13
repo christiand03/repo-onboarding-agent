@@ -1,6 +1,6 @@
 import ast
 import os
-from .getRepo import GitRepository
+from getRepo import GitRepository
 
 def path_to_module(filepath, project_root):
     """Wandelt einen Dateipfad in einen Python-Modulpfad um."""

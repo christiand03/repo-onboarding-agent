@@ -18,14 +18,14 @@ Available models:
 for model in client.models.list().data:
     print(model.id)
 
-model_name = "alias-ha"
+# model_name = "alias-ha"
 
-# Use model
-response = client.chat.completions.create(messages=[{"role":"user","content":"Tell me a joke!"}],model=model_name)
+# # Use model
+# response = client.chat.completions.create(messages=[{"role":"user","content":"Tell me a joke!"}],model=model_name)
 
-# Print the joke
-print("""
-Your joke:
-""")
-joke = response.choices[0].message.content
-print(joke)
+# # Print the joke
+# print("""
+# Your joke:
+# """)
+# joke = response.choices[0].message.content
+# print(joke)

@@ -1,11 +1,9 @@
 import ast
 import networkx as nx
-import os 
-
 from pathlib import Path
-from typing import Dict
 
-from .getRepo import GitRepository
+from getRepo import GitRepository
+
 
 class CallGraph(ast.NodeVisitor):
     def __init__(self, filename: str):
@@ -17,7 +15,7 @@ class CallGraph(ast.NodeVisitor):
         self.graph = nx.DiGraph()
         self.import_mapping: dict[str, str] = {}
         self.function_set: set[str] = set()
-        self.edges: Dict[str, set[str]] = {}
+        self.edges: dict[str, set[str]] = {}
 
     def _recursive_call(self, node):
         """
@@ -133,17 +131,22 @@ class CallGraph(ast.NodeVisitor):
         else:
             self.generic_visit(node)
 
-# def build_callGraph(tree: ast.AST, filename: str, repo_root) -> nx.DiGraph:
-#     visitor = CallGraph(filename, repo_root)
-#     visitor.visit(tree)
-#     graph = visitor.graph
 
-#     for caller, callees in visitor.edges.items():
-#         for callee in callees:
-#             graph.add_node(callee)
-#             graph.add_edge(caller, callee)
+def build_callGraph(tree: ast.AST, filename: str) -> nx.DiGraph:
+    visitor = CallGraph(filename)
+    visitor.visit(tree)
+    graph = visitor.graph
+    own_functions = visitor.function_set
 
-#     return graph
+    for caller, callees in visitor.edges.items():
+        if caller in own_functions:
+            graph.add_node(caller)
+        for callee in callees:
+            if callee in own_functions:
+                graph.add_node(callee)
+                graph.add_edge(caller, callee)
+
+    return graph
 
 # def build_global_callgraph(repo: GitRepository, repo_root) -> nx.DiGraph:
 #     all_files = repo.get_all_files()
@@ -218,27 +221,24 @@ def build_filtered_callgraph(repo: GitRepository) -> nx.DiGraph:
 
 if __name__ == "__main__":
     from getRepo import GitRepository
-    from basic_info import ProjektInfoExtractor
-    import os
-
+    repo_url = Path(__file__).parent.parent.resolve()
     # repo_url = "https://github.com/christiand03/repo-onboarding-agent"
-    repo_url = "https://github.com/pallets/flask"    
+    # repo_url = "https://github.com/pallets/flask"    
 
     with GitRepository(repo_url) as repository:
         print(f"Repository von {repository.repo_url} erfolgreich geklont. Es liegt im Ornder {repository.temp_dir}")
-        
-        # Die Dateiliste wird jetzt am Anfang geholt, damit sie für alle Analysen verfügbar ist
+
         all_file_objects = repository.get_all_files()
+  
+        for file in all_file_objects:
+            if not file.path.endswith(".py") or "frontend" in file.path or "database" in file.path:
+                continue
+            
+            tree = ast.parse(file.content)
+            filename: str = file.path
+            filename = filename.split("/")[-1]
+            filename = filename.removesuffix(".py")  
+            file_callgraph = build_callGraph(tree, filename)    
+            make_safe_dot(file_callgraph, f"file_callgraph_{filename}.dot")     
+        # filtered_graph = build_filtered_callgraph(repository)
 
-        info_extractor = ProjektInfoExtractor()
-        basic_project_info = info_extractor.extrahiere_info(all_file_objects, repo_url)
-
-        print("\n--- Verzeichnisstruktur (Tree View) ---")
-        file_tree_structure = repository.get_file_tree()
-        repo_name = os.path.basename(repo_url.removesuffix('.git'))
-        print(f"📁 {repo_name}/")
-
-        print("\n--- Starte nun die detaillierte Code-Analyse... ---")
-        print(f"Insgesamt {len(all_file_objects)} Dateien im Repository für die Analyse gefunden.")               
-        filtered_graph = build_filtered_callgraph(repository)
-        make_safe_dot(filtered_graph, "filtered_repo_callgraph_repo-agent-3.dot")
