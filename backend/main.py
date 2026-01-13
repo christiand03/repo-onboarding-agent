@@ -74,55 +74,59 @@ def calculate_net_time(start_time, end_time, total_items, batch_size, model_name
     return max(0, net_time)
 
 
-def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None):
+def main_workflow(user_input, api_keys: dict, model_names: dict, status_callback=None, check_stop=None):
     
     def update_status(msg):
+        # --- NEU: Prüfen ob abgebrochen wurde ---
+        if check_stop and check_stop():
+            logging.info("Interrupt empfangen. Breche main_workflow ab.")
+            raise InterruptedError("Analyse wurde vom User gestoppt.")
+        
         if status_callback:
             status_callback(msg)
         logging.info(msg)
 
     update_status("🔍 Analysiere Input...")
     
-    user_input = input
-    
-    # API Key & Ollama Base URL aus Frontend holen
+    # API Keys & URLs extrahieren
     gemini_api_key = api_keys.get("gemini")
     openai_api_key = api_keys.get("gpt")
     scadsllm_api_key = api_keys.get("scadsllm")
     scadsllm_base_url = api_keys.get("scadsllm_base_url")
     ollama_base_url = api_keys.get("ollama")
-    base_url = None
+    
+    # User-eigene Open Source Konfiguration
+    user_opensrc_key = api_keys.get("opensrc_key")
+    user_opensrc_url = api_keys.get("opensrc_url")
 
-    if model_names["helper"].startswith("gpt-"):
-        helper_api_key = openai_api_key
-    elif model_names["helper"].startswith("gemini-"):
-        helper_api_key = gemini_api_key
-    elif ("/" in model_names["helper"] or 
-          model_names["helper"].startswith("alias-") or 
-          any(x in model_names["helper"] 
-              for x in ["DeepSeek", "Teuken", "Llama", "Qwen", "gpt-oss", "openGPT"])):
-        helper_api_key = scadsllm_api_key
-        base_url = scadsllm_base_url
-    else:
-        helper_api_key = None
-        base_url = ollama_base_url
-    if model_names["main"].startswith("gpt-"):
-        main_api_key = openai_api_key
-    elif model_names["main"].startswith("gemini-"):
-        main_api_key = gemini_api_key
-    elif ("/" in model_names["main"] or 
-          model_names["main"].startswith("alias-") or 
-          any(x in model_names["main"] 
-              for x in ["DeepSeek", "Teuken", "Llama", "Qwen", "openai", "openGPT"])):
-        main_api_key = scadsllm_api_key
-        base_url = scadsllm_base_url
-    else:
-        main_api_key = None
-        base_url = ollama_base_url
+    helper_model = model_names.get("helper", "gemini-2.0-flash-lite")
+    main_model = model_names.get("main", "gemini-2.0-pro")
 
-    # Standardeinstellungen für Modelle
-    helper_model = model_names.get("helper", "gpt-5-mini")
-    main_model = model_names.get("main", "gpt-5.1")
+    def get_key_and_url(model_name):
+        """Bestimmt pro Modell den richtigen Key und die richtige Base URL."""
+        if model_name.startswith("gpt-"):
+            return openai_api_key, None
+        
+        if model_name.startswith("gemini-"):
+            # NUR wenn es wirklich mit gemini- anfängt, wird der Gemini Key erzwungen
+            if not gemini_api_key:
+                raise ValueError(f"Gemini API Key fehlt für Modell {model_name}")
+            return gemini_api_key, None
+        
+        if model_name == "llama3":
+            return None, ollama_base_url
+        
+        # Logik für Open Source / ScadsLLM / Aliasse
+        # Falls der User in der UI einen eigenen OS-Key/URL hinterlegt hat, nimm diesen
+        if user_opensrc_url:
+            return user_opensrc_key, user_opensrc_url
+            
+        # Sonst Fallback auf System-ScadsLLM
+        return scadsllm_api_key, scadsllm_base_url
+
+    # Zuweisung für Helper und Main
+    helper_api_key, helper_base_url = get_key_and_url(helper_model)
+    main_api_key, main_base_url = get_key_and_url(main_model)    
 
     # Error Handling für fehlende API Keys
     if not gemini_api_key and "gemini" in helper_model:
@@ -295,7 +299,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         function_prompt_path=function_prompt_file, 
         class_prompt_path=class_prompt_file,
         model_name=helper_model,
-        base_url=base_url,
+        base_url=helper_base_url,
     )
     
     if ollama_base_url:
@@ -407,7 +411,7 @@ def main_workflow(input, api_keys: dict, model_names: dict, status_callback=None
         api_key=main_api_key, 
         prompt_file_path=prompt_file_mainllm_toon,
         model_name=main_model,
-        base_url=base_url,
+        base_url=main_base_url,
     )
 
     # RPM Limit Sleep für Gemini Modelle
@@ -498,79 +502,54 @@ def enrich_report_with_diagrams(final_report: str, diagrams: dict) -> str:
     return "\n".join(enriched_report)
 
 
-def notebook_workflow(input, api_keys, model, status_callback=None):
+def notebook_workflow(input, api_keys, model, status_callback=None, check_stop=None):
     t_start = time.time()
     final_report = "keine Notebooks gefunden"
+    
     def update_status(msg):
+        # --- NEU: Prüfen ob abgebrochen wurde ---
+        if check_stop and check_stop():
+            logging.info("Interrupt empfangen. Breche notebook_workflow ab.")
+            raise InterruptedError("Analyse wurde vom User gestoppt.")
+            
         if status_callback:
             status_callback(msg)
         logging.info(msg)
 
-    def gemini_payload(basic_info, nb_path, xml_content, images):
-        
-        intro_json = json.dumps({
-            "basic_info": basic_info,
-            "current_notebook_path": nb_path
-        }, indent=2)
-        
-        payload_content = []
+    # --- API KEY & URL LOGIK (KONSISTENT ZU MAIN_WORKFLOW) ---
+    gemini_api_key = api_keys.get("gemini")
+    openai_api_key = api_keys.get("gpt")
+    scadsllm_api_key = api_keys.get("scadsllm")
+    scadsllm_base_url = api_keys.get("scadsllm_base_url")
+    ollama_base_url = api_keys.get("ollama")
+    
+    # User-eigene Open Source Konfiguration aus der UI
+    user_opensrc_key = api_keys.get("opensrc_key")
+    user_opensrc_url = api_keys.get("opensrc_url")
 
-        payload_content.append({
-            "type": "text",
-            "text": f"Context Information:\n{intro_json}\n\nNotebook XML Structure:\n"
-        })
-
-        # Regex to find: <IMAGE_PLACEHOLDER index="0" mime="image/png"/>
-        pattern = r'(<IMAGE_PLACEHOLDER index="(\d+)" mime="([^"]+)"/>)'
-        last_pos = 0
-        
-        for match in re.finditer(pattern, xml_content):
-            text_segment = xml_content[last_pos:match.start()]
-            if text_segment.strip():
-                payload_content.append({
-                    "type": "text",
-                    "text": text_segment
-                })
-                
-            image_index = int(match.group(2))
-            mime_type = match.group(3)
-            
-            if image_index < len(images):
-                img_data = images[image_index]
-                b64_string = img_data['data']
-                
-                payload_content.append({
-                    "type": "image_url",
-                    "image_url": {
-                        "url": f"data:{mime_type};base64,{b64_string}"
-                    }
-                })
-                
-            last_pos = match.end()
-
-        # Add any remaining text after the last image
-        remaining_text = xml_content[last_pos:]
-        if remaining_text.strip():
-            payload_content.append({
-                "type": "text",
-                "text": remaining_text
-            })
-
-        return payload_content
-
-
+    input_api_key = None
     base_url = None
 
+    # Präzise Bestimmung des Providers
     if model.startswith("gpt-"):
-        input_api_key = api_keys.get("gpt")
+        input_api_key = openai_api_key
+        base_url = None
     elif model.startswith("gemini-"):
-        input_api_key = api_keys.get("gemini")
-    elif "/" in model or model.startswith("alias-") or any(x in model for x in ["DeepSeek", "Teuken", "Llama", "Qwen", "gpt-oss", "openGPT"]):
-        input_api_key = api_keys.get("scadsllm")
-        base_url = api_keys.get("scadsllm_base_url")
-    else:
+        if not gemini_api_key:
+            raise ValueError(f"Gemini API Key fehlt für Modell {model}")
+        input_api_key = gemini_api_key
+        base_url = None
+    elif model == "llama3":
         input_api_key = None
-        base_url = api_keys.get("ollama")
+        base_url = ollama_base_url
+    else:
+        # Logik für Open Source / ScadsLLM / Aliasse
+        if user_opensrc_url:
+            input_api_key = user_opensrc_key
+            base_url = user_opensrc_url
+        else:
+            input_api_key = scadsllm_api_key
+            base_url = scadsllm_base_url
 
     update_status("🔍 Analysiere Input...")
 
@@ -581,37 +560,35 @@ def notebook_workflow(input, api_keys, model, status_callback=None):
 
     if match:
         repo_url = match.group(0)
-        logging.info(f"Extracted repository URL: {repo_url}")
     else:
-        raise ValueError("Could not find a valid URL in the provided input.")
+        raise ValueError("Keine gültige GitHub-URL im Input gefunden.")
     
     update_status(f"⬇️ Klone Repository: {repo_url} ...")
 
     try: 
         with GitRepository(repo_url) as repo:
             repo_files = repo.get_all_files()
+            
+            # Extrahiere Basic Infos (während Repo noch offen ist)
+            update_status("ℹ️ Extrahiere Basis-Informationen...")
+            info_extractor = ProjektInfoExtractor()
+            basic_project_info = info_extractor.extrahiere_info(dateien=repo_files, repo_url=repo_url)
+            
+            update_status(f"🔗 Bereite Notebooks vor...")
+            # convert to XML/Toon (erfordert repo_files)
+            processed_data = process_repo_notebooks(repo_files)
+            
     except Exception as e:
-        logging.error(f"Error cloning repository: {e}")
+        logging.error(f"Error processing repository: {e}")
         raise
-    
-    update_status("🔗 Bereite Input vor...")
 
-    # convert to XML
-    processed_data = process_repo_notebooks(repo_files)
+    if not processed_data:
+        return {
+            "report": "In diesem Repository wurden keine Jupyter Notebooks (.ipynb) gefunden.",
+            "metrics": {"total_time": round(time.time() - t_start, 2), "main_model": model}
+        }
 
-    
-    # Extrahiere Basic Infos
-    update_status("ℹ️ Extrahiere Basis-Informationen...")
-    try:
-        info_extractor = ProjektInfoExtractor()
-        basic_project_info = info_extractor.extrahiere_info(dateien=repo_files, repo_url=repo_url)
-        logging.info("Basic project info extracted")
-    except Exception as e:
-        logging.error(f"Error extracting basic project info: {e}")
-        basic_project_info = "Could not extract basic info."
-
-
-
+    # Initialisiere LLM
     prompt_file_notebook_llm = "SystemPrompts/SystemPromptNotebookLLM.txt"
     notebook_llm = MainLLM(
         api_key=input_api_key, 
@@ -623,65 +600,55 @@ def notebook_workflow(input, api_keys, model, status_callback=None):
     notebook_reports = []
     total_notebooks = len(processed_data)
     
-    logging.info(f"Starting sequential processing of {total_notebooks} notebooks...")
+    # Hilfsfunktion für Gemini-Payload (bleibt gleich)
+    def gemini_payload(info, path, xml, imgs):
+        intro_json = json.dumps({"basic_info": info, "current_notebook_path": path}, indent=2)
+        payload = [{"type": "text", "text": f"Context Information:\n{intro_json}\n\nNotebook XML Structure:\n"}]
+        pattern = r'(<IMAGE_PLACEHOLDER index="(\d+)" mime="([^"]+)"/>)'
+        last_pos = 0
+        for m in re.finditer(pattern, xml):
+            payload.append({"type": "text", "text": xml[last_pos:m.start()]})
+            idx = int(m.group(2))
+            mime = m.group(3)
+            if idx < len(imgs):
+                payload.append({"type": "image_url", "image_url": {"url": f"data:{mime};base64,{imgs[idx]['data']}"}})
+            last_pos = m.end()
+        payload.append({"type": "text", "text": xml[last_pos:]})
+        return payload
 
-    # Iterate over each notebook file individually
+    # Sequentielle Verarbeitung
     for index, (nb_path, nb_data) in enumerate(processed_data.items(), 1):
-        
         update_status(f"🧠 Generiere Report ({index}/{total_notebooks}): {os.path.basename(nb_path)}")
         
-        nb_xml = nb_data['xml']
-        nb_images = nb_data['images']
-
-        llm_payload = gemini_payload(basic_project_info, nb_path, nb_xml, nb_images)
+        llm_payload = gemini_payload(basic_project_info, nb_path, nb_data['xml'], nb_data['images'])
 
         try:
             single_report = notebook_llm.call_llm(llm_payload)
-            if single_report and isinstance(single_report, str):
+            if single_report:
                 notebook_reports.append(single_report)
             else:
-                logging.warning(f"LLM lieferte kein Ergebnis für {nb_path}")
-                notebook_reports.append(f"## Analyse für {os.path.basename(nb_path)}\nFehler: Das Modell lieferte keine Antwort.")
-            
+                notebook_reports.append(f"## Analyse für {os.path.basename(nb_path)}\nFehler: Keine Antwort vom Modell.")
         except Exception as e:
-            logging.error(f"Error generating report for {nb_path}: {e}")
-            notebook_reports.append(f"# Error processing {nb_path}\n\nError: {str(e)}\n\n---\n")
+            logging.error(f"Fehler bei {nb_path}: {e}")
+            notebook_reports.append(f"## Fehler bei {os.path.basename(nb_path)}\n{str(e)}")
 
-    # Concatenate all reports
-    final_report = "\n\n<br>\n<br>\n<br>\n\n".join([str(r) for r in notebook_reports if r is not None])
-
+    final_report = "\n\n---\n\n".join(notebook_reports)
     
-    # --- Speichern der Ergebnisse ---
-    output_dir = "result"
-    os.makedirs(output_dir, exist_ok=True)
-    
-    # Dateiname für Report
-    timestamp = datetime.now().strftime("%d_%m_%Y_%H-%M-%S")
-    report_filename = f"notebook_report_{timestamp}_NotebookLLM_{notebook_llm.model_name}.md"
-    report_filepath = os.path.join(output_dir, report_filename)
-    
-    if final_report:
-        with open(report_filepath, "w", encoding="utf-8") as f:
-            f.write(final_report)
-        logging.info(f"Final report saved to '{report_filepath}'.")
-
-    # Am Ende der Funktion nach dem Speichern:
+    # Zeitmessung
     total_time = time.time() - t_start
     
-    # Metriken für das Frontend bauen
-    metrics = {
-        "helper_time": "0", # Notebook-Workflow hat meist keinen separaten Helper
-        "main_time": round(total_time, 2),
-        "total_time": round(total_time, 2),
-        "helper_model": "None",
-        "main_model": model,
-        "json_tokens": 0,
-        "toon_tokens": 0,
-        "savings_percent": 0
-    }
     return {
         "report": final_report,
-        "metrics": metrics
+        "metrics": {
+            "helper_time": 0,
+            "main_time": round(total_time, 2),
+            "total_time": round(total_time, 2),
+            "helper_model": "None",
+            "main_model": model,
+            "json_tokens": 0,
+            "toon_tokens": 0,
+            "savings_percent": 0
+        }
     }
 
 if __name__ == "__main__":
@@ -702,3 +669,7 @@ if __name__ == "__main__":
                       "main": "openai/gpt-oss-120b"
                   }
     )
+
+    notebook_input= "https://github.com/Schmarc4/Monarchs"
+   # notebook_workflow(notebook_input, api_keys= {"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model= "gemini-2.5-flash")
+

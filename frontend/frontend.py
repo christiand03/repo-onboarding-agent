@@ -74,7 +74,7 @@ ALL_MAIN_MODELS = sorted(list(set(STANDARD_MODELS + MAIN_MODELS)))
 ALL_MODELS = sorted(list(set(ALL_HELPER_MODELS + ALL_MAIN_MODELS)))
 
 CATEGORY_KEYWORDS = {
-    "Favoriten": ["STANDARD"], # Zeigt nur STANDARD_MODELS
+    "Standard": ["STANDARD"], # Zeigt nur STANDARD_MODELS
     "Google Gemini": ["gemini"],
     "Meta Llama": ["llama"],
     "Alias Tools": ["alias"],
@@ -99,6 +99,15 @@ def get_filtered_models(source_list, category_name):
             
     return filtered if filtered else source_list # Fallback falls leer
 
+# --- NEU: INITIALISIERUNG FÜR ABBRUCH-LOGIK ---
+if "is_running" not in st.session_state:
+    st.session_state.is_running = False
+if "abort_requested" not in st.session_state:
+    st.session_state.abort_requested = False
+
+def handle_abort():
+    st.session_state.abort_requested = True
+    st.toast("🛑 Abbruch wird verarbeitet...")
 
 # ----------------------------------------
 # 1. Page Config
@@ -108,33 +117,7 @@ st.set_page_config(page_title="Repo Agent", layout="wide", page_icon="🤖")
 load_dotenv()
 SCADSLLM_KEY=os.getenv("SCADSLLM_KEY")
 SCADSLLM_HOST=os.getenv("SCADSLLM_HOST")
-# ----------------------------------------
-# CSS: SIDEBAR STICKY FOOTER (FINAL FIX)
-# ----------------------------------------
-st.markdown("""
-    <style>
-        /* 1. Der Bereich für User-Content in der Sidebar */
-        [data-testid="stSidebarUserContent"] {
-            display: flex;
-            flex-direction: column;
-            height: 100vh; /* Volle Höhe */
-            justify-content: flex-start; /* WICHTIG: Alles fängt oben an! */
-        }
-        
-        /* 2. Alle Container außer dem letzten verhalten sich normal */
-        [data-testid="stSidebarUserContent"] > div {
-            width: 100%; /* Sicherstellen, dass sie die Breite füllen */
-        }
 
-        /* 3. NUR das letzte Element (Einstellungen) wird nach unten gedrückt */
-        [data-testid="stSidebarUserContent"] > div:last-of-type {
-            margin-top: auto; /* Das schiebt es an den Boden */
-            padding-bottom: 20px; /* Abstand zum Rand */
-            padding-top: 10px; /* Kleiner Abstand zum Inhalt darüber */
-            border-top: 1px solid rgba(255, 255, 255, 0.1); /* Optional: Trennlinie */
-        }
-    </style>
-""", unsafe_allow_html=True)
 
 # ----------------------------------------
 # CALLBACKS
@@ -153,50 +136,53 @@ def save_ollama_cb():
         db.update_ollama_url(st.session_state["username"], new_url)
         st.toast("Ollama URL gespeichert! ✅")
 
+
+
 # ----------------------------------------
 # DATA LOADING (CONSISTENT)
 # ----------------------------------------
 
+def get_last_activity(chat_name):
+    """Ermittelt den Zeitstempel der letzten Nachricht in einem Chat."""
+    exchanges = st.session_state.chats.get(chat_name, {}).get("exchanges", [])
+    if not exchanges:
+        return datetime.min
+    # Wir nehmen das Feld 'datetime' aus dem exchange (stelle sicher, dass es ein datetime-objekt ist)
+    last_ex = exchanges[-1]
+    dt = last_ex.get("datetime", datetime.min)
+    if isinstance(dt, str): # Falls es als String aus der DB kommt
+        try: dt = datetime.fromisoformat(dt)
+        except: dt = datetime.min
+    return dt
+
 def load_data_from_db(username: str):
-    """Lädt Chats und Exchanges konsistent aus der DB."""
-    
-    # Nur laden, wenn neuer User oder noch nicht geladen
     if "loaded_user" not in st.session_state or st.session_state.loaded_user != username:
         st.session_state.chats = {}
-        
-        # 1. Erst die definierten Chats laden (damit auch leere Chats da sind)
         db_chats = db.fetch_chats_by_user(username)
         for c in db_chats:
             c_name = c.get("chat_name")
             if c_name:
                 st.session_state.chats[c_name] = {"exchanges": []}
 
-        # 2. Dann die Exchanges laden und einsortieren
         db_exchanges = db.fetch_exchanges_by_user(username)
         for ex in db_exchanges:
             c_name = ex.get("chat_name", "Unbenannt")
-            
-            # Falls Exchanges existieren für Chats, die nicht in dbchats sind (Legacy Support)
             if c_name not in st.session_state.chats:
                 st.session_state.chats[c_name] = {"exchanges": []}
-            
             if "feedback" not in ex or ex["feedback"] is None:
                 ex["feedback"] = np.nan
-            
             st.session_state.chats[c_name]["exchanges"].append(ex)
 
-        # 3. Default Chat erstellen, falls gar nichts existiert
         if not st.session_state.chats:
             initial_name = "Chat 1"
-            # Konsistent in DB anlegen
             db.insert_chat(username, initial_name)
             st.session_state.chats[initial_name] = {"exchanges": []}
             st.session_state.active_chat = initial_name
         else:
-            # Active Chat setzen, falls nötig
+            # Sortiere Chats nach letzter Aktivität beim ersten Laden
+            sorted_names = sorted(st.session_state.chats.keys(), key=get_last_activity, reverse=True)
             if "active_chat" not in st.session_state or st.session_state.active_chat not in st.session_state.chats:
-                # Nimm den ersten verfügbaren Chat
-                st.session_state.active_chat = list(st.session_state.chats.keys())[0]
+                st.session_state.active_chat = sorted_names[0]
         
         st.session_state.loaded_user = username
 
@@ -283,70 +269,45 @@ def render_text_with_mermaid(markdown_text, should_stream=False):
 
 def render_exchange(ex, current_chat_name):
     st.chat_message("user").write(ex["question"])
+    
+    answer_text = ex.get("answer", "")
+    is_error = answer_text.startswith("Fehler") or answer_text.startswith("Error")
 
-    with st.chat_message("assistant"):
-        answer_text = ex.get("answer", "")
-        is_error = answer_text.startswith("Fehler") or answer_text.startswith("Error")
-
-        # --- 1. TOOLBAR CONTAINER ---
-        # Nutzt die neuen Parameter horizontal=True und alignment
-        # border=True rahmt die Toolbar ein
-        # horizontal_alignment="right" schiebt alles nach rechts
-        with st.container(horizontal=True, horizontal_alignment="right"):
-            
-            if not is_error:
-                # 1. Status Text (wird jetzt links von den Buttons angezeigt, aber rechtsbündig im Container)
+    if is_error:
+        # Fehlermeldungen werden ohne Assistant-Bubble und ohne 500px-Container angezeigt
+        st.error(answer_text)
+        if st.button("🗑️ Fehler-Nachricht löschen", key=f"del_err_hist_{ex['_id']}", type="secondary"):
+            handle_delete_exchange(current_chat_name, ex)
+    else:
+        # Normale Antworten
+        with st.chat_message("assistant"):
+            # --- 1. TOOLBAR ---
+            with st.container(horizontal=True, horizontal_alignment="right"):
                 st.write("hier die Antwort:")
                 if ex.get("feedback") == 1:
                     st.caption("✅ Hilfreich")
                 elif ex.get("feedback") == 0:
                     st.caption("❌ Nicht hilfreich")
                 
-                # 2. Die Buttons (einfach untereinander im Code, erscheinen nebeneinander im UI)
-                
-                # Like
-                type_primary_up = ex.get("feedback") == 1
-                if st.button("👍", key=f"up_{ex['_id']}", type="primary" if type_primary_up else "secondary", help="Hilfreich"):
+                # Buttons
+                if st.button("👍", key=f"up_{ex['_id']}", type="primary" if ex.get("feedback") == 1 else "secondary"):
                     handle_feedback_change(ex, 1)
-
-                # Dislike
-                type_primary_down = ex.get("feedback") == 0
-                if st.button("👎", key=f"down_{ex['_id']}", type="primary" if type_primary_down else "secondary", help="Nicht hilfreich"):
+                if st.button("👎", key=f"down_{ex['_id']}", type="primary" if ex.get("feedback") == 0 else "secondary"):
                     handle_feedback_change(ex, 0)
-
-                # Comment Popover
-                with st.popover("💬", help="Notiz hinzufügen"):
+                
+                with st.popover("💬"):
                     msg = st.text_area("Notiz:", value=ex.get("feedback_message", ""), key=f"txt_{ex['_id']}")
                     if st.button("Speichern", key=f"save_{ex['_id']}"):
-                        ex["feedback_message"] = msg
                         db.update_exchange_feedback_message(ex["_id"], msg)
-                        st.success("Gespeichert!")
-                        time.sleep(0.5)
                         st.rerun()
 
-                # Download
-                st.download_button(
-                    label="📥",
-                    data=ex["answer"],
-                    file_name=f"response_{ex['_id']}.md",
-                    mime="text/markdown",
-                    key=f"dl_{ex['_id']}",
-                    help="Als Markdown herunterladen"
-                )
-
-                # Delete
-                if st.button("🗑️", key=f"del_{ex['_id']}", help="Nachricht löschen", type="secondary"):
+                st.download_button("📥", data=ex["answer"], file_name="response.md", key=f"dl_{ex['_id']}")
+                if st.button("🗑️", key=f"del_{ex['_id']}"):
                     handle_delete_exchange(current_chat_name, ex)
 
-            else:
-                # Fehlerfall
-                st.error("⚠️ Fehler")
-                if st.button("🗑️ Löschen", key=f"del_err_{ex['_id']}"):
-                    handle_delete_exchange(current_chat_name, ex)
-
-        # --- 2. CONTENT (Antwort) ---
-        with st.container(height=500, border=True):
-             render_text_with_mermaid(ex["answer"], should_stream=False)
+            # --- 2. CONTENT CONTAINER (Nur für echte Antworten) ---
+            with st.container(height=500, border=True):
+                 render_text_with_mermaid(ex["answer"], should_stream=False)
 
 # ----------------------------------------
 # AUTH SETUP
@@ -424,12 +385,6 @@ if st.session_state["authentication_status"]:
     # SIDEBAR
     # ----------------------------------------
     with st.sidebar:
-        with st.container():
-            st.write(f"👤 **{current_name}**")
-            authenticator.logout("Abmelden", "sidebar",)
-            
-        
-        
         # Sicherstellen, dass Active Chat gültig ist
         chat_names = list(st.session_state.chats.keys())
         if st.session_state.active_chat not in chat_names:
@@ -439,90 +394,92 @@ if st.session_state["authentication_status"]:
                  # Fallback (sollte durch load_data abgefangen sein)
                  st.session_state.active_chat = "Chat 1" 
 
+        with st.container(border=None, gap=None):
+            if st.button("➕ Neuer Chat", width="content", type="tertiary"):
+                    # Namen generieren
+                    base_name = "Chat"
+                    i = 1
+                    while True:
+                        candidate = f"{base_name} {i}"
+                        if candidate not in st.session_state.chats:
+                            new_name = candidate
+                            break
+                        i += 1
+                    # KONSISTENZ: Sofort in DB schreiben
+                    db.insert_chat(current_user, new_name)
+                    # In Session State
+                    st.session_state.chats[new_name] = {"exchanges": []}
+                    st.session_state.active_chat = new_name
+                    st.rerun()
+
+            if st.button("🗑️ aktuellen Chat löschen", width="content", type="tertiary"):
+                    handle_delete_chat(current_user, st.session_state.active_chat)   
+                         
+
         with st.container(border=None, gap=None,height=400):
             # --- CHAT MANAGEMENT ---
-            if st.button("➕ Neuer Chat", width="content", type="tertiary"):
-                # Namen generieren
-                base_name = "Chat"
-                i = 1
-                while True:
-                    candidate = f"{base_name} {i}"
-                    if candidate not in st.session_state.chats:
-                        new_name = candidate
-                        break
-                    i += 1
-                # KONSISTENZ: Sofort in DB schreiben
-                db.insert_chat(current_user, new_name)
-                # In Session State
-                st.session_state.chats[new_name] = {"exchanges": []}
-                st.session_state.active_chat = new_name
-                st.rerun()
+            sorted_chat_names = sorted(
+                st.session_state.chats.keys(), 
+                key=get_last_activity, 
+                reverse=True
+            )
 
-            st.markdown("<br>",unsafe_allow_html=True)
-            st.markdown("<br>",unsafe_allow_html=True)
-            st.caption("*Chats:*")
-            for chat_name in list(st.session_state.chats.keys()):
-                label = chat_name
-                # Optional: Anzeigen wie viele Nachrichten drin sind
-                # count = len(st.session_state.chats[chat_name]["exchanges"])
-                # label = f"{chat_name} ({count})"
-
+            for chat_name in sorted_chat_names:
+                # Markiere den aktiven Chat optisch (optional)
+                is_active = (chat_name == st.session_state.active_chat)
+                label = f" {chat_name}" if not is_active else f" {chat_name}"
                 if st.button(label, key=f"btn_{chat_name}", width="content", 
-                            type="tertiary"):
+                            type="secondary" if is_active else "tertiary"):
                     st.session_state.active_chat = chat_name
                     st.rerun()
 
         
 
         with st.container(border=None, gap=None):
-            if st.button("🗑️ aktuellen Chat löschen", width="content", type="tertiary"):
-                handle_delete_chat(current_user, st.session_state.active_chat)        
-            
+            st.toggle("Notebook Modus", key="notebook_mode", help="ermöglicht wenn aktiviert die Dokumentation von Jupyter Notebooks, deaktiviert werden .py files ausgewertet", value=False)  
             with st.popover("⚙️ Einstellungen", type="tertiary"):
-                st.toggle("Notebook Modus", key="notebook_mode", help="ermöglicht wenn aktiviert die Dokumentation von Jupyter Notebooks, deaktiviert werden .py files ausgewertet", value=False)
-                st.caption("🤖 Modelle")
-                
-                
+                col1 , col2 = st.columns(2)
+                with col1:
+                    st.caption("🤖 Modelle")
+                    sbhelp = "None"
+                    # Helper LLM Auswahl
+                    if  not st.session_state.notebook_mode:
+                        cat_helper = st.selectbox(
+                        "Helper Modell:", 
+                        list(CATEGORY_KEYWORDS.keys()), 
+                        index=0, 
+                        key="cat_helper"
+                        )
+                        filtered_helpers = get_filtered_models(ALL_HELPER_MODELS, cat_helper)
 
-                sbhelp = "None"
-                # Helper LLM Auswahl
-                if  not st.session_state.notebook_mode:
-                    cat_helper = st.selectbox(
-                    "Kategorie (Helper):", 
-                    list(CATEGORY_KEYWORDS.keys()), 
-                    index=0, 
-                    key="cat_helper"
+                        sbhelp = st.selectbox(
+                            "Helper LLM", 
+                            filtered_helpers,
+                            index=0, # Standard auf das erste Element (gemini-2.0-flash-lite)
+                            label_visibility="collapsed"
+                        )
+                    
+                    cat_main = st.selectbox(
+                        "Main Modell:", 
+                        list(CATEGORY_KEYWORDS.keys()), 
+                        index=0, # Default: Favoriten
+                        key="cat_main"
                     )
-                    filtered_helpers = get_filtered_models(ALL_HELPER_MODELS, cat_helper)
+                    filtered_mains = get_filtered_models(ALL_MAIN_MODELS, cat_main)
 
-                    sbhelp = st.selectbox(
-                        "Helper LLM", 
-                        filtered_helpers,
-                        index=0, # Standard auf das erste Element (gemini-2.0-flash-lite)
+                    # Main LLM Auswahl
+                    sbmain = st.selectbox(
+                        "Main LLM", 
+                        filtered_mains,
+                        index=2, # Standard z.B. auf gemini-2.5-pro
                         label_visibility="collapsed"
                     )
-                
-                cat_main = st.selectbox(
-                    "Kategorie (Main):", 
-                    list(CATEGORY_KEYWORDS.keys()), 
-                    index=0, # Default: Favoriten
-                    key="cat_main"
-                )
-                filtered_mains = get_filtered_models(ALL_MAIN_MODELS, cat_main)
-
-                # Main LLM Auswahl
-                sbmain = st.selectbox(
-                    "Main LLM", 
-                    filtered_mains,
-                    index=2, # Standard z.B. auf gemini-2.5-pro
-                    label_visibility="collapsed"
-                )
-                
-                if not st.session_state.notebook_mode:
-                    st.caption(f"Gewählt: Python Modus mit: \n\n {sbhelp} -> {sbmain}")
-                else:
-                    st.caption(f"Gewählt: Notebook Modus mit: \n\n {sbmain}")
-                st.markdown("---")
+                    
+                    if not st.session_state.notebook_mode:
+                        st.caption(f"Gewählt: Python Modus mit: \n\n {sbhelp} -> {sbmain}")
+                    else:
+                        st.caption(f"Gewählt: Notebook Modus mit: \n\n {sbmain}")
+                    
 
                 # API Keys holen
                 gemini_key, ollama_url, gpt_key , opensrc_key, opensrc_url = db.get_decrypted_api_keys(current_user)
@@ -532,67 +489,93 @@ if st.session_state["authentication_status"]:
                 has_opensrc_url = bool(opensrc_url)
                 has_opensrc_key = bool(opensrc_key)
 
-                st.caption("API Keys Configuration")
-                
-                # Logik: Zeige Inputs nur für Modelle, die User-Keys brauchen
-                
-                # 1. Check für Gemini
-                if sbhelp.startswith("gemini") or sbmain.startswith("gemini"):
-                    status_icon = "✅" if has_gemini else "❌"
-                    st.markdown(f"**Gemini Key**: {status_icon} {'Gesetzt' if has_gemini else 'Fehlt'}")
-                    with st.form("gemini_form"):
-                        new_gemini = st.text_input("Gemini Key ändern", type="password")
-                        if st.form_submit_button("Speichern") and new_gemini:
-                            db.update_gemini_key(current_user, new_gemini)
-                            st.success("Gespeichert!")
-                            time.sleep(0.5)
-                            st.rerun() 
-
-                # 2. Check für Ollama (Lokal)
-                if sbhelp == "llama3" or sbmain == "llama3":
-                    status_icon = "✅" if has_ollama else "❌"
-                    st.markdown(f"**Llama URL**: {status_icon} {'Gesetzt' if has_ollama else 'Fehlt'}")
-                    current_url_val = ollama_url if ollama_url else ""
-                    with st.form("ollama_form"):
-                        new_ollama = st.text_input("Llama Base URL ändern", value=current_url_val)
-                        if st.form_submit_button("Speichern"):
-                            if new_ollama != current_url_val:
-                                db.update_ollama_url(current_user, new_ollama)
-                                st.success("Gespeichert!")
-                                time.sleep(0.5)
-                                st.rerun()
-
-                # 3. Check für GPT (OpenAI)
-                if sbhelp.startswith("gpt-5") or sbmain.startswith("gpt-5"):
+                with col2:
                     
-                    status_icon = "✅" if has_gpt else "❌"
-                    st.markdown(f"**GPT Key**: {status_icon} {'Gesetzt' if has_gpt else 'Fehlt'}")
-                    with st.form("gpt_form"):
-                        new_gpt = st.text_input("GPT Key ändern", type="password")
-                        if st.form_submit_button("Speichern") and new_gpt:
-                            db.update_gpt_key(current_user, new_gpt)
-                            st.success("Gespeichert!")
-                            time.sleep(0.5)
-                            st.rerun()
+                    # Logik: Zeige Inputs nur für Modelle, die User-Keys brauchen
+                    def get_provider(model_name):
+                        if model_name.startswith("gemini"):
+                            return "Google Gemini"
+                        elif model_name == "llama3":
+                            return "ollama"
+                        elif model_name.startswith("gpt-5"):
+                            return "gpt"
+                        else:
+                            return "Open Source LLM"
+                    
+                    def config_provider(model_name):
+                        if model_name.startswith("gemini"): 
+                            status_icon = "✅" if has_gemini else "❌"
+                            st.markdown(f"**Gemini Key**: {status_icon} {'Gesetzt' if has_gemini else 'Fehlt'}")
+                            with st.form("gemini_form"):
+                                new_gemini = st.text_input("Gemini Key ändern", type="password")
+                                if st.form_submit_button("Speichern") and new_gemini:
+                                    db.update_gemini_key(current_user, new_gemini)
+                                    st.success("Gespeichert!")
+                                    time.sleep(0.5)
+                                    st.rerun() 
+                        
+                        elif model_name == "llama3":
+                            status_icon = "✅" if has_ollama else "❌"
+                            st.markdown(f"**Llama URL**: {status_icon} {'Gesetzt' if has_ollama else 'Fehlt'}")
+                            current_url_val = ollama_url if ollama_url else ""
+                            with st.form("ollama_form"):
+                                new_ollama = st.text_input("Llama Base URL ändern", value=current_url_val)
+                                if st.form_submit_button("Speichern"):
+                                    if new_ollama != current_url_val:
+                                        db.update_ollama_url(current_user, new_ollama)
+                                        st.success("Gespeichert!")
+                                        time.sleep(0.5)
+                                        st.rerun()
 
-                else:
-                    status_icon = "✅" if has_opensrc_key else "❌"  
-                    st.markdown(f"**Open Source LLM Key**: {status_icon} {'Gesetzt' if has_opensrc_key else 'Fehlt'}")
-                    status_icon_url = "✅" if has_opensrc_url else "❌"
-                    st.markdown(f"**Open Source LLM URL**: {status_icon_url} {'Gesetzt' if has_opensrc_url else 'Fehlt'}")
-                    with st.form("opensrc_form"):
-                        new_opensrc_key = st.text_input("Open Source LLM Key ändern", type="password")
-                        new_opensrc_url = st.text_input("Open Source LLM URL ändern")
-                        if st.form_submit_button("Speichern"):
-                            if new_opensrc_key:
-                                db.update_opensrc_key(current_user, new_opensrc_key)
-                            if new_opensrc_url:
-                                db.update_opensrc_url(current_user, new_opensrc_url)
-                            st.success("Gespeichert!")
-                            time.sleep(0.5)
-                            st.rerun()    
+                        elif model_name.startswith("gpt-5"):
+                            status_icon = "✅" if has_gpt else "❌"
+                            st.markdown(f"**GPT Key**: {status_icon} {'Gesetzt' if has_gpt else 'Fehlt'}")
+                            with st.form("gpt_form"):
+                                new_gpt = st.text_input("GPT Key ändern", type="password")
+                                if st.form_submit_button("Speichern") and new_gpt:
+                                    db.update_gpt_key(current_user, new_gpt)
+                                    st.success("Gespeichert!")
+                                    time.sleep(0.5)
+                                    st.rerun()
+                        else:
+                            status_icon = "✅" if has_opensrc_key else "❌"  
+                            st.markdown(f"**Open Source LLM Key**: {status_icon} {'Gesetzt' if has_opensrc_key else 'Fehlt'}")
+                            status_icon_url = "✅" if has_opensrc_url else "❌"
+                            st.markdown(f"**Open Source LLM URL**: {status_icon_url} {'Gesetzt' if has_opensrc_url else 'Fehlt'}")
+                            with st.form("opensrc_form"):
+                                new_opensrc_key = st.text_input("Open Source LLM Key ändern", type="password")
+                                new_opensrc_url = st.text_input("Open Source LLM URL ändern")
+                                if st.form_submit_button("Speichern"):
+                                    if new_opensrc_key:
+                                        db.update_opensrc_key(current_user, new_opensrc_key)
+                                    if new_opensrc_url:
+                                        db.update_opensrc_url(current_user, new_opensrc_url)
+                                    st.success("Gespeichert!")
+                                    time.sleep(0.5)
+                                    st.rerun()      
+
+
+                    st.caption("API Keys Konfiguration")
+                    if get_provider(sbhelp) == get_provider(sbmain) :
+                        st.caption("Helper und Main Konfiguration:")
+                        config_provider(sbmain)
+                    elif get_provider(sbhelp) != get_provider(sbmain) and not st.session_state.notebook_mode:
+                        st.caption("Helper Konfiguration:")
+                        config_provider(sbhelp)
+                        st.caption("Main Konfiguration:")
+                        config_provider(sbmain)                           
+                    elif st.session_state.notebook_mode:
+                        st.caption("Main Konfiguration:")
+                        config_provider(sbmain)
+
+                       
+            
+
+            
+            with st.container():
+                st.write(f"👤 **{current_name}**")
+                authenticator.logout("Abmelden", "sidebar")
                 
-               
 
     # ----------------------------------------
     # CHAT AREA
@@ -614,124 +597,147 @@ if st.session_state["authentication_status"]:
         render_exchange(ex, active_chat_name)
 
     # Input Handling
+    # Input Handling
+    # Input Handling
+    # ----------------------------------------
+    # CHAT AREA - INPUT & ANALYSIS
+    # ----------------------------------------
     if prompt := st.chat_input("Link zum Git Repository..."):
+        # --- 0. FEHLER-CLEANUP ---
+        current_chat_name = st.session_state.active_chat
+        if current_chat_name in st.session_state.chats:
+            original_exchanges = st.session_state.chats[current_chat_name]["exchanges"]
+            valid_exchanges = []
+            for ex in original_exchanges:
+                answer = ex.get("answer", "")
+                # Lösche Fehler oder Abbruch-Nachrichten, damit der Chat sauber bleibt
+                if not (answer.startswith("Fehler") or answer.startswith("Error") or "abgebrochen" in answer.lower()):
+                    valid_exchanges.append(ex)
+                else:
+                    db.delete_exchange_by_id(ex["_id"])
+            st.session_state.chats[current_chat_name]["exchanges"] = valid_exchanges
+
         st.chat_message("user").write(prompt)
         
-        # --- 1. SOFORTIGE UMBENENNUNG (VOR DER ANALYSE) ---
-        current_chat_name = st.session_state.active_chat
-        
-        # Prüfen, ob der aktuelle Name generisch ist (startet mit "Neuer Chat" oder "Chat")
-        # Damit überschreiben wir keine vom User manuell gewählten Namen (falls du das später einbaust)
-        is_generic_name = current_chat_name.startswith("Neuer Chat") or current_chat_name.startswith("Chat ")
-        
+        # --- 1. SOFORTIGE UMBENENNUNG ---
         repo_name = extract_repo_name(prompt)
-        
-        # Wir arbeiten mit einer lokalen Variable für den Namen, falls er sich ändert
         working_chat_name = current_chat_name
+        is_generic_name = current_chat_name.startswith("Neuer Chat") or current_chat_name.startswith("Chat ")
 
         if is_generic_name and repo_name:
-            # Namen kollisionsfrei machen (falls "react" schon existiert -> "react (2)")
             new_name = repo_name
             counter = 1
-            existing_chats = list(st.session_state.chats.keys())
-            
-            while new_name in existing_chats:
-                # Sicherheit: Falls der Chat schon so heißt wie das Repo (z.B. User postet Link nochmal), nichts tun
-                if new_name == current_chat_name:
-                    break 
+            while new_name in st.session_state.chats and new_name != current_chat_name:
                 counter += 1
                 new_name = f"{repo_name} ({counter})"
             
             if new_name != current_chat_name:
-                # A) In der Datenbank umbenennen
                 db.rename_chat_fully(current_user, current_chat_name, new_name)
-                
-                # B) Im Frontend Session State verschieben
                 chat_content = st.session_state.chats.pop(current_chat_name)
                 st.session_state.chats[new_name] = chat_content
                 st.session_state.active_chat = new_name
-                
-                # C) Arbeitsvariable aktualisieren
                 working_chat_name = new_name
-                
-                # Kleines Feedback (Sidebar aktualisiert sich erst nach dem Rerun am Ende)
                 st.toast(f"📂 Chat umbenannt zu: **{new_name}**")
 
-        # --- 2. ANALYSE STARTEN ---
+        # --- 2. ANALYSE KONFIGURATION ---
+        st.session_state.is_running = True
+        st.session_state.abort_requested = False
+        
+        # --- HIER FEHLTE DIE DEFINITION ---
+        def check_stop_callback():
+            """Diese Funktion wird vom Backend aufgerufen, um zu prüfen ob der User Stop gedrückt hat."""
+            return st.session_state.get("abort_requested", False)
+
+        # Stop-Button anzeigen
+        stop_col1, _ = st.columns([1, 4])
+        with stop_col1:
+            st.button("Analyse abbrechen", on_click=handle_abort, type="primary", use_container_width=True)
         
         status = st.status(f"⏳ Analysiere Repository in '{working_chat_name}'...", expanded=True)
 
-        dec_gemini, dec_ollama, dec_gpt = db.get_decrypted_api_keys(current_user)
-        api_keys = {"gemini": dec_gemini, "ollama": dec_ollama, "gpt": dec_gpt, "scadsllm": SCADSLLM_KEY, "scadsllm_base_url": SCADSLLM_HOST}
+        # API Keys zusammenstellen
+        dec_gemini, dec_ollama, dec_gpt, user_opensrc_key, user_opensrc_url = db.get_decrypted_api_keys(current_user)
+        api_keys = {
+            "gemini": dec_gemini, 
+            "ollama": dec_ollama, 
+            "gpt": dec_gpt, 
+            "opensrc_key": user_opensrc_key,
+            "opensrc_url": user_opensrc_url,
+            "scadsllm": SCADSLLM_KEY, 
+            "scadsllm_base_url": SCADSLLM_HOST
+        }
         model_config = {"helper": sbhelp, "main": sbmain}
 
         workflow_success = False
         response = ""
         metrics = {}
         
+        # --- 3. WORKFLOW STARTEN ---
         try:
             if not st.session_state.notebook_mode: 
-                # Hier läuft der Prozess (5-6 Minuten)
                 result_data = main.main_workflow(
-                    input=prompt, 
+                    user_input=prompt, 
                     api_keys=api_keys, 
                     model_names=model_config,
-                    status_callback=status.write 
+                    status_callback=status.write,
+                    check_stop=check_stop_callback 
                 )
-            elif st.session_state.notebook_mode:  
-                # Hier läuft der Prozess (5-6 Minuten)
+            else:  
                 result_data = main.notebook_workflow(
                     input=prompt, 
                     api_keys=api_keys, 
                     model=model_config["main"],
-                    status_callback=status.write 
+                    status_callback=status.write,
+                    check_stop=check_stop_callback 
                 )  
             
-            logging.info(f"Workflow finished. Keys: {result_data.keys()}")
             response = result_data["report"]
             metrics = result_data["metrics"]
+            workflow_success = not (response.startswith("Error:") or response.startswith("Fehler"))
             
-            if response.startswith("Error:") or response.startswith("Fehler"):
-                workflow_success = False
-            else:
-                workflow_success = True
-            
-        except Exception as e:
-            error_details = traceback.format_exc()
-            logging.error(f"CRITICAL ERROR: {error_details}")
-            response = f"Fehler bei der Verarbeitung: {e}"
-            metrics = {
-                "helper_time": "0", "main_time": "0", "total_time": "0",
-                "helper_model": sbhelp, "main_model": sbmain
-            }
-            workflow_success = False
-        
-        # ... (Code davor bleibt gleich) ...
-
-        status.update(label="Fertig!", state="complete", expanded=False)
-        
-        with st.chat_message("assistant"):
             if workflow_success:
+                status.update(label="Analyse abgeschlossen!", state="complete", expanded=False)
+            else:
+                status.update(label="Analyse fehlgeschlagen", state="error", expanded=False)
+
+        except InterruptedError:
+            response = "Fehler: Die Analyse wurde vom Benutzer abgebrochen."
+            status.update(label="❌ Abgebrochen", state="error", expanded=False)
+            workflow_success = False
+        except Exception as e:
+            logging.error(f"CRITICAL ERROR: {traceback.format_exc()}")
+            response = f"Fehler bei der Verarbeitung: {e}"
+            status.update(label="⚠️ Fehler aufgetreten", state="error", expanded=False)
+            workflow_success = False
+        finally:
+            st.session_state.is_running = False
+            st.session_state.abort_requested = False
+
+        # --- 4. ANZEIGE & SPEICHERN ---
+        if workflow_success:
+            # NUR bei Erfolg wird die Assistant-Bubble und der Container geöffnet
+            with st.chat_message("assistant"):
                 st.write("Antwort generiert:")
                 with st.container(height=500):
-                    # HIER GEÄNDERT: Streaming AUS für Stabilität bei großen Texten
                     render_text_with_mermaid(response, should_stream=False)
-            else:
-                st.error(response)
+        else:
+            # Im Fehlerfall wird NUR die Error-Box außerhalb der Assistant-Bubble angezeigt
+            st.error(response)
 
-        # --- 3. SPEICHERN (UNTER DEM NEUEN NAMEN) ---
-        if workflow_success:
+        # Ergebnis in DB und Session State speichern (auch Fehler, damit sie nach Rerun sichtbar bleiben, 
+        # aber sie werden ja beim nächsten Prompt durch deinen Cleanup gelöscht)
+        if response:
             new_id = db.insert_exchange(
                 question=prompt,
                 answer=response,
                 feedback=np.nan,
                 username=current_user,
                 chat_name=working_chat_name, 
-                helper_used=metrics["helper_model"],
-                main_used=metrics["main_model"],
-                total_time=str(metrics["total_time"]),
-                helper_time=str(metrics["helper_time"]),
-                main_time=str(metrics["main_time"]),
+                helper_used=metrics.get("helper_model", sbhelp),
+                main_used=metrics.get("main_model", sbmain),
+                total_time=str(metrics.get("total_time", "0")),
+                helper_time=str(metrics.get("helper_time", "0")),
+                main_time=str(metrics.get("main_time", "0")),
                 json_tokens=metrics.get("json_tokens", 0),
                 toon_tokens=metrics.get("toon_tokens", 0),
                 savings_percent=metrics.get("savings_percent", 0.0)
@@ -745,21 +751,9 @@ if st.session_state["authentication_status"]:
                 "feedback_message": "",
                 "chat_name": working_chat_name,
                 "username": current_user,
-                "helper_used": metrics["helper_model"],
-                "main_used": metrics["main_model"],
-                "json_tokens": metrics.get("json_tokens", 0),
-                "toon_tokens": metrics.get("toon_tokens", 0),
-                "savings_percent": metrics.get("savings_percent", 0.0),
-                "datetime": datetime.now()
+                "datetime": datetime.now() 
             }
-            
             if working_chat_name in st.session_state.chats:
                 st.session_state.chats[working_chat_name]["exchanges"].append(new_ex)
             
-            # Safe Rerun: Falls der Socket hier schon wackelt, fangen wir es ab
-            try:
-                st.rerun()
-            except Exception:
-                # Falls Rerun fehlschlägt (z.B. Connection Lost), ist das okay,
-                # da die Daten in der DB gespeichert sind. Der User drückt dann F5.
-                pass
+            st.rerun()
