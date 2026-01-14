@@ -4,648 +4,295 @@ import logging
 import os
 import re
 import time
-import math
 from datetime import datetime
 import matplotlib.pyplot as plt
-
-
-from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
 
+# Interne Imports
 from .getRepo import GitRepository
 from .AST_Schema import ASTAnalyzer
 from .MainLLM import MainLLM
 from .basic_info import ProjektInfoExtractor
 from .HelperLLM import LLMHelper
 from .relationship_analyzer import ProjectAnalyzer
-from schemas.types import FunctionContextInput, FunctionAnalysisInput, ClassContextInput, ClassAnalysisInput, MethodContextInput
-
-from toon_format import encode, count_tokens, estimate_savings, compare_formats
-
+from schemas.types import (
+    FunctionContextInput, 
+    FunctionAnalysisInput, 
+    ClassContextInput, 
+    ClassAnalysisInput, 
+    MethodContextInput
+)
+from toon_format import encode, estimate_savings
 from .converter import process_repo_notebooks
-
 
 # --- Konfiguration & Logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 load_dotenv()
 
+# --- Hilfsfunktionen ---
+
+def validate_llm_credentials(model_name, api_key, base_url):
+    """Führt einen minimalen Test-Call aus, um den Key zu validieren, bevor der Workflow startet."""
+    # Wir übergeben einen existierenden Pfad, damit der MainLLM-Konstruktor die Datei lesen kann
+    dummy_prompt_path = "SystemPrompts/SystemPromptMainLLM.txt"
+    
+    try:
+        # Falls die Datei nicht existiert, erstellen wir eine temporäre Dummy-Datei
+        if not os.path.exists(dummy_prompt_path):
+            os.makedirs("SystemPrompts", exist_ok=True)
+            with open(dummy_prompt_path, "w") as f:
+                f.write("You are a helpful assistant.")
+
+        test_llm = MainLLM(
+            api_key=api_key, 
+            prompt_file_path=dummy_prompt_path, 
+            model_name=model_name, 
+            base_url=base_url
+        )
+        # Ein minimaler Test-Aufruf
+        test_llm.call_llm("Ping") 
+    except Exception as e:
+        raise ValueError(f"Validierung fehlgeschlagen für Modell '{model_name}': {str(e)}")
+
 def create_savings_chart(json_tokens, toon_tokens, savings_percent, output_path):
-    """Erstellt ein Balkendiagramm für den Token-Vergleich und speichert es."""
+    """Erstellt ein Balkendiagramm für den Token-Vergleich."""
     labels = ['JSON', 'TOON']
     values = [json_tokens, toon_tokens]
     colors = ['#ff9999', '#66b3ff']
 
     plt.figure(figsize=(8, 6))
     bars = plt.bar(labels, values, color=colors, width=0.5)
-
-    # Titel und Beschriftungen
     plt.title(f'Token-Vergleich: {savings_percent:.2f}% Einsparung', fontsize=14)
     plt.ylabel('Anzahl Token')
     plt.grid(axis='y', linestyle='--', alpha=0.7)
 
-    # Werte über den Balken anzeigen
     for bar in bars:
         height = bar.get_height()
         plt.text(bar.get_x() + bar.get_width() / 2.0, height, 
                  f'{int(height):,}', ha='center', va='bottom', fontsize=12, fontweight='bold')
 
-    # Speichern
     plt.savefig(output_path)
     plt.close()
 
 def calculate_net_time(start_time, end_time, total_items, batch_size, model_name):
-    """Berechnet die Dauer abzüglich der Sleep-Zeiten für Rate-Limits."""
+    """Berechnet die Dauer abzüglich der Sleep-Zeiten für Rate-Limits (speziell Gemini)."""
     total_duration = end_time - start_time
-    
-    if not model_name.startswith("gemini-"):
+    if not model_name.startswith("gemini-") or total_items == 0:
         return total_duration
-
-    if total_items == 0:
-        return 0
-
     num_batches = math.ceil(total_items / batch_size)
     sleep_count = max(0, num_batches - 1)
-    total_sleep_time = sleep_count * 61
-    
-    net_time = total_duration - total_sleep_time
-    return max(0, net_time)
+    return max(0, total_duration - (sleep_count * 61))
 
+# --- Haupt-Workflows ---
 
 def main_workflow(user_input, api_keys: dict, model_names: dict, status_callback=None, check_stop=None):
-    
     def update_status(msg):
-        # --- NEU: Prüfen ob abgebrochen wurde ---
         if check_stop and check_stop():
-            logging.info("Interrupt empfangen. Breche main_workflow ab.")
             raise InterruptedError("Analyse wurde vom User gestoppt.")
-        
         if status_callback:
             status_callback(msg)
         logging.info(msg)
 
-    update_status("🔍 Analysiere Input...")
-    
-    # API Keys & URLs extrahieren
+    # 1. API Keys extrahieren
     gemini_api_key = api_keys.get("gemini")
     openai_api_key = api_keys.get("gpt")
     scadsllm_api_key = api_keys.get("scadsllm")
     scadsllm_base_url = api_keys.get("scadsllm_base_url")
     ollama_base_url = api_keys.get("ollama")
-    
-    # User-eigene Open Source Konfiguration
     user_opensrc_key = api_keys.get("opensrc_key")
     user_opensrc_url = api_keys.get("opensrc_url")
 
-    helper_model = model_names.get("helper", "gemini-2.0-flash-lite")
-    main_model = model_names.get("main", "gemini-2.0-pro")
+    helper_model = model_names.get("helper", "gemini-2.5-flash-lite")
+    main_model = model_names.get("main", "gemini-2.5-pro")
 
     def get_key_and_url(model_name):
-        """Bestimmt pro Modell den richtigen Key und die richtige Base URL."""
         if model_name.startswith("gpt-"):
+            if not openai_api_key: raise ValueError(f"OpenAI API Key fehlt für {model_name}.")
             return openai_api_key, None
-        
         if model_name.startswith("gemini-"):
-            # NUR wenn es wirklich mit gemini- anfängt, wird der Gemini Key erzwungen
-            if not gemini_api_key:
-                raise ValueError(f"Gemini API Key fehlt für Modell {model_name}")
+            if not gemini_api_key: raise ValueError(f"Gemini API Key fehlt für {model_name}.")
             return gemini_api_key, None
-        
         if model_name == "llama3":
+            if not ollama_base_url: raise ValueError(f"Ollama URL fehlt für {model_name}.")
             return None, ollama_base_url
-        
-        # Logik für Open Source / ScadsLLM / Aliasse
-        # Falls der User in der UI einen eigenen OS-Key/URL hinterlegt hat, nimm diesen
         if user_opensrc_url:
             return user_opensrc_key, user_opensrc_url
-            
-        # Sonst Fallback auf System-ScadsLLM
         return scadsllm_api_key, scadsllm_base_url
 
-    # Zuweisung für Helper und Main
+    # 2. Key-Zuweisung & Pre-flight Check
     helper_api_key, helper_base_url = get_key_and_url(helper_model)
     main_api_key, main_base_url = get_key_and_url(main_model)
 
-    
+    update_status("🔑 Validierung der API-Keys (Pre-flight)...")
+    validate_llm_credentials(helper_model, helper_api_key, helper_base_url)
+    if helper_model != main_model:
+        validate_llm_credentials(main_model, main_api_key, main_base_url)
 
-    # Error Handling für fehlende API Keys
-    if not gemini_api_key and "gemini" in helper_model:
-        raise ValueError("Gemini API Key was not provided in api_keys dictionary.")
-
-    # URL Extraktion
-    repo_url = None
+    # 3. Repository klonen
     url_pattern = r"https?://(?:www\.)?github\.com/[^\s]+"
     match = re.search(url_pattern, user_input)
-
-    if match:
-        repo_url = match.group(0)
-        logging.info(f"Extracted repository URL: {repo_url}")
-    else:
-        raise ValueError("Could not find a valid URL in the provided input.")
+    if not match: raise ValueError("Keine gültige GitHub-URL gefunden.")
+    repo_url = match.group(0)
     
-    # Repo klonen und Dateien extrahieren
     update_status(f"⬇️ Klone Repository: {repo_url} ...")
-    
-    repo_files = []
-    local_repo_path = "" 
-
-    try: 
-
+    try:
         with GitRepository(repo_url) as repo:
             repo_files = repo.get_all_files()
             local_repo_path = repo.temp_dir
 
-            logging.info(f"Total files retrieved: {len(repo_files)}")
-
-    except Exception as e:
-        logging.error(f"Error cloning repository: {e}")
-        raise 
-
-
-    # Extrahiere Basic Infos
-    update_status("ℹ️ Extrahiere Basis-Informationen...")
-    try:
-        info_extractor = ProjektInfoExtractor()
-        basic_project_info = info_extractor.extrahiere_info(dateien=repo_files, repo_url=repo_url)
-        logging.info("Basic project info extracted")
-    except Exception as e:
-        logging.error(f"Error extracting basic project info: {e}")
-        basic_project_info = "Could not extract basic info."
-
-    # Erstelle Repository Dateibaum
-    update_status("🌲 Erstelle Repository Dateibaum...")
-    try:
-        repo_file_tree = repo.get_file_tree()
-        logging.info("Repository file tree constructed")
-    except Exception as e:
-        logging.error(f"Error constructing repository file tree: {e}")
-        repo_file_tree = "Could not create file tree."
-
-    # Relationship Analyse durchführen
-    update_status("🔗 Analysiere Beziehungen (Calls & Instanziierungen)...")
-    try:
-        rel_analyzer = ProjectAnalyzer(project_root=local_repo_path)
-        rel_analyzer.analyze()
-        
-        raw_relationships = rel_analyzer.get_raw_relationships()
-        
-        logging.info(f"Relationships analyzed.")
-    except Exception as e:
-        logging.error(f"Error in relationship analyzer: {e}")
-        raw_relationships = {"outgoing": {}, "incoming": {}}
-
-    # Erstelle AST Schema
-    update_status("🌳 Erstelle Abstract Syntax Tree (AST)...")
-    try:        
-        ast_analyzer = ASTAnalyzer()   
-        ast_schema = ast_analyzer.analyze_repository(files=repo_files, repo=repo)
-        logging.info("AST schema created")
-    except Exception as e:
-        logging.error(f"Error retrieving repository files: {e}")
-        raise
-
-    # Anreichern des AST Schemas mit Relationship Daten
-    update_status("➕ Reiche AST mit Beziehungsdaten an...")            
-    try:   
-        ast_schema = ast_analyzer.merge_relationship_data(ast_schema, raw_relationships)
-        logging.info("AST schema created and enriched")
-
-    except Exception as e:
-        logging.error(f"Error processing repository: {e}")
-        raise
-
-    # Vorbereitung der HelperLLM Eingaben
-    update_status("⚙️ Bereite Daten für Helper LLM vor...")
-    
-    helper_llm_function_input = []
-    helper_llm_class_input = []
-
-    try:
-        for filename, file_data in ast_schema['files'].items():
-            ast_nodes = file_data.get('ast_nodes', {})
-            imports = ast_nodes.get('imports', [])
-            functions = ast_nodes.get('functions', [])
-            classes = ast_nodes.get('classes', [])
-
-            for function in functions:
-                context = function.get('context', {})
-                
-                raw_called_by = context.get('called_by', [])
-                clean_called_by = [cb for cb in raw_called_by if isinstance(cb, dict)]
-
-                function_context = FunctionContextInput(
-                    calls = context.get('calls', []),
-                    called_by = clean_called_by 
-                )
-                
-                function_input = FunctionAnalysisInput(
-                    mode = function.get('mode', 'function_analysis'),
-                    identifier = function.get('identifier'),
-                    source_code = function.get('source_code'),
-                    imports = imports,
-                    context = function_context
-                )
-                
-                helper_llm_function_input.append(function_input)
-
-            for _class in classes:
-                context = _class.get('context', {})
-                
-                method_context_inputs = []
-                for method in context.get('method_context', []):
-                    
-                    raw_method_called_by = method.get('called_by', [])
-                    clean_method_called_by = [cb for cb in raw_method_called_by if isinstance(cb, dict)]
-
-                    method_context_inputs.append(
-                        MethodContextInput(
-                            identifier=method.get('identifier'),
-                            calls=method.get('calls', []),
-                            called_by=clean_method_called_by, 
-                            args=method.get('args', []),
-                            docstring=method.get('docstring')
-                        )
-                    )
-
-                raw_instantiated_by = context.get('instantiated_by', [])
-                clean_instantiated_by = [ib for ib in raw_instantiated_by if isinstance(ib, dict)]
-
-                class_context = ClassContextInput(
-                    dependencies = context.get('dependencies', []),
-                    instantiated_by = clean_instantiated_by, 
-                    method_context = method_context_inputs
-                )
-
-                class_input = ClassAnalysisInput(
-                    mode = _class.get('mode', 'class_analysis'),
-                    identifier =_class.get('identifier'),
-                    source_code = _class.get('source_code'), 
-                    imports = imports, 
-                    context = class_context
-                )
-                
-                helper_llm_class_input.append(class_input)
-
-    except Exception as e:
-        logging.error(f"Error preparing inputs for Helper LLM: {e}")
-        raise
-    
-    # Initialisiere HelperLLM
-    function_prompt_file = 'SystemPrompts/SystemPromptFunctionHelperLLM.txt'
-    class_prompt_file = 'SystemPrompts/SystemPromptClassHelperLLM.txt'
-    
-    llm_helper = LLMHelper(
-        api_key=helper_api_key, 
-        function_prompt_path=function_prompt_file, 
-        class_prompt_path=class_prompt_file,
-        model_name=helper_model,
-        base_url=helper_base_url,
-    )
-    
-    if ollama_base_url:
-        os.environ["OLLAMA_BASE_URL"] = ollama_base_url
-
-    # Initialisiere Ergebniscontainer
-    analysis_results = {}
-    function_analysis_results = []
-    class_analysis_results = []
-
-    # Call HelperLLM für Funktionen
-    update_status(f"🤖 Helper LLM: Analysiere {len(helper_llm_function_input)} Funktionen ({helper_model})...")
-
-    try:
-        net_time_func = 0
-        if len(helper_llm_function_input) > 0:
-
-            logging.info("\n--- Generating documentation for Functions ---")
-            t_start_func = time.time()    
-            function_analysis_results = llm_helper.generate_for_functions(helper_llm_function_input)    
-            t_end_func = time.time()
-            net_time_func = calculate_net_time(t_start_func, t_end_func, len(helper_llm_function_input), llm_helper.batch_size, helper_model)
-
-        if len(function_analysis_results) != 0:
-            for doc in function_analysis_results:
-                if doc:
-                    logging.info(f"Successfully generated doc for: {doc.identifier}")
-                    if "functions" not in analysis_results:
-                        analysis_results["functions"] = {}
-                    analysis_results["functions"][doc.identifier] = doc.model_dump() 
-                else:
-                    logging.warning(f"Failed to generate doc for a function") 
-    except Exception as e:
-        logging.error(f"Error during Helper LLM function analysis: {e}")
-        raise
-    
-
-    # Call HelperLLM für Klassen
-    try:
-        net_time_class = 0
-        if len(helper_llm_class_input) > 0:
-            # Rate Limit Sleep für Gemini Modelle
-            if llm_helper.model_name.startswith("gemini-") & (len(helper_llm_function_input) > 0):
-                update_status("💤 Wartezeit eingelegt, um Rate Limits einzuhalten...")
-                time.sleep(65)
-            
-            update_status(f"🤖 Helper LLM: Analysiere {len(helper_llm_class_input)} Klassen ({helper_model})...")
-            
-            logging.info("\n--- Generating documentation for Classes ---")
-            t_start_class = time.time()
-            class_analysis_results = llm_helper.generate_for_classes(helper_llm_class_input)
-            t_end_class = time.time()
-            net_time_class = calculate_net_time(t_start_class, t_end_class, len(helper_llm_class_input), llm_helper.batch_size, helper_model)
-
-        if len(class_analysis_results) != 0:
-            for doc in class_analysis_results:
-                if doc:
-                    logging.info(f"Successfully generated doc for: {doc.identifier}")
-                    if "classes" not in analysis_results:
-                        analysis_results["classes"] = {}
-                    analysis_results["classes"][doc.identifier] = doc.model_dump() 
-                else:
-                    logging.warning(f"Failed to generate doc for a class")
-    except Exception as e:
-        logging.error(f"Error during Helper LLM class analysis: {e}")
-        raise
-
-    total_helper_time = net_time_func + net_time_class
-
-    # MainLLM Input Vorbereitung
-    main_llm_input = {
-        "basic_info": basic_project_info,
-        "file_tree": repo_file_tree,
-        "ast_schema": ast_schema,
-        "analysis_results": analysis_results
-    }
-
-    # Speichern als JSON (Optional)
-    main_llm_input_json = json.dumps(main_llm_input, indent=2)
-    # with open("output.json", "w", encoding="utf-8") as f:
-    #     f.write(main_llm_input_json)
-    #     logging.info("JSON-Datei wurde gespeichert.")
-
-    # Konvertiere Input in Toon Format
-    main_llm_input_toon = encode(main_llm_input)
-
-    #Speichern in TOON Format (Optional)
-    # with open("output.toon", "w", encoding="utf-8") as f:
-    #     f.write(main_llm_input_toon)
-    #     logging.info("output.toon erfolgreich gespeichert.")
-    
-    # Token Evaluation
-    savings_data = None
-    try:
-        logging.info("--- Evaluierung der Token-Ersparnis ---")
-        savings_data = estimate_savings(main_llm_input)
-        logging.info(f"JSON Tokens: {savings_data['json_tokens']}")
-        logging.info(f"TOON Tokens: {savings_data['toon_tokens']}")
-        logging.info(f"Ersparnis:   {savings_data['savings_percent']:.2f}%")
-        
-    except Exception as e:
-        logging.warning(f"Token evaluation could not be performed: {e}")    
-
-
-
-    prompt_file_mainllm = "SystemPrompts/SystemPromptMainLLM.txt"
-    prompt_file_mainllm_toon = "SystemPrompts/SystemPromptMainLLMToon.txt"
-    # MainLLM Ausführung
-    main_llm = MainLLM(
-        api_key=main_api_key, 
-        prompt_file_path=prompt_file_mainllm_toon,
-        model_name=main_model,
-        base_url=main_base_url,
-    )
-
-
-    # RPM Limit Sleep für Gemini Modelle
-    if llm_helper.model_name == main_llm.model_name and main_llm.model_name.startswith("gemini-"):
-        time.sleep(65)
-        update_status("💤 Wartezeit eingelegt, um Rate Limits einzuhalten...")
-
-    # Call MainLLM für finalen Report
-    update_status(f"🧠 Main LLM: Generiere finalen Report ({main_model})...")
-    try:
-        total_main_time = 0
-        logging.info("\n--- Generating Final Report ---")
-        t_start_main = time.time()
-        final_report = main_llm.call_llm(main_llm_input_toon)
-        t_end_main = time.time()
-        total_main_time = t_end_main - t_start_main
-    except Exception as e:
-        logging.error(f"Error during Main LLM final report generation: {e}")
-        raise
-
-    
-    # --- Speichern der Ergebnisse ---
-    output_dir = "result"
-    stats_dir = "Statistics" # Neuer Ordner
-    os.makedirs(output_dir, exist_ok=True)
-    os.makedirs(stats_dir, exist_ok=True) # Stelle sicher, dass Statistics Ordner existiert
-
-    total_active_time = total_helper_time + total_main_time
-    
-    # Dateiname für Report
-    timestamp = datetime.now().strftime("%d_%m_%Y_%H-%M-%S")
-    report_filename = f"report_{timestamp}_Helper_{llm_helper.model_name}_MainLLM_{main_llm.model_name}.md"
-    report_filepath = os.path.join(output_dir, report_filename)
-    
-    if final_report:
-        with open(report_filepath, "w", encoding="utf-8") as f:
-            f.write(final_report)
-        logging.info(f"Final report saved to '{report_filepath}'.")
-        
-        if savings_data:
-            try:
-                savings_filename = report_filename.replace("report_", "savings_").replace(".md", ".png")
-                savings_filepath = os.path.join(stats_dir, savings_filename)
-                
-                logging.info(f"Erstelle Token-Chart: {savings_filepath}")
-                create_savings_chart(
-                    json_tokens=savings_data['json_tokens'], 
-                    toon_tokens=savings_data['toon_tokens'], 
-                    savings_percent=savings_data['savings_percent'],
-                    output_path=savings_filepath
-                )
-            except Exception as chart_error:
-                logging.error(f"Konnte Diagramm nicht erstellen: {chart_error}")
-
-    else:
-        final_report = "Error: Report generation failed or returned empty."
-
-    metrics = {
-        "helper_time": round(total_helper_time, 2),
-        "main_time": round(total_main_time, 2),
-        "total_time": round(total_active_time, 2),
-        "helper_model": helper_model,
-        "main_model": main_model,
-        "json_tokens": savings_data['json_tokens'] if savings_data else None,
-        "toon_tokens": savings_data['toon_tokens'] if savings_data else None,
-        "savings_percent": round(savings_data['savings_percent'], 2) if savings_data else None
-    
-    }
-
-    return {
-        "report": final_report,
-        "metrics": metrics
-    }
-
-
-
-
-
-def notebook_workflow(input, api_keys, model, status_callback=None, check_stop=None):
-    t_start = time.time()
-    final_report = "keine Notebooks gefunden"
-    
-    def update_status(msg):
-        # --- NEU: Prüfen ob abgebrochen wurde ---
-        if check_stop and check_stop():
-            logging.info("Interrupt empfangen. Breche notebook_workflow ab.")
-            raise InterruptedError("Analyse wurde vom User gestoppt.")
-            
-        if status_callback:
-            status_callback(msg)
-        logging.info(msg)
-
-    # --- API KEY & URL LOGIK (KONSISTENT ZU MAIN_WORKFLOW) ---
-    gemini_api_key = api_keys.get("gemini")
-    openai_api_key = api_keys.get("gpt")
-    scadsllm_api_key = api_keys.get("scadsllm")
-    scadsllm_base_url = api_keys.get("scadsllm_base_url")
-    ollama_base_url = api_keys.get("ollama")
-    
-    # User-eigene Open Source Konfiguration aus der UI
-    user_opensrc_key = api_keys.get("opensrc_key")
-    user_opensrc_url = api_keys.get("opensrc_url")
-
-    input_api_key = None
-    base_url = None
-
-    # Präzise Bestimmung des Providers
-    if model.startswith("gpt-"):
-        input_api_key = openai_api_key
-        base_url = None
-    elif model.startswith("gemini-"):
-        if not gemini_api_key:
-            raise ValueError(f"Gemini API Key fehlt für Modell {model}")
-        input_api_key = gemini_api_key
-        base_url = None
-    elif model == "llama3":
-        input_api_key = None
-        base_url = ollama_base_url
-    else:
-        # Logik für Open Source / ScadsLLM / Aliasse
-        if user_opensrc_url:
-            input_api_key = user_opensrc_key
-            base_url = user_opensrc_url
-        else:
-            input_api_key = scadsllm_api_key
-            base_url = scadsllm_base_url
-
-    update_status("🔍 Analysiere Input...")
-
-    # URL Extraktion
-    repo_url = None
-    url_pattern = r"https?://(?:www\.)?github\.com/[^\s]+"
-    match = re.search(url_pattern, input)
-
-    if match:
-        repo_url = match.group(0)
-    else:
-        raise ValueError("Keine gültige GitHub-URL im Input gefunden.")
-    
-    update_status(f"⬇️ Klone Repository: {repo_url} ...")
-
-    try: 
-        with GitRepository(repo_url) as repo:
-            repo_files = repo.get_all_files()
-            
-            # Extrahiere Basic Infos (während Repo noch offen ist)
+            # 4. Informationen extrahieren
             update_status("ℹ️ Extrahiere Basis-Informationen...")
             info_extractor = ProjektInfoExtractor()
             basic_project_info = info_extractor.extrahiere_info(dateien=repo_files, repo_url=repo_url)
+
+            update_status("🌲 Erstelle Dateibaum & Beziehungen...")
+            repo_file_tree = repo.get_file_tree()
+            rel_analyzer = ProjectAnalyzer(project_root=local_repo_path)
+            rel_analyzer.analyze()
+            raw_relationships = rel_analyzer.get_raw_relationships()
+
+            update_status("🌳 AST Analyse...")
+            ast_analyzer = ASTAnalyzer()   
+            ast_schema = ast_analyzer.analyze_repository(files=repo_files, repo=repo)
+            ast_schema = ast_analyzer.merge_relationship_data(ast_schema, raw_relationships)
+
+            # 5. Helper LLM Vorbereitung
+            update_status("⚙️ Vorbereitung Helper LLM...")
+            helper_llm_function_input = []
+            helper_llm_class_input = []
+
+            for filename, file_data in ast_schema['files'].items():
+                nodes = file_data.get('ast_nodes', {})
+                for fn in nodes.get('functions', []):
+                    ctx = fn.get('context', {})
+                    helper_llm_function_input.append(FunctionAnalysisInput(
+                        mode='function_analysis', identifier=fn.get('identifier'),
+                        source_code=fn.get('source_code'), imports=nodes.get('imports', []),
+                        context=FunctionContextInput(calls=ctx.get('calls', []), called_by=[cb for cb in ctx.get('called_by', []) if isinstance(cb, dict)])
+                    ))
+                for cl in nodes.get('classes', []):
+                    ctx = cl.get('context', {})
+                    helper_llm_class_input.append(ClassAnalysisInput(
+                        mode='class_analysis', identifier=cl.get('identifier'),
+                        source_code=cl.get('source_code'), imports=nodes.get('imports', []),
+                        context=ClassContextInput(
+                            dependencies=ctx.get('dependencies', []), instantiated_by=[ib for ib in ctx.get('instantiated_by', []) if isinstance(ib, dict)],
+                            method_context=[MethodContextInput(identifier=m.get('identifier'), calls=m.get('calls', []), called_by=[cb for cb in m.get('called_by', []) if isinstance(cb, dict)], args=m.get('args', []), docstring=m.get('docstring')) for m in ctx.get('method_context', [])]
+                        )
+                    ))
+
+            llm_helper = LLMHelper(api_key=helper_api_key, function_prompt_path='SystemPrompts/SystemPromptFunctionHelperLLM.txt', class_prompt_path='SystemPrompts/SystemPromptClassHelperLLM.txt', model_name=helper_model, base_url=helper_base_url)
+            analysis_results = {"functions": {}, "classes": {}}
+
+            # Helper LLM Ausführung
+            update_status(f"🤖 Helper LLM: Analysiere {len(helper_llm_function_input)} Funktionen...")
+            t_start_h = time.time()
+            if helper_llm_function_input:
+                res_f = llm_helper.generate_for_functions(helper_llm_function_input)
+                for r in res_f: 
+                    if r: analysis_results["functions"][r.identifier] = r.model_dump()
             
-            update_status(f"🔗 Bereite Notebooks vor...")
-            # convert to XML/Toon (erfordert repo_files)
-            processed_data = process_repo_notebooks(repo_files)
+            if helper_llm_class_input:
+                if helper_model.startswith("gemini-"): time.sleep(65)
+                update_status(f"🤖 Helper LLM: Analysiere {len(helper_llm_class_input)} Klassen...")
+                res_c = llm_helper.generate_for_classes(helper_llm_class_input)
+                for r in res_c:
+                    if r: analysis_results["classes"][r.identifier] = r.model_dump()
             
+            total_helper_time = calculate_net_time(t_start_h, time.time(), len(helper_llm_function_input)+len(helper_llm_class_input), llm_helper.batch_size, helper_model)
+
+            # 6. Main LLM Ausführung
+            update_status(f"🧠 Main LLM: Generiere finalen Report ({main_model})...")
+            main_llm_input = {"basic_info": basic_project_info, "file_tree": repo_file_tree, "ast_schema": ast_schema, "analysis_results": analysis_results}
+            input_toon = encode(main_llm_input)
+            savings_data = estimate_savings(main_llm_input)
+
+            main_llm = MainLLM(api_key=main_api_key, prompt_file_path="SystemPrompts/SystemPromptMainLLMToon.txt", model_name=main_model, base_url=main_base_url)
+            if helper_model == main_model and main_model.startswith("gemini-"): time.sleep(65)
+            
+            t_start_m = time.time()
+            final_report = main_llm.call_llm(input_toon)
+            total_main_time = time.time() - t_start_m
+
+            if not final_report or len(final_report.strip()) < 10:
+                raise ValueError("Main-Modell lieferte keine Antwort.")
+
+            # Metriken & Speichern
+            metrics = {"helper_time": round(total_helper_time, 2), "main_time": round(total_main_time, 2), "total_time": round(total_helper_time + total_main_time, 2), "helper_model": helper_model, "main_model": main_model, "json_tokens": savings_data['json_tokens'], "toon_tokens": savings_data['toon_tokens'], "savings_percent": round(savings_data['savings_percent'], 2)}
+            return {"report": final_report, "metrics": metrics}
+
     except Exception as e:
-        logging.error(f"Error processing repository: {e}")
+        logging.error(f"Error: {e}")
         raise
 
-    if not processed_data:
-        return {
-            "report": "In diesem Repository wurden keine Jupyter Notebooks (.ipynb) gefunden.",
-            "metrics": {"total_time": round(time.time() - t_start, 2), "main_model": model}
-        }
+def notebook_workflow(input, api_keys, model, status_callback=None, check_stop=None):
+    t_start = time.time()
+    def update_status(msg):
+        if check_stop and check_stop(): raise InterruptedError("Abgebrochen.")
+        if status_callback: status_callback(msg)
+        logging.info(msg)
 
-    # Initialisiere LLM
-    prompt_file_notebook_llm = "SystemPrompts/SystemPromptNotebookLLM.txt"
-    notebook_llm = MainLLM(
-        api_key=input_api_key, 
-        prompt_file_path=prompt_file_notebook_llm,
-        model_name=model,
-        base_url=base_url,
-    )
+    # API Key Logik
+    gemini_key = api_keys.get("gemini")
+    openai_key = api_keys.get("gpt")
+    scads_key = api_keys.get("scadsllm")
+    scads_url = api_keys.get("scadsllm_base_url")
+    ollama_url = api_keys.get("ollama")
+    user_os_key = api_keys.get("opensrc_key")
+    user_os_url = api_keys.get("opensrc_url")
 
-    notebook_reports = []
-    total_notebooks = len(processed_data)
-    
-    # Hilfsfunktion für Gemini-Payload (bleibt gleich)
-    def gemini_payload(info, path, xml, imgs):
-        intro_json = json.dumps({"basic_info": info, "current_notebook_path": path}, indent=2)
-        payload = [{"type": "text", "text": f"Context Information:\n{intro_json}\n\nNotebook XML Structure:\n"}]
-        pattern = r'(<IMAGE_PLACEHOLDER index="(\d+)" mime="([^"]+)"/>)'
-        last_pos = 0
-        for m in re.finditer(pattern, xml):
-            payload.append({"type": "text", "text": xml[last_pos:m.start()]})
-            idx = int(m.group(2))
-            mime = m.group(3)
-            if idx < len(imgs):
-                payload.append({"type": "image_url", "image_url": {"url": f"data:{mime};base64,{imgs[idx]['data']}"}})
-            last_pos = m.end()
-        payload.append({"type": "text", "text": xml[last_pos:]})
-        return payload
+    if model.startswith("gpt-"): input_api_key, base_url = openai_key, None
+    elif model.startswith("gemini-"):
+        if not gemini_key: raise ValueError("Gemini Key fehlt.")
+        input_api_key, base_url = gemini_key, None
+    elif model == "llama3": input_api_key, base_url = None, ollama_url
+    else:
+        input_api_key = user_os_key if user_os_url else scads_key
+        base_url = user_os_url if user_os_url else scads_url
 
-    # Sequentielle Verarbeitung
-    for index, (nb_path, nb_data) in enumerate(processed_data.items(), 1):
-        update_status(f"🧠 Generiere Report ({index}/{total_notebooks}): {os.path.basename(nb_path)}")
-        
-        llm_payload = gemini_payload(basic_project_info, nb_path, nb_data['xml'], nb_data['images'])
+    update_status("🔑 Validierung des API-Keys...")
+    validate_llm_credentials(model, input_api_key, base_url)
 
-        try:
-            single_report = notebook_llm.call_llm(llm_payload)
-            if single_report:
-                notebook_reports.append(single_report)
-            else:
-                notebook_reports.append(f"## Analyse für {os.path.basename(nb_path)}\nFehler: Keine Antwort vom Modell.")
-        except Exception as e:
-            logging.error(f"Fehler bei {nb_path}: {e}")
-            notebook_reports.append(f"## Fehler bei {os.path.basename(nb_path)}\n{str(e)}")
+    update_status("🔍 Klone Repo & bereite Notebooks vor...")
+    url_match = re.search(r"https?://(?:www\.)?github\.com/[^\s]+", input)
+    if not url_match: raise ValueError("Ungültige URL.")
+    repo_url = url_match.group(0)
 
-    final_report = "\n\n---\n\n".join(notebook_reports)
-    
-    # Zeitmessung
-    total_time = time.time() - t_start
-    
-    return {
-        "report": final_report,
-        "metrics": {
-            "helper_time": 0,
-            "main_time": round(total_time, 2),
-            "total_time": round(total_time, 2),
-            "helper_model": "None",
-            "main_model": model,
-            "json_tokens": 0,
-            "toon_tokens": 0,
-            "savings_percent": 0
-        }
-    }
+    try:
+        with GitRepository(repo_url) as repo:
+            repo_files = repo.get_all_files()
+            info_extractor = ProjektInfoExtractor()
+            basic_info = info_extractor.extrahiere_info(dateien=repo_files, repo_url=repo_url)
+            processed_data = process_repo_notebooks(repo_files)
 
-if __name__ == "__main__":
-    #user_input = "https://github.com/christiand03/repo-onboarding-agent"
-    #main_workflow(user_input, api_keys={"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model_names={"helper": "alias-code", "main": "alias-ha"})
+            if not processed_data:
+                return {"report": "Keine Notebooks gefunden.", "metrics": {"total_time": round(time.time()-t_start, 2), "main_model": model}}
 
-    #notebook_input = "https://github.com/christiand03/predicting-power-consumption-uni"
-    #notebook_input = "https://github.com/christiand03/clustering-and-classification-uni"
-    notebook_input= "https://github.com/Schmarc4/Monarchs"
-   # notebook_workflow(notebook_input, api_keys= {"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model= "gemini-2.5-flash")
+            notebook_ll = MainLLM(api_key=input_api_key, prompt_file_path="SystemPrompts/SystemPromptNotebookLLM.txt", model_name=model, base_url=base_url)
+            notebook_reports = []
+
+            for idx, (path, data) in enumerate(processed_data.items(), 1):
+                update_status(f"🧠 Analysiere Notebook {idx}/{len(processed_data)}: {os.path.basename(path)}")
+                
+                # Payload Erstellung (Multimodal)
+                intro = json.dumps({"basic_info": basic_info, "path": path}, indent=2)
+                payload = [{"type": "text", "text": f"Context:\n{intro}\n\nStructure:\n"}]
+                last_pos = 0
+                for m in re.finditer(r'(<IMAGE_PLACEHOLDER index="(\d+)" mime="([^"]+)"/>)', data['xml']):
+                    payload.append({"type": "text", "text": data['xml'][last_pos:m.start()]})
+                    i_idx = int(m.group(2))
+                    if i_idx < len(data['images']):
+                        payload.append({"type": "image_url", "image_url": {"url": f"data:{m.group(3)};base64,{data['images'][i_idx]['data']}"}})
+                    last_pos = m.end()
+                payload.append({"type": "text", "text": data['xml'][last_pos:]})
+
+                report = notebook_ll.call_llm(payload)
+                notebook_reports.append(report if report else f"Fehler bei {os.path.basename(path)}")
+
+            final_report = "\n\n---\n\n".join(notebook_reports)
+            return {"report": final_report, "metrics": {"helper_time": 0, "main_time": round(time.time()-t_start, 2), "total_time": round(time.time()-t_start, 2), "helper_model": "None", "main_model": model, "json_tokens": 0, "toon_tokens": 0, "savings_percent": 0}}
+
+    except Exception as e:
+        logging.error(f"Error: {e}")
+        raise

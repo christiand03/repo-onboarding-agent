@@ -25,7 +25,7 @@ class MainLLM:
     """
     def __init__(self, api_key: str, prompt_file_path: str, model_name: str = "gemini-2.5-pro", base_url: str = None):
         if not api_key:
-            raise ValueError("Gemini API Key must be set.")
+            raise ValueError("API Key fehlt. Bitte setzen Sie den API Key entsprechend.")
         
         try:
             with open(prompt_file_path, 'r', encoding='utf-8') as f:
@@ -51,7 +51,7 @@ class MainLLM:
             )
         elif "/" in model_name or model_name.startswith("alias-") or any(x in model_name for x in ["DeepSeek", "Teuken", "Llama", "Qwen", "gpt-oss", "openGPT"]):
             if not SCADSLLM_URL:
-                raise ValueError(f"SCADSLLM_URL environment variable is required for model {model_name}")
+                raise ValueError(f"SCADSLLM_URL wird für folgendes Modell benötigt: {model_name}")
             
             logging.info(f"Connecting to Custom API at {SCADSLLM_URL} for model {model_name}")
             
