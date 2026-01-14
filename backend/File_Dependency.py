@@ -17,8 +17,8 @@ from ast import (
 from keyword import iskeyword
 from pathlib import Path
 
-from getRepo import GitRepository
-from callgraph import make_safe_dot
+from .getRepo import GitRepository
+from .callgraph import make_safe_dot
 class FileDependencyGraph(NodeVisitor):
 
     import_dependencies: dict[str, set[str]] = {}

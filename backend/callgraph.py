@@ -2,7 +2,7 @@ import ast
 import networkx as nx
 from pathlib import Path
 
-from getRepo import GitRepository
+from .getRepo import GitRepository
 
 
 class CallGraph(ast.NodeVisitor):
