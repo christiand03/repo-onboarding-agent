@@ -1,3 +1,4 @@
+import uuid
 import numpy as np
 from datetime import datetime
 import time
@@ -144,9 +145,13 @@ def save_ollama_cb():
 
 def get_last_activity(chat_name):
     """Ermittelt den Zeitstempel der letzten Nachricht in einem Chat."""
-    exchanges = st.session_state.chats.get(chat_name, {}).get("exchanges", [])
+    chat_data = st.session_state.chats.get(chat_name, {})
+    exchanges = chat_data.get("exchanges", [])
+    
+    creation_dt = chat_data.get("created_at", datetime.min)
+
     if not exchanges:
-        return datetime.min
+        return creation_dt
     # Wir nehmen das Feld 'datetime' aus dem exchange (stelle sicher, dass es ein datetime-objekt ist)
     last_ex = exchanges[-1]
     dt = last_ex.get("datetime", datetime.min)
@@ -162,7 +167,10 @@ def load_data_from_db(username: str):
         for c in db_chats:
             c_name = c.get("chat_name")
             if c_name:
-                st.session_state.chats[c_name] = {"exchanges": []}
+                st.session_state.chats[c_name] = {
+                    "exchanges": [],
+                    "created_at": c.get("created_at", datetime.min)
+                }
 
         db_exchanges = db.fetch_exchanges_by_user(username)
         for ex in db_exchanges:
@@ -408,7 +416,10 @@ if st.session_state["authentication_status"]:
                     # KONSISTENZ: Sofort in DB schreiben
                     db.insert_chat(current_user, new_name)
                     # In Session State
-                    st.session_state.chats[new_name] = {"exchanges": []}
+                    st.session_state.chats[new_name] = {
+                        "exchanges": [],
+                        "created_at": datetime.now()
+                    }
                     st.session_state.active_chat = new_name
                     st.rerun()
 
@@ -436,137 +447,117 @@ if st.session_state["authentication_status"]:
         
 
         with st.container(border=None, gap=None):
-            st.toggle("Notebook Modus", key="notebook_mode", help="ermöglicht wenn aktiviert die Dokumentation von Jupyter Notebooks, deaktiviert werden .py files ausgewertet", value=False)  
+            st.toggle("Notebook Modus", key="notebook_mode", help="Aktiviert können Jupyter Notebooks (.ipynb) ausgewertet werden, deaktiviert werden Python (.py) files ausgewertet", value=False)  
             with st.popover("⚙️ Einstellungen", type="tertiary"):
-                col1 , col2 = st.columns(2)
-                with col1:
-                    st.caption("🤖 Modelle")
+                # 1. API Keys & Status vorab laden
+                gemini_key, ollama_url, gpt_key, opensrc_key, opensrc_url = db.get_decrypted_api_keys(current_user)
+                has_gemini, has_ollama, has_gpt = bool(gemini_key), bool(ollama_url), bool(gpt_key)
+                has_opensrc_url, has_opensrc_key = bool(opensrc_url), bool(opensrc_key)
+
+                # 2. Hilfsfunktionen definieren
+                def get_provider(model_name):
+                    if not model_name or model_name == "None": return None
+                    if model_name.startswith("gemini"): return "Google Gemini"
+                    if model_name == "llama3": return "ollama"
+                    if model_name.startswith("gpt-5"): return "gpt"
+                    return "Open Source LLM"
+
+                def render_config_form(model_name):
+                    provider = get_provider(model_name)
+                    if provider == "Google Gemini":
+                        status_icon = "✅" if has_gemini else "❌"
+                        st.markdown(f"**Gemini Key**: {status_icon} {'Gesetzt' if has_gemini else 'Fehlt'}")
+                        with st.form(f"form_gemini_{model_name}"):
+                            new_gemini = st.text_input("Gemini Key ändern", type="password")
+                            if st.form_submit_button("Speichern") and new_gemini:
+                                db.update_gemini_key(current_user, new_gemini)
+                                st.success("Gespeichert!")
+                                time.sleep(0.5); st.rerun()
+                            if st.form_submit_button("Löschen"):
+                                db.update_gemini_key(current_user, "")
+                                st.rerun()
+
+                    elif provider == "ollama":
+                        status_icon = "✅" if has_ollama else "❌"
+                        st.markdown(f"**Llama URL**: {status_icon} {'Gesetzt' if has_ollama else 'Fehlt'}")
+                        with st.form(f"form_ollama_{model_name}"):
+                            new_ollama = st.text_input("Llama Base URL ändern", value=ollama_url if ollama_url else "")
+                            if st.form_submit_button("Speichern"):
+                                db.update_ollama_url(current_user, new_ollama)
+                                st.success("Gespeichert!"); time.sleep(0.5); st.rerun()
+                            if st.form_submit_button("Löschen"):
+                                db.update_ollama_url(current_user, "")
+                                st.rerun()
+
+                    elif provider == "gpt":
+                        status_icon = "✅" if has_gpt else "❌"
+                        st.markdown(f"**GPT Key**: {status_icon} {'Gesetzt' if has_gpt else 'Fehlt'}")
+                        with st.form(f"form_gpt_{model_name}"):
+                            new_gpt = st.text_input("GPT Key ändern", type="password")
+                            
+                            if st.form_submit_button("Speichern") and new_gpt:
+                                db.update_gpt_key(current_user, new_gpt)
+                                st.success("Gespeichert!"); time.sleep(0.5); st.rerun()
+                            if st.form_submit_button("Löschen"):
+                                db.update_gpt_key(current_user, "")
+                                st.rerun()
+                    
+                    elif provider == "Open Source LLM":
+                        status_icon = "✅" if has_opensrc_key else "❌"
+                        st.markdown(f"**OS Key**: {status_icon} | **URL**: {'✅' if has_opensrc_url else '❌'}")
+                        with st.form(f"form_os_{model_name}"):
+                            n_key = st.text_input("Open Source Key", type="password")
+                            n_url = st.text_input("Open Source URL", value=opensrc_url if opensrc_url else "")
+                            if st.form_submit_button("Speichern"):
+                                if n_key: db.update_opensrc_key(current_user, n_key)
+                                db.update_opensrc_url(current_user, n_url)
+                                st.success("Gespeichert!"); time.sleep(0.5); st.rerun()
+                            if st.form_submit_button("Löschen"):
+                                db.update_opensrc_key(current_user, ""); db.update_opensrc_url(current_user, "")
+                                st.rerun()
+
+                # 3. Layout: Basis-Spalten (Links: Modelle, Rechts: Platz für Keys)
+                base_col_left, base_col_right = st.columns([1, 2])
+
+                with base_col_left:
+                    st.caption("🤖 Modellauswahl")
                     sbhelp = "None"
-                    # Helper LLM Auswahl
-                    if  not st.session_state.notebook_mode:
-                        cat_helper = st.selectbox(
-                        "Helper Modell:", 
-                        list(CATEGORY_KEYWORDS.keys()), 
-                        index=0, 
-                        key="cat_helper"
-                        )
-                        filtered_helpers = get_filtered_models(ALL_HELPER_MODELS, cat_helper)
-
-                        sbhelp = st.selectbox(
-                            "Helper LLM", 
-                            filtered_helpers,
-                            index=0, # Standard auf das erste Element (gemini-2.0-flash-lite)
-                            label_visibility="collapsed"
-                        )
+                    if not st.session_state.notebook_mode:
+                        cat_h = st.selectbox("Kategorie Helper:", list(CATEGORY_KEYWORDS.keys()), index=0, key="cat_h")
+                        sbhelp = st.selectbox("Helper LLM", get_filtered_models(ALL_HELPER_MODELS, cat_h), index=0)
                     
-                    cat_main = st.selectbox(
-                        "Main Modell:", 
-                        list(CATEGORY_KEYWORDS.keys()), 
-                        index=0, # Default: Favoriten
-                        key="cat_main"
-                    )
-                    filtered_mains = get_filtered_models(ALL_MAIN_MODELS, cat_main)
+                    cat_m = st.selectbox("Kategorie Main:", list(CATEGORY_KEYWORDS.keys()), index=0, key="cat_m")
+                    sbmain = st.selectbox("Main LLM", get_filtered_models(ALL_MAIN_MODELS, cat_m), index=2)
 
-                    # Main LLM Auswahl
-                    sbmain = st.selectbox(
-                        "Main LLM", 
-                        filtered_mains,
-                        index=2, # Standard z.B. auf gemini-2.5-pro
-                        label_visibility="collapsed"
-                    )
-                    
                     if not st.session_state.notebook_mode:
                         st.caption(f"Gewählt: Python Modus mit: \n\n {sbhelp} -> {sbmain}")
                     else:
                         st.caption(f"Gewählt: Notebook Modus mit: \n\n {sbmain}")
-                    
 
-                # API Keys holen
-                gemini_key, ollama_url, gpt_key , opensrc_key, opensrc_url = db.get_decrypted_api_keys(current_user)
-                has_gemini = bool(gemini_key)
-                has_ollama = bool(ollama_url)
-                has_gpt = bool(gpt_key)
-                has_opensrc_url = bool(opensrc_url)
-                has_opensrc_key = bool(opensrc_key)
+                # 4. Dynamische Config-Spalten in base_col_right
+                p_help = get_provider(sbhelp)
+                p_main = get_provider(sbmain)
 
-                with col2:
+                with base_col_right:
+                    # Fall: Zwei verschiedene Provider im Python Modus -> 2 Config Spalten
+                    if not st.session_state.notebook_mode and p_help != p_main:
+                        st.caption("🔑 API Konfiguration")
+                        sub_col1, sub_col2 = st.columns(2)
+                        with sub_col1:
+                            st.caption(f"Helper: {p_help}")
+                            render_config_form(sbhelp)
+                        with sub_col2:
+                            st.caption(f"Main: {p_main}")
+                            render_config_form(sbmain)
                     
-                    # Logik: Zeige Inputs nur für Modelle, die User-Keys brauchen
-                    def get_provider(model_name):
-                        if model_name.startswith("gemini"):
-                            return "Google Gemini"
-                        elif model_name == "llama3":
-                            return "ollama"
-                        elif model_name.startswith("gpt-5"):
-                            return "gpt"
+                    # Fall: Notebook Modus ODER gleiche Provider -> 1 Config Spalte
+                    else:
+                        st.caption("🔑 API Konfiguration")
+                        if st.session_state.notebook_mode:
+                            st.caption(f"Modell: {p_main}")
                         else:
-                            return "Open Source LLM"
-                    
-                    def config_provider(model_name):
-                        if model_name.startswith("gemini"): 
-                            status_icon = "✅" if has_gemini else "❌"
-                            st.markdown(f"**Gemini Key**: {status_icon} {'Gesetzt' if has_gemini else 'Fehlt'}")
-                            with st.form("gemini_form"):
-                                new_gemini = st.text_input("Gemini Key ändern", type="password")
-                                if st.form_submit_button("Speichern") and new_gemini:
-                                    db.update_gemini_key(current_user, new_gemini)
-                                    st.success("Gespeichert!")
-                                    time.sleep(0.5)
-                                    st.rerun() 
-                        
-                        elif model_name == "llama3":
-                            status_icon = "✅" if has_ollama else "❌"
-                            st.markdown(f"**Llama URL**: {status_icon} {'Gesetzt' if has_ollama else 'Fehlt'}")
-                            current_url_val = ollama_url if ollama_url else ""
-                            with st.form("ollama_form"):
-                                new_ollama = st.text_input("Llama Base URL ändern", value=current_url_val)
-                                if st.form_submit_button("Speichern"):
-                                    if new_ollama != current_url_val:
-                                        db.update_ollama_url(current_user, new_ollama)
-                                        st.success("Gespeichert!")
-                                        time.sleep(0.5)
-                                        st.rerun()
-
-                        elif model_name.startswith("gpt-5"):
-                            status_icon = "✅" if has_gpt else "❌"
-                            st.markdown(f"**GPT Key**: {status_icon} {'Gesetzt' if has_gpt else 'Fehlt'}")
-                            with st.form("gpt_form"):
-                                new_gpt = st.text_input("GPT Key ändern", type="password")
-                                if st.form_submit_button("Speichern") and new_gpt:
-                                    db.update_gpt_key(current_user, new_gpt)
-                                    st.success("Gespeichert!")
-                                    time.sleep(0.5)
-                                    st.rerun()
-                        else:
-                            status_icon = "✅" if has_opensrc_key else "❌"  
-                            st.markdown(f"**Open Source LLM Key**: {status_icon} {'Gesetzt' if has_opensrc_key else 'Fehlt'}")
-                            status_icon_url = "✅" if has_opensrc_url else "❌"
-                            st.markdown(f"**Open Source LLM URL**: {status_icon_url} {'Gesetzt' if has_opensrc_url else 'Fehlt'}")
-                            with st.form("opensrc_form"):
-                                new_opensrc_key = st.text_input("Open Source LLM Key ändern", type="password")
-                                new_opensrc_url = st.text_input("Open Source LLM URL ändern")
-                                if st.form_submit_button("Speichern"):
-                                    if new_opensrc_key:
-                                        db.update_opensrc_key(current_user, new_opensrc_key)
-                                    if new_opensrc_url:
-                                        db.update_opensrc_url(current_user, new_opensrc_url)
-                                    st.success("Gespeichert!")
-                                    time.sleep(0.5)
-                                    st.rerun()      
-
-
-                    st.caption("API Keys Konfiguration")
-                    if get_provider(sbhelp) == get_provider(sbmain) :
-                        st.caption("Helper und Main Konfiguration:")
-                        config_provider(sbmain)
-                    elif get_provider(sbhelp) != get_provider(sbmain) and not st.session_state.notebook_mode:
-                        st.caption("Helper Konfiguration:")
-                        config_provider(sbhelp)
-                        st.caption("Main Konfiguration:")
-                        config_provider(sbmain)                           
-                    elif st.session_state.notebook_mode:
-                        st.caption("Main Konfiguration:")
-                        config_provider(sbmain)
+                            st.caption(f"Gemeinsamer Provider: {p_main}")
+                        render_config_form(sbmain)
 
                        
             
@@ -605,17 +596,6 @@ if st.session_state["authentication_status"]:
     if prompt := st.chat_input("Link zum Git Repository..."):
         # --- 0. FEHLER-CLEANUP ---
         current_chat_name = st.session_state.active_chat
-        if current_chat_name in st.session_state.chats:
-            original_exchanges = st.session_state.chats[current_chat_name]["exchanges"]
-            valid_exchanges = []
-            for ex in original_exchanges:
-                answer = ex.get("answer", "")
-                # Lösche Fehler oder Abbruch-Nachrichten, damit der Chat sauber bleibt
-                if not (answer.startswith("Fehler") or answer.startswith("Error") or "abgebrochen" in answer.lower()):
-                    valid_exchanges.append(ex)
-                else:
-                    db.delete_exchange_by_id(ex["_id"])
-            st.session_state.chats[current_chat_name]["exchanges"] = valid_exchanges
 
         st.chat_message("user").write(prompt)
         
@@ -720,40 +700,51 @@ if st.session_state["authentication_status"]:
                 st.write("Antwort generiert:")
                 with st.container(height=500):
                     render_text_with_mermaid(response, should_stream=False)
+                new_id = db.insert_exchange(
+                    question=prompt,
+                    answer=response,
+                    feedback=np.nan,
+                    username=current_user,
+                    chat_name=working_chat_name, 
+                    helper_used=metrics.get("helper_model", sbhelp),
+                    main_used=metrics.get("main_model", sbmain),
+                    total_time=str(metrics.get("total_time", "0")),
+                    helper_time=str(metrics.get("helper_time", "0")),
+                    main_time=str(metrics.get("main_time", "0")),
+                    json_tokens=metrics.get("json_tokens", 0),
+                    toon_tokens=metrics.get("toon_tokens", 0),
+                    savings_percent=metrics.get("savings_percent", 0.0)
+                )
+                
+                new_ex = {
+                    "_id": new_id, 
+                    "question": prompt,
+                    "answer": response,
+                    "feedback": np.nan,
+                    "feedback_message": "",
+                    "chat_name": working_chat_name,
+                    "username": current_user,
+                    "datetime": datetime.now() 
+                }
+                if working_chat_name in st.session_state.chats:
+                    st.session_state.chats[working_chat_name]["exchanges"].append(new_ex)  
         else:
             # Im Fehlerfall wird NUR die Error-Box außerhalb der Assistant-Bubble angezeigt
             st.error(response)
-
-        # Ergebnis in DB und Session State speichern (auch Fehler, damit sie nach Rerun sichtbar bleiben, 
-        # aber sie werden ja beim nächsten Prompt durch deinen Cleanup gelöscht)
-        if response:
-            new_id = db.insert_exchange(
-                question=prompt,
-                answer=response,
-                feedback=np.nan,
-                username=current_user,
-                chat_name=working_chat_name, 
-                helper_used=metrics.get("helper_model", sbhelp),
-                main_used=metrics.get("main_model", sbmain),
-                total_time=str(metrics.get("total_time", "0")),
-                helper_time=str(metrics.get("helper_time", "0")),
-                main_time=str(metrics.get("main_time", "0")),
-                json_tokens=metrics.get("json_tokens", 0),
-                toon_tokens=metrics.get("toon_tokens", 0),
-                savings_percent=metrics.get("savings_percent", 0.0)
-            )
-            
+            new_id = f"session_{uuid.uuid4()}"
             new_ex = {
-                "_id": new_id, 
-                "question": prompt,
-                "answer": response,
-                "feedback": np.nan,
-                "feedback_message": "",
-                "chat_name": working_chat_name,
-                "username": current_user,
-                "datetime": datetime.now() 
-            }
+                    "_id": new_id, 
+                    "question": prompt,
+                    "answer": response,
+                    "feedback": np.nan,
+                    "feedback_message": "",
+                    "chat_name": working_chat_name,
+                    "username": current_user,
+                    "datetime": datetime.now() 
+                }
             if working_chat_name in st.session_state.chats:
-                st.session_state.chats[working_chat_name]["exchanges"].append(new_ex)
-            
-            st.rerun()
+                    st.session_state.chats[working_chat_name]["exchanges"].append(new_ex)
+        st.rerun()       
+
+       
+        
