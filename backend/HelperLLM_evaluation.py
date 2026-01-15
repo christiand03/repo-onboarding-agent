@@ -17,7 +17,7 @@ from schemas.types import FunctionContextInput, FunctionAnalysisInput, ClassCont
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 load_dotenv()
 
-REPO_URL_TO_TEST = "https://github.com/christiand03/analytics-application-development-uni" 
+REPO_URL_TO_TEST = "https://github.com/christiand03/repo-onboarding-agent"
 
 HELPER_MODELS_TO_TEST = [
     # #Google Gemini
@@ -267,7 +267,7 @@ def benchmark_loop():
         try:
             analysis_results = None
             generated_json_str = None
-            max_retries = 2
+            max_retries = 1
             
             for attempt in range(max_retries + 1):
                 try:
@@ -314,14 +314,13 @@ def benchmark_loop():
                     if attempt < max_retries:
                         time.sleep(10)
             
-
             if not analysis_results:
                 current_stat["status"] = "failed"
                 if not current_stat["error_message"]:
                     current_stat["error_message"] = "Max retries exceeded / Empty Response"
-                logging.error(f"Modell '{model}' fehlgeschlagen. Schreibe Fehler in Stats.")
+                logging.error(f"Modell '{model}' fehlgeschlagen. Evaluierung wird übersprungen.")
             
-            else:
+            if current_stat["status"] != "failed":
                 generated_json_str = json.dumps(analysis_results, indent=2)
                 output_path = os.path.join(dirs["output"], f"output_{safe_model_name}.json")
                 with open(output_path, "w", encoding="utf-8") as f:
@@ -349,6 +348,7 @@ def benchmark_loop():
                 
                 current_stat["duration_eval_sec"] = round(time.time() - start_eval, 2)
                 current_stat["score"] = extract_score_from_eval(eval_report)
+                
                 current_stat["status"] = "success"
                 current_stat["error_message"] = None
 

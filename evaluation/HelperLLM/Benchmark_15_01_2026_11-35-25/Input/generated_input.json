@@ -1,0 +1,996 @@
+{
+  "functions": [
+    {
+      "mode": "function_analysis",
+      "identifier": "app_pages.page1.show_page",
+      "source_code": "def show_page(df, df2, metrics_df1, metrics_df2, metrics_combined):\n\n    # --- KPI-BEREICH (6 Kacheln) ---\n    kpi_cols = st.columns(6)\n\n    row_count_df1 = metrics_df1.get(\"row_count\", len(df))\n    row_count_df2 = metrics_df2.get(\"row_count\", len(df2))\n    null_rows_df1 = metrics_df1.get(\"null_ratio_rows\", mt.ratio_null_values_rows(df))\n    null_rows_df2 = metrics_df2.get(\"null_ratio_rows\", mt.ratio_null_values_rows(df2))\n    proforma_count = metrics_df1.get(\"proforma_belege_count\", 0)\n\n    kva_unique = metrics_combined.get(\"kvarechnung_id_is_unique\", None)\n    pos_unique = metrics_combined.get(\"position_id_is_unique\", None)\n\n    with kpi_cols[0]:\n        st.metric(label=\"Auftr\u00e4ge (df)\", value=f\"{row_count_df1:,}\".replace(\",\", \".\"), help=\"Anzahl Zeilen in Auftragsdaten (df).\")\n    with kpi_cols[1]:\n        st.metric(label=\"Positionen (df2)\", value=f\"{row_count_df2:,}\".replace(\",\", \".\"), help=\"Anzahl Zeilen in Positionsdaten (df2).\")\n    with kpi_cols[2]:\n        st.metric(label=\"Fehlerquoten (df) [%]\", value=f\"{null_rows_df1:.2f}%\", help=\"Anteil der Zeilen mit mindestens einem Null-/Fehlerwert in df.\")\n    with kpi_cols[3]:\n        st.metric(label=\"Fehlerquoten (df2) [%]\", value=f\"{null_rows_df2:.2f}%\", help=\"Anteil der Zeilen mit mindestens einem Null-/Fehlerwert in df2.\")\n    with kpi_cols[4]:\n        st.metric(label=\"Proforma\u2011Belege\", value=f\"{proforma_count:,}\".replace(\",\", \".\"), help=\"Anzahl Auftr\u00e4ge mit Einigung_Netto zwischen 0,01 und 1 \u20ac.\")\n    with kpi_cols[5]:\n        uniq_text = (\n            \"OK\" if (kva_unique is True and pos_unique is True) else\n            (\"KVA ok, Pos. nicht\" if (kva_unique is True and pos_unique is False) else\n             (\"KVA nicht, Pos. ok\" if (kva_unique is False and pos_unique is True) else\n              (\"n/v\" if (kva_unique is None or pos_unique is None) else \"beide nicht\")))\n        )\n        st.metric(label=\"Eindeutigkeit IDs\", value=uniq_text, help=\"Pr\u00fcft Einzigartigkeit von KvaRechnung_ID (df) und Position_ID (df2).\")\n\n    st.markdown(\"<div style='margin-top: 1rem;'></div>\", unsafe_allow_html=True)\n\n    # CHART-BEREICH\n    chart_col1, chart_col2 = st.columns(2)\n\n    # Chart 1: Nullwerte je Spalte (Top N) aus df\n    with chart_col1:\n        st.subheader(\"Nullwerte je Spalte (Top N)\")\n\n        null_ratio_cols = metrics_df1.get(\"null_ratio_cols\", {})\n        if isinstance(null_ratio_cols, dict) and null_ratio_cols:\n            n = st.slider(\"Anzahl Spalten (Top N)\", min_value=5, max_value=min(30, len(null_ratio_cols)), value=min(10, len(null_ratio_cols)), key=\"p1_topn\")\n            null_df = (\n                pd.DataFrame(list(null_ratio_cols.items()), columns=[\"Spalte\", \"Nullquote_%\"]).sort_values(\"Nullquote_%\", ascending=False).head(n)\n            )\n\n            bar = (\n                alt.Chart(null_df)\n                .mark_bar()\n                .encode(\n                    x=alt.X(\"Nullquote_%:Q\", title=\"Nullquote [%]\"),\n                    y=alt.Y(\"Spalte:N\", sort='-x', title=\"Spalte\"),\n                    tooltip=[\"Spalte\", alt.Tooltip(\"Nullquote_%:Q\", format=\".2f\")]\n                )\n                .properties(height=28 * len(null_df), width=\"container\")\n            )\n            st.altair_chart(bar, width=\"stretch\")\n        else:\n            st.info(\"Keine Nullwert-Informationen verf\u00fcgbar.\")\n\n    # Chart 2: Fehlerh\u00e4ufigkeit nach Wochentag und Stunde (Heatmap)\n    with chart_col2:\n        st.subheader(\"Fehlerquote nach Wochentag und Stunde\")\n        err_df = metrics_df1.get(\"error_frequency_weekday_hour\", None)\n        if isinstance(err_df, pd.DataFrame) and not err_df.empty:\n            weekday_order = [\"Monday\", \"Tuesday\", \"Wednesday\", \"Thursday\", \"Friday\", \"Saturday\", \"Sunday\"]\n            if \"weekday\" in err_df.columns:\n                err_df[\"weekday\"] = pd.Categorical(err_df[\"weekday\"], categories=weekday_order, ordered=True)\n\n            heat = (\n                alt.Chart(err_df)\n                .mark_rect()\n                .encode(\n                    x=alt.X(\"hour:O\", title=\"Stunde\"),\n                    y=alt.Y(\"weekday:O\", sort=weekday_order, title=\"Wochentag\"),\n                    color=alt.Color(\"error_rate:Q\", title=\"Fehlerquote [%]\", scale=alt.Scale(scheme=\"reds\")),\n                    tooltip=[\n                        alt.Tooltip(\"weekday:N\", title=\"Wochentag\"),\n                        alt.Tooltip(\"hour:Q\", title=\"Stunde\"),\n                        alt.Tooltip(\"total_rows:Q\", title=\"Anzahl Auftr\u00e4ge\"),\n                        alt.Tooltip(\"error_rows:Q\", title=\"Fehlerf\u00e4lle\"),\n                        alt.Tooltip(\"error_rate:Q\", title=\"Fehlerquote\", format=\".2f\")\n                    ]\n                )\n                .properties(height=240, width=\"container\")\n            )\n            st.altair_chart(heat, width=\"stretch\")\n        else:\n            st.info(\"Keine Fehlerfrequenz-Daten verf\u00fcgbar.\")",
+      "imports": [
+        "streamlit",
+        "pandas",
+        "altair",
+        "metrics"
+      ],
+      "context": {
+        "calls": [
+          "metrics.ratio_null_values_rows"
+        ],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "app_pages.page2.show_page",
+      "source_code": "def show_page(df, df2, metrics_df1, metrics_df2, metrics_combined):\n\n    zeitwert_error_series = metrics_df1.get(\"zeitwert_error_series\", mt.check_zeitwert(df))\n    zeitwert_error_count = metrics_df1.get(\"zeitwert_errors_count\", 0)\n    above_50k_df = metrics_df1.get(\"above_50k_df\", mt.above_50k(df))\n    above_50k_count = above_50k_df.size\n\n    auftraege_abgleich = metrics_combined.get(\"auftraege_abgleich\")\n    \n    # --- KPIs ---\n    kpi_cols = st.columns(2)\n    with kpi_cols[0]: st.metric(label=\"Fehleranzahl Zeitwerte\", value=zeitwert_error_count)\n    with kpi_cols[1]: st.metric(label=\"Anzahl Auftr\u00e4ge \u00fcber 50.000\u20ac\", value=above_50k_count)\n\n    st.markdown(\"---\")\n\n    # --- CHARTS ---\n    chart_col1, chart_col2 = st.columns(2)\n\n# Welche Spalten sollten noch rein um die Daten sinnvoll pr\u00fcfen zu k\u00f6nnen? Aktuell kein Spaltenname da Series\n    with chart_col1:\n        st.subheader(\"Die inkorrekten Zeitwerte:\")\n        st.dataframe(zeitwert_error_series)\n\n    with chart_col2:\n        st.subheader(\"Auftr\u00e4ge \u00fcber 50.000\u20ac:\")\n        st.dataframe(above_50k_df)\n\n    st.subheader(\"Abgleich ob Positionssummen mit Auftragssummen \u00fcbereinstimmen\")\n    st.dataframe(auftraege_abgleich)",
+      "imports": [
+        "streamlit",
+        "pandas",
+        "numpy",
+        "metrics"
+      ],
+      "context": {
+        "calls": [
+          "metrics.above_50k",
+          "metrics.check_zeitwert"
+        ],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "app_pages.page3.show_page",
+      "source_code": "def show_page(df, df2, metrics_df1, metrics_df2, metrics_combined):\n    \n    df_outlier = metrics_df1.get(\"handwerker_gewerke_outlier\")\n    #mismatched_entries = metrics_df1.get(\"mismatched_entries\")\n    kundengruppe_containing_test = metrics_df1.get(\"test_kundengruppen_anzahl\")\n\n    kpi_cols = st.columns(2)\n    with kpi_cols[0]: st.metric(label=\"Anzahl Testdatens\u00e4tze in Kundengruppe\", value=kundengruppe_containing_test)\n\n    chart_col1, chart_col2 = st.columns(2)\n\n    with chart_col1:\n        st.subheader(\"Zuordnung Handwerker/Gewerk mit Embeddings + Cosine Distance\")\n        #st.dataframe(mismatched_entries)\n\n    with chart_col2:\n        st.subheader(\"Zuordnung Handwerker/Gewerke Regelbasiert\")\n        st.dataframe(df_outlier)",
+      "imports": [
+        "streamlit"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "app_pages.page4.show_page",
+      "source_code": "def show_page(df, df2, metrics_df1, metrics_df2, metrics_combined):\n    \n    \n    plausi_diff_list_df1 = metrics_df1.get(\"plausi_forderung_einigung_list\")\n    plausi_count_df1 = metrics_df1.get(\"plausi_forderung_einigung_count\")\n    plausi_avg_df1 = metrics_df1.get(\"plausi_forderung_einigung_avg_diff\")\n    false_negative_df1 = metrics_df1.get(\"false_negatie\", mt.false_negative_df(df))\n\n    plausi_diff_list_df2 = metrics_df2.get(\"plausi_forderung_einigung_list\")\n    plausi_count_df2 = metrics_df2.get(\"plausi_forderung_einigung_count\")\n    plausi_avg_df2 = metrics_df2.get(\"plausi_forderung_einigung_avg_diff\")\n    discount_check = metrics_df2.get(\"discount_check_errors\", mt.discount_check(df2))\n    false_negative_df2 = metrics_df2.get(\"false_negatie\", mt.false_negative_df2(df2))\n\n    # --- KPIs ---\n    plausi_cols = st.columns(4)\n    with plausi_cols[0]: st.metric(label=\"Auftragsdaten: Einigung > Forderung\", value=plausi_count_df1)\n    with plausi_cols[1]: st.metric(label=\"Auftragsdaten: Durchschnittliche Abweichung\", value=f\"{plausi_avg_df1:.2f} \u20ac\")\n    with plausi_cols[2]: st.metric(label=\"Positionsdaten: Einigung > Forderung\", value=plausi_count_df2)\n    with plausi_cols[3]: st.metric(label=\"Auftragsdaten: Durchschnittliche Abweichung\", value=f\"{plausi_avg_df1:.2f} \u20ac\")\n\n    st.markdown(\"---\")\n\n    kpi_cols = st.columns(3)\n    with kpi_cols[0]: st.metric(label=\"Positionsdaten: Potenziell fehlerhaftes Vorzeichen\", value=discount_check) #braucht noch einen vern\u00fcftigen Namen\n    with kpi_cols[1]: st.metric(label=\"Auftragsdaten: Inkorrekte Negative Betr\u00e4ge\", value=false_negative_df1)\n    with kpi_cols[2]: st.metric(label=\"Positionsdaten: Inkorrekte Negative Betr\u00e4ge\", value=false_negative_df2)\n    \n\n    st.markdown(\"---\")",
+      "imports": [
+        "streamlit",
+        "metrics"
+      ],
+      "context": {
+        "calls": [
+          "metrics.discount_check",
+          "metrics.false_negative_df",
+          "metrics.false_negative_df2"
+        ],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "app_pages.page5.show_page",
+      "source_code": "def show_page():\n    st.title(\"Page 5\")",
+      "imports": [
+        "streamlit"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "dashboard.load",
+      "source_code": "def load():\n    df = pd.read_parquet(\"resources/Auftragsdaten_konvertiert\")\n    df2 = pd.read_parquet(\"resources/Positionsdaten_konvertiert\")\n    return df, df2",
+      "imports": [
+        "time",
+        "pandas",
+        "streamlit",
+        "metrics",
+        "streamlit_option_menu.option_menu",
+        "app_pages.page1",
+        "app_pages.page2",
+        "app_pages.page3",
+        "app_pages.page4",
+        "app_pages.page5"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "dashboard.compute_metrics_df1",
+      "source_code": "def compute_metrics_df1():\n    print(\"Calculating metrics for df1 (Auftragsdaten)...\")\n    df, _ = load()\n\n    calc_time_start = time.time()\n    plausi_diff_list, plausi_count, plausi_avg = mt.plausibilitaetscheck_forderung_einigung(df)\n    print(\"Calculated plausi_diff_list, plausi_count, plausi_avg in \"\n          f\"{round(time.time() - calc_time_start, 2)}s\")\n\n    calc_time_start = time.time()\n    zeitwert_errors_series = mt.check_zeitwert(df)\n    print(\"Calculated zeitwert_errors_list in \"\n          f\"{round(time.time() - calc_time_start, 2)}s\")\n\n    calc_time_start = time.time()\n    proforma_df, proforma_count = mt.proformabelege(df)\n    print(\"Calculated proforma_df, proforma_count in \"\n          f\"{round(time.time() - calc_time_start, 2)}s\")\n\n    calc_time_start = time.time()\n    grouped_col_ratios_df1, grouped_row_ratios_df1 = mt.data_cleanliness(df)\n    print(\"Calculated grouped_col_ratios_df1, grouped_row_ratios_df1 in \"\n          f\"{round(time.time() - calc_time_start, 2)}s\")\n\n    calc_time_start = time.time()\n    error_freq_df = mt.error_frequency_by_weekday_hour(\n        df,\n        time_col=\"CRMEingangszeit\",\n        relevant_columns=None\n    )\n    print(\"Calculated error_freq_df (by weekday) in \"\n          f\"{round(time.time() - calc_time_start, 2)}s\")\n    \n    calc_time_start = time.time()\n    df_added = mt.handwerker_gewerke_outlier(df)\n    df_true = df_added[df_added['is_outlier'] == True].copy()\n    df_true['Check_Result'] = mt.check_keywords_vectorized(df_true)\n\n    print(\"Calculated craftsman/craft comparison in \"\n          f\"{round(time.time() - calc_time_start, 2)}s\")\n\n    calc_time_start = time.time()\n    metrics_df1 = {\n        \"row_count\": mt.count_rows(df),\n        \"null_ratio_cols\": mt.ratio_null_values_column(df),\n        \"null_ratio_rows\": mt.ratio_null_values_rows(df),\n        \"test_kundengruppen_anzahl\": mt.Kundengruppe_containing_test(df),\n        \"statistiken_num\": mt.allgemeine_statistiken_num(df),\n        \"plausi_forderung_einigung_list\": plausi_diff_list,\n        \"plausi_forderung_einigung_count\": plausi_count,\n        \"plausi_forderung_einigung_avg_diff\": plausi_avg,\n        \"grouped_col_ratios\": grouped_col_ratios_df1,\n        \"grouped_row_ratios\": grouped_row_ratios_df1,\n        \"proforma_belege_df\": proforma_df,\n        \"proforma_belege_count\": proforma_count,\n        \"above_50k_df\": mt.above_50k(df),\n        \"zeitwert_errors_list\": zeitwert_errors_series,\n        \"zeitwert_errors_count\": zeitwert_errors_series.size,\n        \"error_frequency_weekday_hour\": error_freq_df,\n        \"false_negative\": mt.false_negative_df(df),\n        #\"mismatched_entries\": mt.get_mismatched_entries(df), # vorher cuda installieren\n        \"handwerker_gewerke_outlier\": df_true,\n    }\n    print(\"Calculated all other metrics for df1 in \"\n          f\"{round(time.time() - calc_time_start, 2)}s\")\n\n    return metrics_df1",
+      "imports": [
+        "time",
+        "pandas",
+        "streamlit",
+        "metrics",
+        "streamlit_option_menu.option_menu",
+        "app_pages.page1",
+        "app_pages.page2",
+        "app_pages.page3",
+        "app_pages.page4",
+        "app_pages.page5"
+      ],
+      "context": {
+        "calls": [
+          "dashboard.load",
+          "metrics.Kundengruppe_containing_test",
+          "metrics.above_50k",
+          "metrics.allgemeine_statistiken_num",
+          "metrics.check_keywords_vectorized",
+          "metrics.check_zeitwert",
+          "metrics.count_rows",
+          "metrics.data_cleanliness",
+          "metrics.error_frequency_by_weekday_hour",
+          "metrics.false_negative_df",
+          "metrics.handwerker_gewerke_outlier",
+          "metrics.plausibilitaetscheck_forderung_einigung",
+          "metrics.proformabelege",
+          "metrics.ratio_null_values_column",
+          "metrics.ratio_null_values_rows"
+        ],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "dashboard.compute_metrics_df2",
+      "source_code": "def compute_metrics_df2():\n    \"\"\"Teure Metriken f\u00fcr df2 (Positionsdaten) \u2013 gecached.\"\"\"\n    print(\"Calculating metrics for df2 (Positionsdaten)...\")\n    _, df2 = load()\n    calc_time_start = time.time()\n    \n    plausi_diff_list, plausi_count, plausi_avg = mt.plausibilitaetscheck_forderung_einigung(df2)\n    print(\"Calculated plausi_diff_list, plausi_count, plausi_avg in \"\n          f\"{round(time.time() - calc_time_start, 2)}s\")\n    \n    metrics_df2 = {\n        \"row_count\": mt.count_rows(df2),\n        \"null_ratio_cols\": mt.ratio_null_values_column(df2),\n        \"null_ratio_rows\": mt.ratio_null_values_rows(df2),\n        \"statistiken_num\": mt.allgemeine_statistiken_num(df2),\n        \"discount_check_errors\": mt.discount_check(df2),\n        \"position_counts_per_rechnung\": mt.position_count(df2),\n        \"plausi_forderung_einigung_list\": plausi_diff_list,\n        \"plausi_forderung_einigung_count\": plausi_count,\n        \"plausi_forderung_einigung_avg_diff\": plausi_avg,\n        \"false_negative\": mt.false_negative_df2(df2)\n    }\n    print(\"Calculated all metrics for df2 in \"\n          f\"{round(time.time() - calc_time_start, 2)}s\")\n    return metrics_df2",
+      "imports": [
+        "time",
+        "pandas",
+        "streamlit",
+        "metrics",
+        "streamlit_option_menu.option_menu",
+        "app_pages.page1",
+        "app_pages.page2",
+        "app_pages.page3",
+        "app_pages.page4",
+        "app_pages.page5"
+      ],
+      "context": {
+        "calls": [
+          "dashboard.load",
+          "metrics.allgemeine_statistiken_num",
+          "metrics.count_rows",
+          "metrics.discount_check",
+          "metrics.false_negative_df2",
+          "metrics.plausibilitaetscheck_forderung_einigung",
+          "metrics.position_count",
+          "metrics.ratio_null_values_column",
+          "metrics.ratio_null_values_rows"
+        ],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "dashboard.compute_metrics_combined",
+      "source_code": "def compute_metrics_combined():\n    \"\"\"Metriken, die beide DataFrames brauchen \u2013 gecached.\"\"\"\n    print(\"Calculating combined metrics...\")\n    df, df2 = load()\n    calc_time_start = time.time()\n    kva_id_unique, pos_id_unique = mt.uniqueness_check(df, df2)\n    auftraege_abgleich = mt.abgleich_auftraege(df, df2)\n    metrics_combined = {\n        \"kvarechnung_id_is_unique\": kva_id_unique,\n        \"position_id_is_unique\": pos_id_unique,\n        \"auftraege_abgleich\": auftraege_abgleich\n    }\n    print(\"Calculated all combined metrics in \"\n          f\"{round(time.time() - calc_time_start, 2)}s\")\n    return metrics_combined",
+      "imports": [
+        "time",
+        "pandas",
+        "streamlit",
+        "metrics",
+        "streamlit_option_menu.option_menu",
+        "app_pages.page1",
+        "app_pages.page2",
+        "app_pages.page3",
+        "app_pages.page4",
+        "app_pages.page5"
+      ],
+      "context": {
+        "calls": [
+          "dashboard.load",
+          "metrics.abgleich_auftraege",
+          "metrics.uniqueness_check"
+        ],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "dashboard.compute_positions_over_time",
+      "source_code": "def compute_positions_over_time():\n    \"\"\"Positionsanzahl pro Auftrag \u00fcber Zeit \u2013 gecached.\"\"\"\n    print(\"Calculating positions per order over time...\")\n    df, df2 = load()\n    calc_time_start = time.time()\n    positions_over_time_df = mt.positions_per_order_over_time(\n        df,\n        df2,\n        time_col=\"CRMEingangszeit\"\n    )\n    print(\"Calculated positions over time in \"\n          f\"{round(time.time() - calc_time_start, 2)}s\")\n    return positions_over_time_df",
+      "imports": [
+        "time",
+        "pandas",
+        "streamlit",
+        "metrics",
+        "streamlit_option_menu.option_menu",
+        "app_pages.page1",
+        "app_pages.page2",
+        "app_pages.page3",
+        "app_pages.page4",
+        "app_pages.page5"
+      ],
+      "context": {
+        "calls": [
+          "dashboard.load",
+          "metrics.positions_per_order_over_time"
+        ],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "data_drift.load_data",
+      "source_code": "def load_data():\n    dates = pd.date_range(start='2022-01-01', end='2023-12-31', freq='D')\n    df = pd.DataFrame({\n        'datum': dates,\n        # Wir bauen einen k\u00fcnstlichen \"Drift\" ein, damit man im Chart was sieht\n        # Der Umsatz steigt langsam an, die Varianz (Std) wird h\u00f6her\n        'umsatz': np.linspace(200, 800, len(dates)) + np.random.normal(0, 50, len(dates)),\n        'kunden': np.random.randint(10, 50, size=len(dates))\n    })\n    return df",
+      "imports": [
+        "streamlit",
+        "pandas",
+        "numpy"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "data_drift.filterby_timeframe",
+      "source_code": "def filterby_timeframe(input_df, start_date, end_date):\n    start_ts = pd.to_datetime(start_date)\n    end_ts = pd.to_datetime(end_date)\n    date_mask = (input_df['datum'] >= start_ts) & (input_df['datum'] <= end_ts)\n    return input_df.loc[date_mask]",
+      "imports": [
+        "streamlit",
+        "pandas",
+        "numpy"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "data_drift.get_drift_stats",
+      "source_code": "def get_drift_stats(input_df, frequency):\n    \"\"\"\n    Berechnet Statistiken (Mean, Median, Std) gruppiert nach Frequenz\n    f\u00fcr die Charts.\n    \"\"\"\n    # Gruppieren nach Zeit\n    grouper = pd.Grouper(key='datum', freq=frequency)\n    \n    # Wir berechnen mehrere Metriken gleichzeitig\n    stats_df = input_df.groupby(grouper)[['umsatz', 'kunden']].agg(['mean', 'median', 'std', 'min', 'max'])\n    \n    # Die Spalten sind jetzt ein MultiIndex (z.B. umsatz -> mean). \n    # Wir machen sie flach f\u00fcr einfacheres Plotten: 'umsatz_mean', 'umsatz_std' etc.\n    stats_df.columns = ['_'.join(col).strip() for col in stats_df.columns.values]\n    \n    return stats_df",
+      "imports": [
+        "streamlit",
+        "pandas",
+        "numpy"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "data_drift.slicing",
+      "source_code": "def slicing(input_df, frequency):\n    \"\"\"\n    Erstellt die einzelnen Slices f\u00fcr die Detail-Ansicht (Expanders)\n    \"\"\"\n    try:\n        grouping = pd.Grouper(key='datum', freq=frequency)\n        grouped = input_df.groupby(grouping)\n\n        slices = {}\n        for name, group in grouped:\n            if not group.empty:\n                label = name.strftime('%Y-%m-%d') \n                slices[label] = group\n        return slices\n    except Exception as e:\n        st.error(f\"Fehler beim Slicing: {e}\")\n        return {}",
+      "imports": [
+        "streamlit",
+        "pandas",
+        "numpy"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "data_drift_metrics.load",
+      "source_code": "def load():\n    df = pd.read_parquet(\"resources/Auftragsdaten_konvertiert\")\n    df2 = pd.read_parquet(\"resources/Positionsdaten_konvertiert\")\n    df = df.sort_values(\"CRMEingangszeit\", ascending=True)\n    df2 = pd.merge(df2,df[['KvaRechnung_ID','CRMEingangszeit']], on='KvaRechnung_ID', how='left')\n    df2 = df2.sort_values(\"CRMEingangszeit\", ascending=True)\n    return df, df2",
+      "imports": [
+        "pandas",
+        "numpy",
+        "sklearn.datasets",
+        "evidently.Dataset",
+        "evidently.DataDefinition",
+        "evidently.Report",
+        "evidently.presets.DataDriftPreset",
+        "evidently.presets.DataSummaryPreset",
+        "streamlit",
+        "streamlit.components.v1",
+        "pyinstrument"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "data_drift_metrics.check_start_end_date",
+      "source_code": "def check_start_end_date(start,end):\n    \"\"\"Helper function. Checks if end follows start chronologically and reorders the two if needed. \n\n    Parameters\n    ----------\n    start : datetime\n        The assumed beginnig of the interval.\n    end : datetime\n        The assumed end of the interval.\n\n    Returns\n    -------\n    datetime, datetime\n        Pair of chronologically sorted datetime values.\n    \"\"\"\n    if(start > end):\n       start, end = end, start\n    return start, end",
+      "imports": [
+        "pandas",
+        "numpy",
+        "sklearn.datasets",
+        "evidently.Dataset",
+        "evidently.DataDefinition",
+        "evidently.Report",
+        "evidently.presets.DataDriftPreset",
+        "evidently.presets.DataSummaryPreset",
+        "streamlit",
+        "streamlit.components.v1",
+        "pyinstrument"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "data_drift_metrics.datetime_slice_mask",
+      "source_code": "def datetime_slice_mask(df, start_date, end_date):\n    \"\"\"Helper function. Returns a chronologically sliced Dataset according to passed datetime.\n\n    Parameters\n    ----------\n    df : pandas.Dataframe\n        input df\n    start_date : datetime\n    \n    end_date : datetime\n      \n\n    Returns\n    -------\n    evidently.Dataset\n        sliced DataFrame, converted to Dataset.\n    \"\"\"\n    mask =(df[\"CRMEingangszeit\"] >= start_date) & (df[\"CRMEingangszeit\"] < end_date)\n\n    if 'Kundengruppe' in df.columns: #evaluates true if Auftragsdaten-df was passed \n        sliced_ds = Dataset.from_pandas(\n            df.loc[mask],\n            data_definition=schema_df\n        ) \n    if 'Menge' in df.columns: #evaluates true if Positionsdaten-df was passed\n        sliced_ds = Dataset.from_pandas(\n            df.loc[mask],\n            data_definition=schema_df2\n        )  \n    return sliced_ds",
+      "imports": [
+        "pandas",
+        "numpy",
+        "sklearn.datasets",
+        "evidently.Dataset",
+        "evidently.DataDefinition",
+        "evidently.Report",
+        "evidently.presets.DataDriftPreset",
+        "evidently.presets.DataSummaryPreset",
+        "streamlit",
+        "streamlit.components.v1",
+        "pyinstrument"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "data_drift_metrics.data_drift_evaluation",
+      "source_code": "def data_drift_evaluation(df, start_date_reference, end_date_reference, start_date_eval, end_date_eval):\n    \"\"\"Uses the standard preset in the evidentlyai framework to evaluate data drift between two samples (chosen by time interval) from the passed DataFrame. The resulting Snapshot object is saved as html for easy embedding.\n\n    Parameters\n    ----------\n    df : pandas.DataFrame\n        DataFrame to sample from\n    start_date_reference : datetime\n        starting datetime of the reference, baseline dataset\n    end_date_reference : datetime\n        ending datetime of the reference, baseline dataset\n    start_date_eval : datetime\n        starting datetime of the evaluated dataset \n    end_date_eval : datetime\n        starting datetime of the evaluated dataset\n    \n    \"\"\"\n    #check if start and end dates are in chronologicl order, switch if needed\n    start_date_reference, end_date_reference = check_start_end_date(start_date_reference, end_date_reference)\n    start_date_eval, end_date_eval = check_start_end_date(start_date_eval, end_date_eval)\n    \n    #create sliced datasets for analysis (mask-based)\n    reference_data = datetime_slice_mask(df,start_date_reference,end_date_reference)\n    eval_data = datetime_slice_mask(df, start_date_eval,end_date_eval) \n    \n    if 'Kundengruppe' in df.columns: #evaluates true if Auftragsdaten-df was passed\n        report = Report([\n            DataDriftPreset(\n                columns=[\"Forderung_Netto\", \"Empfehlung_Netto\", \"Einigung_Netto\", \"Differenz_vor_Zeitwert_Netto\",\"Land\",\"Schadenart_Name\", \"Falltyp_Name\", \"Gewerk_Name\"]\n                )\n        ])\n        my_eval = report.run(eval_data, reference_data)\n        my_eval.save_html(\"resources/eval_df.html\")\n    if 'Menge' in df.columns: #evaluates true if Positionsdaten-df was passed\n        report = Report([\n            DataDriftPreset(\n                columns=[\"Menge\",\"Menge_Einigung\", \"EP\", \"EP_Einigung\", \"Forderung_Netto\", \"Einigung_Netto\"]\n                )\n        ])\n        my_eval = report.run(eval_data, reference_data)\n        my_eval.save_html(\"resources/eval_df2.html\")",
+      "imports": [
+        "pandas",
+        "numpy",
+        "sklearn.datasets",
+        "evidently.Dataset",
+        "evidently.DataDefinition",
+        "evidently.Report",
+        "evidently.presets.DataDriftPreset",
+        "evidently.presets.DataSummaryPreset",
+        "streamlit",
+        "streamlit.components.v1",
+        "pyinstrument"
+      ],
+      "context": {
+        "calls": [
+          "data_drift_metrics.check_start_end_date",
+          "data_drift_metrics.datetime_slice_mask"
+        ],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "data_exploration.load",
+      "source_code": "def load():\n\n    df = pd.read_parquet(\"resources/Auftragsdaten_konvertiert\")\n    df2 = pd.read_parquet(\"resources/Positionsdaten_konvertiert\")\n    return df, df2",
+      "imports": [
+        "pandas",
+        "streamlit",
+        "time"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "db_dashboard.get_db_connection",
+      "source_code": "def get_db_connection():\n    \"\"\"Establishes a read-only connection to the DuckDB database.\"\"\"\n    return duckdb.connect(DB_PATH, read_only=True)",
+      "imports": [
+        "time",
+        "pandas",
+        "streamlit",
+        "duckdb",
+        "streamlit_option_menu.option_menu",
+        "app_pages.page1",
+        "app_pages.page2",
+        "app_pages.page3",
+        "app_pages.page4",
+        "app_pages.page5"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "db_dashboard.load",
+      "source_code": "def load():\n    \"\"\"Loads the raw cleaned dataframes from DuckDB.\"\"\"\n    con = get_db_connection()\n    try:\n        df = con.execute(\"SELECT * FROM auftragsdaten\").df()\n        df2 = con.execute(\"SELECT * FROM positionsdaten\").df()\n        return df, df2\n    finally:\n        con.close()",
+      "imports": [
+        "time",
+        "pandas",
+        "streamlit",
+        "duckdb",
+        "streamlit_option_menu.option_menu",
+        "app_pages.page1",
+        "app_pages.page2",
+        "app_pages.page3",
+        "app_pages.page4",
+        "app_pages.page5"
+      ],
+      "context": {
+        "calls": [
+          "db_dashboard.get_db_connection"
+        ],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "db_dashboard.get_scalar_metrics",
+      "source_code": "def get_scalar_metrics():\n    \"\"\"Helper to load the single-row scalar table.\"\"\"\n    con = get_db_connection()\n    try:\n        return con.execute(\"SELECT * FROM scalar_metrics\").df().iloc[0]\n    finally:\n        con.close()",
+      "imports": [
+        "time",
+        "pandas",
+        "streamlit",
+        "duckdb",
+        "streamlit_option_menu.option_menu",
+        "app_pages.page1",
+        "app_pages.page2",
+        "app_pages.page3",
+        "app_pages.page4",
+        "app_pages.page5"
+      ],
+      "context": {
+        "calls": [
+          "db_dashboard.get_db_connection"
+        ],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "db_dashboard.compute_metrics_df1",
+      "source_code": "def compute_metrics_df1():\n    print(\"Loading metrics for df1 (Auftragsdaten) from DB...\")\n    start_time = time.time()\n    \n    con = get_db_connection()\n    scalars = get_scalar_metrics()\n    \n    try:\n        null_ratios_cols = con.execute(\"SELECT * FROM metric_null_ratios_per_column\").df()\n        \n        test_data_df = con.execute(\"SELECT * FROM metric_test_data_entries\").df()\n        \n        stats_df = con.execute(\"SELECT * FROM metric_numeric_stats_auftragsdaten\").df()\n        statistiken_num = stats_df.set_index('column_name').T.to_dict()\n\n        plausi_df = con.execute(\"SELECT * FROM metric_plausibility_diffs_auftragsdaten\").df()\n        plausi_diff_list = plausi_df['differenz_eur'] if not plausi_df.empty else pd.Series(dtype=float)\n\n        grouped_col_ratios_df1 = con.execute(\"SELECT * FROM metric_cleanliness_cols_grouped_auftragsdaten\").df()\n        \n        row_ratios_df = con.execute(\"SELECT * FROM metric_cleanliness_rows_grouped_auftragsdaten\").df()\n        grouped_row_ratios_df1 = row_ratios_df.set_index('Kundengruppe')['row_null_ratio']\n\n        proforma_df = con.execute(\"SELECT * FROM metric_proforma\").df()\n\n        above_50k_df = con.execute(\"SELECT * FROM metric_above_50k\").df()\n\n        zeitwert_df = con.execute(\"SELECT * FROM metric_zeitwert_errors\").df()\n        zeitwert_errors_series = zeitwert_df['zeitwert_diff'] if not zeitwert_df.empty else pd.Series(dtype=float)\n\n        error_freq_df = con.execute(\"SELECT * FROM metric_error_heatmap\").df()\n\n        handwerker_outliers = con.execute(\"SELECT * FROM metric_handwerker_outliers\").df()\n        \n        semantic_mismatches = con.execute(\"SELECT * FROM metric_semantic_mismatches\").df()\n\n    finally:\n        con.close()\n\n    metrics_df1 = {\n        \"row_count\": scalars['count_total_orders'],\n        \"null_ratio_cols\": null_ratios_cols,\n        \"null_ratio_rows\": scalars['null_row_ratio_orders'],\n        \"test_kundengruppen_anzahl\": scalars['count_test_data_rows'],\n        \"statistiken_num\": statistiken_num,\n        \"plausi_forderung_einigung_list\": plausi_diff_list,\n        \"plausi_forderung_einigung_count\": scalars['count_plausibility_errors'],\n        \"plausi_forderung_einigung_avg_diff\": scalars['avg_plausibility_diff'],\n        \"grouped_col_ratios\": grouped_col_ratios_df1,\n        \"grouped_row_ratios\": grouped_row_ratios_df1,\n        \"proforma_belege_df\": proforma_df,\n        \"proforma_belege_count\": scalars['count_proforma_receipts'],\n        \"above_50k_df\": above_50k_df,\n        \"zeitwert_errors_list\": zeitwert_errors_series,\n        \"zeitwert_errors_count\": zeitwert_errors_series.size,\n        \"error_frequency_weekday_hour\": error_freq_df,\n        \"false_negative\": scalars['count_false_negative_df'],\n        \"handwerker_gewerke_outlier\": handwerker_outliers,\n        \"mismatched_entries\": semantic_mismatches\n    }\n    \n    print(f\"Loaded metrics for df1 in {round(time.time() - start_time, 2)}s\")\n    return metrics_df1",
+      "imports": [
+        "time",
+        "pandas",
+        "streamlit",
+        "duckdb",
+        "streamlit_option_menu.option_menu",
+        "app_pages.page1",
+        "app_pages.page2",
+        "app_pages.page3",
+        "app_pages.page4",
+        "app_pages.page5"
+      ],
+      "context": {
+        "calls": [
+          "db_dashboard.get_db_connection",
+          "db_dashboard.get_scalar_metrics"
+        ],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "db_dashboard.compute_metrics_df2",
+      "source_code": "def compute_metrics_df2():\n    print(\"Loading metrics for df2 (Positionsdaten) from DB...\")\n    start_time = time.time()\n    \n    con = get_db_connection()\n    scalars = get_scalar_metrics()\n\n    try:\n\n        stats_df2 = con.execute(\"SELECT * FROM metric_numeric_stats_positionsdaten\").df()\n        statistiken_num = stats_df2.set_index('column_name').T.to_dict()\n        \n        plausi_df2 = con.execute(\"SELECT * FROM metric_plausibility_diffs_positionsdaten\").df()\n        plausi_diff_list = plausi_df2['differenz_eur'] if not plausi_df2.empty else pd.Series(dtype=float)\n\n        position_counts_df = con.execute(\"\"\"\n            SELECT KvaRechnung_ID, COUNT(Position_ID) as PositionsAnzahl \n            FROM positionsdaten \n            GROUP BY KvaRechnung_ID\n        \"\"\").df()\n\n    finally:\n        con.close()\n\n    metrics_df2 = {\n        \"row_count\": scalars['count_total_positions'],\n        \"null_ratio_cols\": pd.read_sql(\"SELECT * FROM metric_cleanliness_cols_ungrouped_positionsdaten\", get_db_connection()),\n        \"null_ratio_rows\": scalars['null_ratio_positions'] if 'null_ratio_positions' in scalars else 0, \n        \"statistiken_num\": statistiken_num,\n        \"discount_check_errors\": scalars['count_discount_logic_errors'],\n        \"position_counts_per_rechnung\": position_counts_df,\n        \"plausi_forderung_einigung_list\": plausi_diff_list,\n        \"plausi_forderung_einigung_count\": plausi_diff_list.size, \n        \"plausi_forderung_einigung_avg_diff\": plausi_diff_list.mean() if not plausi_diff_list.empty else 0,\n        \"false_negative\": scalars['count_false_negative_df2']\n    }\n    \n    con = get_db_connection()\n    total_rows = scalars['count_total_positions']\n    _, df2_temp = load()\n    metrics_df2[\"null_ratio_rows\"] = (df2_temp.isnull().any(axis=1).sum() / len(df2_temp) * 100) if len(df2_temp) > 0 else 0\n    con.close()\n\n    print(f\"Loaded metrics for df2 in {round(time.time() - start_time, 2)}s\")\n    return metrics_df2",
+      "imports": [
+        "time",
+        "pandas",
+        "streamlit",
+        "duckdb",
+        "streamlit_option_menu.option_menu",
+        "app_pages.page1",
+        "app_pages.page2",
+        "app_pages.page3",
+        "app_pages.page4",
+        "app_pages.page5"
+      ],
+      "context": {
+        "calls": [
+          "db_dashboard.get_db_connection",
+          "db_dashboard.get_scalar_metrics",
+          "db_dashboard.load"
+        ],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "db_dashboard.compute_metrics_combined",
+      "source_code": "def compute_metrics_combined():\n    print(\"Loading combined metrics from DB...\")\n    start_time = time.time()\n    \n    con = get_db_connection()\n    scalars = get_scalar_metrics()\n    \n    try:\n        auftraege_abgleich_df = con.execute(\"SELECT * FROM metric_order_pos_mismatch\").df()\n    finally:\n        con.close()\n\n    metrics_combined = {\n        \"kvarechnung_id_is_unique\": bool(scalars['is_unique_kva_id']),\n        \"position_id_is_unique\": bool(scalars['is_unique_position_id']),\n        \"auftraege_abgleich\": auftraege_abgleich_df\n    }\n    \n    print(f\"Loaded combined metrics in {round(time.time() - start_time, 2)}s\")\n    return metrics_combined",
+      "imports": [
+        "time",
+        "pandas",
+        "streamlit",
+        "duckdb",
+        "streamlit_option_menu.option_menu",
+        "app_pages.page1",
+        "app_pages.page2",
+        "app_pages.page3",
+        "app_pages.page4",
+        "app_pages.page5"
+      ],
+      "context": {
+        "calls": [
+          "db_dashboard.get_db_connection",
+          "db_dashboard.get_scalar_metrics"
+        ],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "db_dashboard.compute_positions_over_time",
+      "source_code": "def compute_positions_over_time():\n    print(\"Loading positions per order over time from DB...\")\n    start_time = time.time()\n    con = get_db_connection()\n    try:\n        df_pos_time = con.execute(\"SELECT * FROM metric_positions_over_time\").df()\n    finally:\n        con.close()\n    \n    print(f\"Loaded positions over time in {round(time.time() - start_time, 2)}s\")\n    return df_pos_time",
+      "imports": [
+        "time",
+        "pandas",
+        "streamlit",
+        "duckdb",
+        "streamlit_option_menu.option_menu",
+        "app_pages.page1",
+        "app_pages.page2",
+        "app_pages.page3",
+        "app_pages.page4",
+        "app_pages.page5"
+      ],
+      "context": {
+        "calls": [
+          "db_dashboard.get_db_connection"
+        ],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "metrics.load_data",
+      "source_code": "def load_data():\n    df = pd.read_parquet(\"resources/Auftragsdaten_konvertiert\")\n    df2 = pd.read_parquet(\"resources/Positionsdaten_konvertiert\")\n    return df, df2",
+      "imports": [
+        "pandas",
+        "numpy",
+        "time",
+        "re",
+        "sentence_transformers.SentenceTransformer",
+        "sklearn.metrics.pairwise.paired_cosine_distances",
+        "torch"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "metrics.ratio_null_values_column",
+      "source_code": "def ratio_null_values_column(input_df):\n    \"\"\"Helper function that calculates the null-value-ratios for each column of the supplied DataFrame. \n\n    Parameters\n    ----------\n    input_df : pandas.DataFrame\n        DataFrame that is to be evaluated.\n\n    Returns\n    -------\n    ratio_dict: pd.DataFrame\n        DataFrame of the form\n          |column_name |  null_ratio (float)|\n        with null_ratio being the percentage amount of null entries in the column  \n    \"\"\"    \n    # length_df = len(input_df)\n    # ratio_dict = {}\n    # for column in input_df.columns:\n    #     null_values = input_df[column].isna().sum()\n    #     ratio_null = round(null_values / length_df * 100, 2) # In Percent\n    #     ratio_dict[column] = ratio_null\n    \n    # return ratio_dict\n    null_ratio_df = pd.DataFrame(input_df.isna()\n                             .mean()\n                             .mul(100)\n                             .round(2)\n                             .rename(\"null_ratio\")\n                             .reset_index()\n                             )\n    return null_ratio_df",
+      "imports": [
+        "pandas",
+        "numpy",
+        "time",
+        "re",
+        "sentence_transformers.SentenceTransformer",
+        "sklearn.metrics.pairwise.paired_cosine_distances",
+        "torch"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "metrics.ratio_null_values_rows",
+      "source_code": "def ratio_null_values_rows(input_df, relevant_columns=None):\n    \"\"\"Helper function that calculates the ratio of rows containing null values in all / only chosen columns to total number of rows.  \n    \n    Parameters\n    ----------\n    input_df : pandas.DataFrame\n        DataFrame that is to be evaluated.\n    relevant_columns : list, optional\n        List of column identifiers; function will only evaluate these columns, by default None.\n\n    Returns\n    -------\n    row_ratio: float\n        Percentage value of rows with at least one null value in the given columns.\n    \"\"\"    \n    if relevant_columns is None:\n        df_to_check = input_df\n    else:\n        df_to_check = input_df[relevant_columns]\n\n    total_rows = len(df_to_check)\n    if total_rows == 0:\n        return 0.0\n\n    null_rows = df_to_check.isnull().any(axis=1).sum()\n    row_ratio = (null_rows / total_rows) * 100\n\n    return row_ratio",
+      "imports": [
+        "pandas",
+        "numpy",
+        "time",
+        "re",
+        "sentence_transformers.SentenceTransformer",
+        "sklearn.metrics.pairwise.paired_cosine_distances",
+        "torch"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "metrics.Kundengruppe_containing_test",
+      "source_code": "def Kundengruppe_containing_test(df, return_frame=False):\n    \"\"\"Determines the number of rows in the 'Auftragsdaten' data set that are part of a test data set. Optionally returns a data frame with all relevant instances. A row is conidered test data, if the entry in 'Kundengruppe' is named accordingly.\n\n    Parameters\n    ----------\n    df : pandas.DataFrame\n        'Auftragsdaten'-DataFrame that is to be evaluated.\n    return_frame : bool, optional\n        If True, this function returns a DataFrame with all found test data, by default False\n\n    Returns\n    -------\n    anzahl_test: int\n        total number of test data rows.\n    test_Kundengruppen: pandas.DataFrame or None\n        DataFrame containing all found test data, returned only if return_frame = True\n    \"\"\"    \n    test_Kundengruppen = df[df['Kundengruppe'].str.contains('test', case=False, na=False)]\n    #anzahl_test = len(df[df['Kundengruppe'].str.contains('test', case=False, na=False)])\n    anzahl_test = len(test_Kundengruppen)\n    if return_frame:\n        return anzahl_test, test_Kundengruppen \n    else:\n        return anzahl_test",
+      "imports": [
+        "pandas",
+        "numpy",
+        "time",
+        "re",
+        "sentence_transformers.SentenceTransformer",
+        "sklearn.metrics.pairwise.paired_cosine_distances",
+        "torch"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "metrics.allgemeine_statistiken_num",
+      "source_code": "def allgemeine_statistiken_num(input_df):\n    \"\"\"Calculates simple statistical values for all columns containing number data. \n\n    Parameters\n    ----------\n    input_df : pandas.DataFrame\n        DataFrame that is to be evaluated.\n\n    Returns\n    -------\n    statistiken: dict\n        nested dictionary containing a dictionary for each column of input_df of the following form:\n            {mean= float, \n            median= float,\n            std= float,\n            min= float,\n            max= float}\n        \n    \"\"\"\n    statistiken = {}\n    \n    for num_col in input_df.select_dtypes('number').columns:\n        statistiken[num_col] = {}\n        mean = input_df[num_col].mean()\n        median = input_df[num_col].median()\n        std = input_df[num_col].std()\n        min = input_df[num_col].min()\n        max = input_df[num_col].max()\n\n        statistiken[num_col]['mean'] = mean\n        statistiken[num_col]['median'] = median\n        statistiken[num_col]['std'] = std\n        statistiken[num_col]['min'] = min\n        statistiken[num_col]['max'] = max\n\n    return statistiken",
+      "imports": [
+        "pandas",
+        "numpy",
+        "time",
+        "re",
+        "sentence_transformers.SentenceTransformer",
+        "sklearn.metrics.pairwise.paired_cosine_distances",
+        "torch"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "metrics.plausibilitaetscheck_forderung_einigung",
+      "source_code": "def plausibilitaetscheck_forderung_einigung(input_df):\n    \"\"\"Checks for diff between Einigung_Netto and Forderung_Netto for all rows in the given dataframe. Einigung > Forderung is assumed as significant error.\n\n        Paramters\n        ---------\n        input_df: pandas.DataFrame\n            DataFrame that is to be evaluated.\n        \n        Returns\n        -------        \n        statistik: pandas.Series\n            a list of all differences >0 as float values\n        count: int  \n            total number of rows with difference >0\n        avg: float\n            average difference over all found instances    \n    \"\"\"\n    #set filter \n    faulty_rows_mask = input_df['Einigung_Netto'].round(2) > input_df['Forderung_Netto'].round(2)\n    #count amount of positives\n    count = faulty_rows_mask.sum()\n\n    statistik = (input_df.loc[faulty_rows_mask, 'Einigung_Netto']-input_df.loc[faulty_rows_mask,'Forderung_Netto']).round(2)\n    avg = statistik.mean()\n    \n    return statistik, count, avg",
+      "imports": [
+        "pandas",
+        "numpy",
+        "time",
+        "re",
+        "sentence_transformers.SentenceTransformer",
+        "sklearn.metrics.pairwise.paired_cosine_distances",
+        "torch"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "metrics.uniqueness_check",
+      "source_code": "def uniqueness_check(df, df2):\n    \"\"\"Checks whether the assumed unique ID columns in the data sets are truly unique.   \n\n    Parameters\n    ----------\n    df : pandas.DataFrame\n        DataFrame that contains the 'Auftragsdaten' data set\n    df2 : pandas.DataFrame\n        DataFrame that contains the 'Positionsdaten' data set\n\n    Returns\n    -------\n    kvarechnung_id_is_unique: bool\n        True if column is unique.\n    position_id_is_unique : bool    \n        True if column is unique.\n    \"\"\"\n    kvarechnung_id_is_unique = df['KvaRechnung_ID'].is_unique\n    position_id_is_unique = df2['Position_ID'].is_unique\n    \n    return kvarechnung_id_is_unique, position_id_is_unique",
+      "imports": [
+        "pandas",
+        "numpy",
+        "time",
+        "re",
+        "sentence_transformers.SentenceTransformer",
+        "sklearn.metrics.pairwise.paired_cosine_distances",
+        "torch"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "metrics.count_rows",
+      "source_code": "def count_rows(input_df):\n    \"\"\"Helper function to calculate the number of rows in a data frame after filtering.\n\n    Parameters\n    ----------\n    input_df : pandas.DataFrame\n        DataFrame to be evaluated.\n\n    Returns\n    -------\n    count: int\n        _description_\n    \"\"\"\n    count = len(input_df)\n    return count",
+      "imports": [
+        "pandas",
+        "numpy",
+        "time",
+        "re",
+        "sentence_transformers.SentenceTransformer",
+        "sklearn.metrics.pairwise.paired_cosine_distances",
+        "torch"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "metrics.split_dataframe",
+      "source_code": "def split_dataframe(input_df, chunks=5):\n    \"\"\" Splits the data frame to simulate a time series data.\n        \n        .. deprecated::  Made obsolete by added datetime columns. \n    \"\"\"\n    return np.array_split(input_df, chunks)",
+      "imports": [
+        "pandas",
+        "numpy",
+        "time",
+        "re",
+        "sentence_transformers.SentenceTransformer",
+        "sklearn.metrics.pairwise.paired_cosine_distances",
+        "torch"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "metrics.data_cleanliness",
+      "source_code": "def data_cleanliness(input_df, group_by_col=None, specific_group=None):\n    \"\"\"Determines ratio of null-values by columns and percentage of rows containing any amount of null values, with optional grouping by a given column.\n\n    Parameters\n    ----------\n    input_df : pandas.DataFrame\n        DataFrame that is to be evaluated.\n    group_by_col: string, optional\n        Column identifier for grouping, defaults to None\n    specific_group: string, optional\n        Passes a group entry to filter the result by, if any; defaults to None\n\n    Returns\n    -------\n    null_ratio_rows: float or None\n        Percentage value of rows with at least one null value in the given columns.\n    null_ratio_cols: DataFrame or None\n        DataFrame, with null_ratio being the percentage amount of null entries in the column.   \n    grouped_row_ratios: pandas.Series or None\n        Series containing the row ratios of all groups as float.\n    grouped_col_ratios: pandas.DataFrame or None\n        DataFrame containing groups and null-value-ratios per column for each.             \n    \"\"\"      \n\n    if group_by_col is None:\n        null_ratio_rows = ratio_null_values_rows(input_df)\n        null_ratio_cols = ratio_null_values_column(input_df)\n\n        return null_ratio_rows, null_ratio_cols\n\n    else:\n            \n        grouped = input_df.groupby(group_by_col,observed=True)\n        \n        # Group for columns & rows\n        grouped_null_counts = grouped.apply(lambda x: x.isnull().sum())\n        grouped_null_rows = grouped.apply(lambda x: x.isnull().any(axis=1).sum())\n        \n        # create group sizes\n        group_sizes = grouped.size()\n        \n        # calculate ratios\n        grouped_col_ratios = grouped_null_counts.div(group_sizes, axis=0)\n        grouped_row_ratios = grouped_null_rows / group_sizes\n        if specific_group:\n            grouped_col_ratios = grouped_col_ratios.loc[[specific_group]]\n            grouped_row_ratios = grouped_row_ratios.loc[[specific_group]] \n        return grouped_row_ratios, grouped_col_ratios",
+      "imports": [
+        "pandas",
+        "numpy",
+        "time",
+        "re",
+        "sentence_transformers.SentenceTransformer",
+        "sklearn.metrics.pairwise.paired_cosine_distances",
+        "torch"
+      ],
+      "context": {
+        "calls": [
+          "metrics.ratio_null_values_column",
+          "metrics.ratio_null_values_rows"
+        ],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "metrics.groupby_col",
+      "source_code": "def groupby_col(input_df, col):\n    \"\"\"Helper function that groups a DataFrame by the given column.\n\n    Parameters\n    ----------\n    input_df :  pandas.DataFrame\n        DataFrame that is to be evaluated..\n    col : string\n        Identifier of the column to be grouped by.\n\n    Returns\n    -------\n    input_df_grouped: pandas.DataFrame \n        A grouped DataFrame.\n    \"\"\"\n    input_df_grouped = input_df.groupby(col,observed=True)\n\n    return input_df_grouped",
+      "imports": [
+        "pandas",
+        "numpy",
+        "time",
+        "re",
+        "sentence_transformers.SentenceTransformer",
+        "sklearn.metrics.pairwise.paired_cosine_distances",
+        "torch"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "metrics.discount_check",
+      "source_code": "def discount_check(df2):\n    \"\"\"Checks if a row in the 'Positionsdaten' data set does/doesn't describe a discount or similar and if the 'Einigung_Netto' and 'Forderung_Netto' information accurately reflects this (negative or positive values). \n    \n    Parameters\n    ----------\n    df2 : pandas.DataFrame\n        DataFrame containing the 'Positionsdaten' data set\n\n    Returns\n    -------\n    potential_errors: int\n        The number of potentially faulty rows\n\n    Notes\n    -----        \n    This check relies on logic in data_cleaning.py that writes its results to the 'Plausibel' column. \n    \n    \"\"\"\n    potential_errors = (~df2['Plausibel']).sum()\n    return potential_errors",
+      "imports": [
+        "pandas",
+        "numpy",
+        "time",
+        "re",
+        "sentence_transformers.SentenceTransformer",
+        "sklearn.metrics.pairwise.paired_cosine_distances",
+        "torch"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "metrics.proformabelege",
+      "source_code": "def proformabelege(df):\n    \"\"\"Function that checks for pro forma receipts in the 'Auftragsdaten' data set. \n\n    Parameters\n    ----------\n    df : pandas.DataFrame\n        DataFrame that is to be evaluated.\n\n    Returns\n    -------\n    proforma: pandas.DataFrame\n        DataFrame containing all found pro forma receipt rows\n    proforma_count: int\n        Amount of found receipts    \n    \"\"\"\n    proforma = df[df['Einigung_Netto'].between(0.01, 1)]\n    proforma_count = len(proforma)\n    return proforma, proforma_count",
+      "imports": [
+        "pandas",
+        "numpy",
+        "time",
+        "re",
+        "sentence_transformers.SentenceTransformer",
+        "sklearn.metrics.pairwise.paired_cosine_distances",
+        "torch"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "metrics.position_count",
+      "source_code": "def position_count(input_df):\n    \"\"\"Counts the number of positions for each unique KvaRechnung_ID\n\n    Parameters\n    ----------\n    input_df : input_df : pandas.DataFrame\n        DataFrame that is to be evaluated.\n\n    Returns\n    -------\n    position_count: pandas.DataFrame\n        DataFrame with the columns 'KvaRechnung_ID' and the amount of associated positions.  \n    \"\"\"\n    position_count = input_df.groupby('KvaRechnung_ID', observed=False)['Position_ID'].count().reset_index().rename(columns={'Position_ID': 'PositionsAnzahl'})\n    #print(type(position_count))\n    return position_count",
+      "imports": [
+        "pandas",
+        "numpy",
+        "time",
+        "re",
+        "sentence_transformers.SentenceTransformer",
+        "sklearn.metrics.pairwise.paired_cosine_distances",
+        "torch"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "metrics.false_negative_df",
+      "source_code": "def false_negative_df(df):\n    \"\"\"Function that checks if, when at least two values in the Tuple (Forderung, Empfehlung, Einigung) in the 'Auftragsdaten' data set are negative,\n       the last remaining value is also negative. All instances where this doesnt hold are collected and counted.       \n\n    Parameters\n    ----------\n    df : pandas.DataFrame\n        DataFrame with 'Auftragsdaten' data set that is to be evaluated.\n\n    Returns\n    -------\n    error_count: int\n        Number of entries in any of the three columns Forderung, Empfehlung or Einigung failing the check.\n    \"\"\"\n    is_negative = {# Select all rows with negative entries in given column\n        \"Einigung_Netto\": df['Einigung_Netto'] < 0,\n        \"Empfehlung_Netto\": df[\"Empfehlung_Netto\"] < 0,\n        \"Forderung_Netto\": df[\"Forderung_Netto\"] < 0, \n    }\n\n    others_are_negative = {# Select all rows with both other columns being negative\n        \"Einigung_Netto\": (df['Forderung_Netto'] < 0) & (df['Empfehlung_Netto'] < 0), \n        \"Empfehlung_Netto\": (df['Forderung_Netto'] < 0) & (df['Einigung_Netto'] < 0),\n       \"Forderung_Netto\": (df['Einigung_Netto'] < 0) & (df['Empfehlung_Netto'] < 0),\n    }\n\n    false_negatives = {\n        col: (is_negative[col] & ~others_are_negative[col])\n        for col in is_negative\n    }\n    error_count = sum(bool_mask.sum() for bool_mask in false_negatives.values())\n    return error_count",
+      "imports": [
+        "pandas",
+        "numpy",
+        "time",
+        "re",
+        "sentence_transformers.SentenceTransformer",
+        "sklearn.metrics.pairwise.paired_cosine_distances",
+        "torch"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "metrics.false_negative_df2",
+      "source_code": "def false_negative_df2(df2):\n    \"\"\"Checks 'Positionsdaten' data set for entries in the columns 'Menge', 'Menge_Einigung', 'EP', 'Ep_Einigung',\n       'Forderung_Netto' and 'Einigung_Netto' that are out of sensible value range. Returns the total error count over all columns. \n\n    Parameters\n    ----------\n    df2 : pandas.DataFrame\n        DataFrame containing 'Positionsdaten' data set that is to be evaluated.\n\n    Returns\n    -------\n    total_errors: int\n        Total amount of non-valid entries aggregated over all relevant columns. \n    \"\"\"\n    count_menge_neg = (df2['Menge'] < 0).sum()\n    count_menge_einigung_neg = (df2['Menge_Einigung'] < 0).sum()\n\n    error_ep = ((df2['EP'] < 0) & (df2['EP_Einigung'] >= 0)).sum()\n    error_ep_einigung = ((df2['EP_Einigung'] < 0) & (df2['EP'] >= 0)).sum()\n\n    error_forderung = ((df2['Forderung_Netto'] < 0) & (df2['Einigung_Netto'] >= 0)).sum()\n    error_einigung = ((df2['Einigung_Netto'] < 0) & (df2['Forderung_Netto'] >= 0)).sum()\n\n    total_errors = (count_menge_neg + count_menge_einigung_neg + error_ep + error_ep_einigung + error_forderung + error_einigung)\n    return total_errors",
+      "imports": [
+        "pandas",
+        "numpy",
+        "time",
+        "re",
+        "sentence_transformers.SentenceTransformer",
+        "sklearn.metrics.pairwise.paired_cosine_distances",
+        "torch"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "metrics.above_50k",
+      "source_code": "def above_50k(df):\n    \"\"\"Checks for all receipts or positions that exceed a limit for suspicion of \u20ac50k in Einigung_Netto and need to be manually vetted.\n\n    Parameters\n    ----------\n    df : pandas.DataFrame\n        DataFrame that is to be evaluated.\n\n    Returns\n    -------\n    suspicious_data: pandas.DataFrame\n        Data frame containing suspiciously high positions\n    \"\"\"\n    suspicious_data = df[df['Einigung_Netto'] >= 50000]\n    return suspicious_data",
+      "imports": [
+        "pandas",
+        "numpy",
+        "time",
+        "re",
+        "sentence_transformers.SentenceTransformer",
+        "sklearn.metrics.pairwise.paired_cosine_distances",
+        "torch"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "metrics.outliers_by_damage",
+      "source_code": "def outliers_by_damage(df, schadenart=None, set_quantile=0.99, column_choice='Forderung_Netto'):\n    \"\"\"Calculates the upper and lower outliers outside the desired quantile range (symmetric over mean) for each kind of damage. Assumes 'Forderung_Netto' as column of interest.  \n\n    Parameters\n    ----------\n    df : pandas.DataFrame\n        DataFrame to be evaluated\n    schadenart : string, optional\n        specific damage type label to filter for, by default None\n    set_quantile : float, optional\n        desired quantile range, symmetric upper/lower bound is inferred, by default 0.99\n    column_choice : str, optional\n        numeric column containing outliers, by default 'Forderung_netto'\n\n    Returns\n    -------\n    df_outlier: pandas.DataFrame\n        df containing all suspicious rows\n    \"\"\"\n    if set_quantile < 0.5:\n        set_quantile = 1-set_quantile\n\n    if schadenart:\n        df = df[df['Schadenart_Name'] == schadenart]\n\n    df_grouped_upper = df.groupby(['Schadenart_Name'],observed=True)[column_choice].transform('quantile',set_quantile, numeric_only=True) \n    df_grouped_lower = df.groupby(['Schadenart_Name'],observed=True)[column_choice].transform('quantile',1-set_quantile, numeric_only=True)\n\n    df_outlier = df[\n        (df[column_choice] > df_grouped_upper) | \n        (df[column_choice] < df_grouped_lower)\n    ]\n\n    return df_outlier",
+      "imports": [
+        "pandas",
+        "numpy",
+        "time",
+        "re",
+        "sentence_transformers.SentenceTransformer",
+        "sklearn.metrics.pairwise.paired_cosine_distances",
+        "torch"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "metrics.check_zeitwert",
+      "source_code": "def check_zeitwert(df):\n    \"\"\"Checks if the value in the column 'Differenz_vor_Zeitwert_Netto' satisfies the condition [Zeitwert = Forderung-Einigung]\n       and calculates the relative error. Only valid for 'Auftragsdaten' data set.     \n\n    Parameters\n    ----------\n    df : _pandas.DataFrame\n        DataFrame containing 'Auftragsdaten' data set that is to be evaluated.\n    Returns\n    -------\n    zeitwert_error: pandas.Series\n        Series of all error values (float) found in the data frame\n    \"\"\"\n    \n    difference = (df['Forderung_Netto'] - df['Einigung_Netto']).round(2) - (df['Differenz_vor_Zeitwert_Netto']).round(2)\n    zeitwert_error = difference[difference != 0] # positive = not enough difference, negative = too much difference\n    return zeitwert_error",
+      "imports": [
+        "pandas",
+        "numpy",
+        "time",
+        "re",
+        "sentence_transformers.SentenceTransformer",
+        "sklearn.metrics.pairwise.paired_cosine_distances",
+        "torch"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "metrics.positions_per_order_over_time",
+      "source_code": "def positions_per_order_over_time(df, df2, time_col=\"CRMEingangszeit\"):\n    \"\"\"\n    Berechnet die durchschnittliche Anzahl an Positionen pro Auftrag je Monat.\n\n    Args:\n        df: Auftragsdaten mit Spalte 'KvaRechnung_ID' und einer Zeitspalte.\n        df2: Positionsdaten mit Spalten 'KvaRechnung_ID' und 'Position_ID'.\n        time_col: Name der Zeitspalte in orders_df (z.B. 'CRMEingangszeit').\n\n    Returns:\n        DataFrame mit Spalten:\n        - 'Zeitperiode'\n        - 'Avg_Positionen_pro_Auftrag'\n        - 'Total_Positionen'\n        - 'Anzahl_Auftraege'\n        - 'Growth_rate_%'\n    \"\"\"\n\n    # Positionen pro Auftrag z\u00e4hlen\n    pos_counts = (\n        df2\n        .groupby(\"KvaRechnung_ID\",observed=True)[\"Position_ID\"]\n        .count()\n        .reset_index(name=\"Positionen_pro_Auftrag\")\n    )\n\n    # Zeitspalte vorbereiten\n    orders = df[[\"KvaRechnung_ID\", time_col]].copy()\n    orders = orders.dropna(subset=[time_col])\n    orders[time_col] = pd.to_datetime(orders[time_col], errors=\"coerce\")\n    orders = orders.dropna(subset=[time_col])\n\n    # Zeitperiode (Monat) bestimmen\n    orders[\"Zeitperiode\"] = orders[time_col].dt.to_period(\"M\").astype(str)\n\n    # Positionen an Auftr\u00e4ge mergen\n    merged = orders.merge(pos_counts, on=\"KvaRechnung_ID\", how=\"left\")\n    merged[\"Positionen_pro_Auftrag\"] = merged[\"Positionen_pro_Auftrag\"].fillna(0)\n\n    # Aggregation je Zeitperiode\n    result = (\n        merged\n        .groupby(\"Zeitperiode\",observed=True)[\"Positionen_pro_Auftrag\"]\n        .agg([\"mean\", \"sum\", \"count\"])\n        .reset_index()\n    )\n\n    result = result.sort_values(\"Zeitperiode\")\n\n    result = result.rename(\n        columns={\n            \"mean\": \"Avg_Positionen_pro_Auftrag\",\n            \"sum\": \"Total_Positionen\",\n            \"count\": \"Anzahl_Auftraege\"\n        }\n    )\n\n    # prozentuale Ver\u00e4nderung der durchschnittlichen Positionsanzahl\n    result[\"Growth_rate_%\"] = result[\"Avg_Positionen_pro_Auftrag\"].pct_change() * 100\n\n    return result",
+      "imports": [
+        "pandas",
+        "numpy",
+        "time",
+        "re",
+        "sentence_transformers.SentenceTransformer",
+        "sklearn.metrics.pairwise.paired_cosine_distances",
+        "torch"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "metrics.error_frequency_by_weekday_hour",
+      "source_code": "def error_frequency_by_weekday_hour(df, time_col=\"CRMEingangszeit\", relevant_columns=None):\n    \"\"\"\n    Aggregiert die Fehlerh\u00e4ufigkeit (NaN-Werte) nach Wochentag und Stunde. Ein Auftrag gilt als fehlerhaft, wenn in mindestens einer der relevanten Spalten ein NaN-Wert vorkommt.\n\n    Parameters\n    ----------\n        df: pandas.DataFrame\n            Auftragsdaten-DataFrame (z.B. Auftragsdaten_konvertiert),muss 'KvaRechnung_ID' und die Zeitspalte enthalten.\n        time_col: string\n            Name der Zeitspalte in df, z.B. 'CRMEingangszeit'.\n        relevant_columns: list\n            Liste der Spalten, die auf NaN gepr\u00fcft werden sollen.\n            Wenn None -> alle Spalten au\u00dfer 'KvaRechnung_ID' und time_col.\n\n    Returns\n    -------\n        result: pandas.DataFrame\n            DataFrame mit Spalten:\n            - 'weekday'     : Name des Wochentags (Monday, Tuesday, ...)\n            - 'hour'        : Stunde (0\u201323)\n            - 'total_rows'  : Anzahl Auftr\u00e4ge in diesem Zeit-Slot\n            - 'error_rows'  : Anzahl fehlerhafter Auftr\u00e4ge in diesem Slot\n            - 'error_rate'  : Fehlerquote in Prozent\n    \"\"\"\n\n    work_df = df.copy()\n\n    # Zeitspalte in datetime umwandeln\n    work_df[time_col] = pd.to_datetime(work_df[time_col], errors=\"coerce\")\n    work_df = work_df.dropna(subset=[time_col])\n\n    # Wochentag + Stunde extrahieren\n    work_df[\"weekday\"] = work_df[time_col].dt.day_name()\n    work_df[\"hour\"] = work_df[time_col].dt.hour\n\n    # Relevante Spalten bestimmen\n    if relevant_columns is None:\n        exclude = {time_col, \"KvaRechnung_ID\", \"weekday\", \"hour\"}\n        relevant_columns = [c for c in work_df.columns if c not in exclude]\n\n    if not relevant_columns:\n        raise ValueError(\"Keine relevanten Spalten f\u00fcr die Fehlerpr\u00fcfung gefunden.\")\n\n    # Error = mind. ein NaN in den relevanten Spalten\n    work_df[\"has_error\"] = work_df[relevant_columns].isna().any(axis=1)\n\n    result = (\n        work_df\n        .groupby([\"weekday\", \"hour\"],observed=True)\n        .agg(\n            total_rows=(\"KvaRechnung_ID\", \"count\"),\n            error_rows=(\"has_error\", \"sum\"),\n        )\n        .reset_index()\n    )\n\n    result[\"error_rate\"] = result[\"error_rows\"] / result[\"total_rows\"] * 100\n\n    weekday_order = [\"Monday\", \"Tuesday\", \"Wednesday\", \"Thursday\", \"Friday\", \"Saturday\", \"Sunday\"]\n    result[\"weekday\"] = pd.Categorical(result[\"weekday\"], categories=weekday_order, ordered=True)\n    result = result.sort_values([\"weekday\", \"hour\"])\n\n    return result",
+      "imports": [
+        "pandas",
+        "numpy",
+        "time",
+        "re",
+        "sentence_transformers.SentenceTransformer",
+        "sklearn.metrics.pairwise.paired_cosine_distances",
+        "torch"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "metrics.get_mismatched_entries",
+      "source_code": "def get_mismatched_entries(df, threshold=0.2):\n    \n    device = \"cuda\" if torch.cuda.is_available() else \"mps\" if torch.backends.mps.is_available() else \"cpu\"\n\n    model = SentenceTransformer('paraphrase-multilingual-MiniLM-L12-v2', device=device)\n    \n    unique_gewerke = df['Gewerk_Name'].unique()\n    unique_handwerker = df['Handwerker_Name'].unique()\n\n    emb_gewerke_dict = {\n        name: vec for name, vec in zip(\n            unique_gewerke, \n            model.encode(unique_gewerke, batch_size=64, show_progress_bar=False, device=device)\n        )\n    }\n    \n    emb_handwerker_dict = {\n        name: vec for name, vec in zip(\n            unique_handwerker, \n            model.encode(unique_handwerker, batch_size=64, show_progress_bar=False, device=device)\n        )\n    }\n\n    embeddings_gewerk = np.array([emb_gewerke_dict[name] for name in df['Gewerk_Name']])\n    embeddings_handwerker = np.array([emb_handwerker_dict[name] for name in df['Handwerker_Name']])\n    \n    cosine_dists = paired_cosine_distances(embeddings_gewerk, embeddings_handwerker)\n    \n\n    df['Similarity_Score'] = 1 - cosine_dists\n    \n    mismatches = df[df['Similarity_Score'] < threshold].copy()\n    mismatches = mismatches.sort_values(by='Similarity_Score', ascending=True)\n    \n    return mismatches",
+      "imports": [
+        "pandas",
+        "numpy",
+        "time",
+        "re",
+        "sentence_transformers.SentenceTransformer",
+        "sklearn.metrics.pairwise.paired_cosine_distances",
+        "torch"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "metrics.handwerker_gewerke_outlier",
+      "source_code": "def handwerker_gewerke_outlier(df):\n    df = df[[\"Handwerker_Name\", \"Gewerk_Name\"]]\n    df = df.dropna()\n    stats = df.groupby(['Handwerker_Name', 'Gewerk_Name'], observed=True).size().reset_index(name='count')\n    total_counts = df.groupby('Handwerker_Name', observed=True).size().reset_index(name='total_count')\n\n    stats = stats.merge(total_counts, on='Handwerker_Name')\n    stats['ratio'] = stats['count'] / stats['total_count'] \n\n    stats['anzahl_gewerke'] = stats.groupby('Handwerker_Name', observed=True)['Gewerk_Name'].transform('count')\n    stats['is_outlier'] = (stats['anzahl_gewerke'] > 1) & (stats['ratio'] < 0.2)\n    stats = stats.dropna()\n\n    return stats",
+      "imports": [
+        "pandas",
+        "numpy",
+        "time",
+        "re",
+        "sentence_transformers.SentenceTransformer",
+        "sklearn.metrics.pairwise.paired_cosine_distances",
+        "torch"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "metrics.check_keywords_vectorized",
+      "source_code": "def check_keywords_vectorized(df):\n    \n    keywords_mapping = {\n    'Heizung- und Sanit\u00e4rinstallation': ['heizung', 'sanit\u00e4r', 'bad', 'gas', 'wasser', 'hls', 'w\u00e4rme', 'installateur', 'haustechnik', 'therme', 'leckage'],\n    'Metallbau- und Schlosserarbeiten': ['metall', 'schlosser', 'stahlbau', 'schwei\u00df', 'schmiede', 'konstruktion', 'edelstahl'],\n    'Fahrrad': ['fahrrad', 'bike', 'rad', 'zweirad', 'velo', 'ebike'],\n    'Maurerarbeiten': ['maurer', 'rohbau', 'baugesch\u00e4ft', 'hochbau', 'bauunternehmung', 'klinker'],\n    'Putz- und Stuckarbeiten': ['putz', 'stuck', 'verputz', 'gips', 'lehmbau', 'fassadenputz'],\n    'Fassadensysteme': ['fassade', 'verklinkerung', 'd\u00e4mmung', 'bekleidung', 'wand'],\n    'Rollladen und Sonnenschutz': ['rollladen', 'sonnenschutz', 'jalousie', 'markise', 'store', 'beschattung', 'rolltor'],\n    'Dachdeckerarbeiten': ['dach', 'bedachung', 'dachdecker', 'steildach', 'flachdach', 'ziegel'],\n    'Tief- und Erdbauarbeiten': ['tiefbau', 'erdbau', 'bagger', 'aushub', 'erd bewegung', 'graben', 'schacht'],\n    'Bodenbelagsarbeiten': ['boden', 'belag', 'teppich', 'linoleum', 'vinyl', 'raumausstatter', 'laminat', 'designbelag'],\n    'Tischlerarbeiten': ['tischler', 'schreiner', 'm\u00f6bel', 'holzbau', 'innenausbau', 'fensterbau'],\n    'Leckageortung und Trocknung': ['leck', 'ortung', 'trocknung', 'feuchte', 'wassersha', 'thermografie'],\n    'Fliesen- und Plattenverlegearbeiten': ['fliesen', 'platten', 'mosaik', 'keramik', 'granit', 'steinzeug'],\n    'Maler- und Tapezierarbeiten': ['maler', 'lack', 'anstrich', 'tapezier', 'farbe', 'raumdesign'],\n    'Zimmer- und Holzbauarbeiten': ['zimmerer', 'zimmerei', 'holzbau', 's\u00e4gewerk', 'abbund', 'dachstuhl'],\n    'Elektroarbeiten': ['elektro', 'strom', 'elektronik', 'schaltanlagen', 'licht', 'kabel', 'spannung'],\n    'Rohr- und Kanalbefahrung': ['kanal', 'rohr', 'tv-inspektion', 'dichtheit', 'abfluss', 'kamera'],\n    'Spenglerarbeiten': ['spengler', 'klempner', 'blech', 'flaschner', 'kupfer', 'zink'],\n    'Garten- und Landschaftsbauarbeiten': ['garten', 'landschaft', 'galabau', 'gr\u00fcn', 'pflanze', 'baum', 'au\u00dfenanlagen'],\n    'Sachverst\u00e4ndigenleistungen': ['sachverst\u00e4ndig', 'gutachter', 'expert', 'bewertung', 'wertermittlung', 'analyse'],\n    'Multigewerk': ['bauunternehmung', 'generalunternehmer', 'bauservice', 'dienstleistung', 'allround', 'sanierung', 'komplettbau'],\n    'Brandschmutzbeseitigung': ['brand', 'sanierung', 'ru\u00df', 'reinigung', 'schadenmanagement'],\n    'Verglasungsarbeiten': ['glas', 'fenster', 'vitrinen', 'spiegel', 'wintergarten'],\n    'Trockenbauarbeiten': ['trockenbau', 'akustik', 'rigips', 'innenausbau', 'montagebau'],\n    'Sicherheits- und Baustelleneinrichtung': ['sicherheit', 'baustrom', 'absperrung', 'bauzaun', 'wc-service', 'logistik'],\n    'Abfall, Entsorgung und Recycling': ['entsorgung', 'recycling', 'container', 'schrott', 'abfall', 'mulden'],\n    'Schlie\u00dfanlagen und Beschl\u00e4ge': ['schl\u00fcssel', 'schlie\u00df', 'sicherheitstechnik', 'beschlag', 'tresor'],\n    'Daten-, Melde- und Kommunikationsanlagen': ['daten', 'netzwerk', 'kommunikation', 'edv', 'it', 'telekom', 'glasfaser'],\n    'Stra\u00dfen, Wege, Pl\u00e4tze': ['stra\u00dfenbau', 'pflaster', 'asphalt', 'wege', 'hofbefestigung'],\n    'Geb\u00e4udereinigung': ['reinigung', 'clean', 'facility', 'sauber', 'glasreinigung', 'service'],\n    'Mauerarbeiten': ['mauer', 'stein', 'rohbau', 'sanierung'],\n    'Dachklempnerarbeiten': ['dachklempner', 'dachrinne', 'fallrohr', 'bauklempner'],\n    'Sanierungsarbeiten an schadstoffhaltigen Bauteilen': ['asbest', 'schadstoff', 'altlasten', 'dekontamination', 'kmf'],\n    'L\u00fcftungsbau und Klimatechnik': ['l\u00fcftung', 'klima', 'k\u00e4lte', 'air', 'ventilation', 'raumluft'],\n    'Bauleitung': ['bauleitung', 'architekt', 'ingenieur', 'planung', 'baubetreuung', 'projektsteuerung'],\n    'Werbeanlagen': ['werbe', 'reklame', 'schild', 'lichtwerbung', 'folie', 'beschriftung', 'sign'],\n    'Verkehrstechnische Anlagen': ['verkehr', 'ampel', 'signal', 'markierung', 'leitsystem'],\n    'Estricharbeiten': ['estrich', 'unterboden', 'zement', 'flie\u00dfestrich'],\n    'Schwimmbadtechnik': ['schwimmbad', 'pool', 'sauna', 'wellness', 'wasseraufbereitung'],\n    'Ger\u00fcstbauarbeiten': ['ger\u00fcst', 'r\u00fcstung', 'einr\u00fcstung', 'steigtechnik'],\n    'Parkettarbeiten': ['parkett', 'dielen', 'schleif', 'holzboden'],\n    'Abbrucharbeiten': ['abbruch', 'abriss', 'r\u00fcckbau', 'demontage', 'spreng'],\n    'Natursteinarbeiten': ['naturstein', 'steinmetz', 'marmor', 'granit', 'grabmale'],\n    'Medienverbrauch': ['stadtwerke', 'energie', 'versorgung', 'messdienst', 'strom', 'gas', 'wasser'],\n    'Beton- und Stahlbetonarbeiten': ['beton', 'stahlbeton', 'pump', 'fertigteil', 'schalung'],\n    'Handel': ['handel', 'vertrieb', 'shop', 'markt', 'baustoff', 'gro\u00dfhandel', 'verkauf'],\n    'Mietminderung': ['mieterschutz', 'anwalt', 'mietverein', 'recht'],\n    'Stahlbauarbeiten': ['stahlbau', 'halle', 'tragwerk', 'schlosserei'],\n    'Betonerhaltungsarbeiten': ['betonsanierung', 'bautenschutz', 'rissinjizierung', 'oberfl\u00e4chenschutz'],\n    'Wasserhaltung': ['wasserhaltung', 'grundwasser', 'absenkung', 'brunnenbau'],\n    'Solaranlagen': ['solar', 'photovoltaik', 'pv', 'sonne', 'regenerativ', 'energie'],\n    'Schutz- und Bewegungsaufwand': ['schutz', 'verpackung', 'abdeckung', 'transportschutz', 'umzug'],\n    'Rechtsanw\u00e4lte': ['anwalt', 'kanzlei', 'recht', 'notar', 'law', 'jurist'],\n    'Abdichtungsarbeiten gegen Wasser/ Bauwerkstrockenlegung': ['abdichtung', 'isolierung', 'bitumen', 'injektion', 'trockenlegung', 'leckage'],\n    'Z\u00e4une und Grundst\u00fcckseinfriedungen': ['zaun', 'tor', 'einfriedung', 'gitter', 'draht'],\n    'Bek\u00e4mpfender Holzschutz': ['holzschutz', 'schwamm', 'sch\u00e4dlingsbek\u00e4mpfung', 'kammerj\u00e4ger'],\n    'Spengler- / Klempnerarbeiten': ['spengler', 'klempner', 'flaschner', 'blechbearbeitung', 'leckage'],\n    'Trocknung': ['trocknung', 'bautrocknung', 'entfeuchtung', 'leckage'],\n    'KFZ': ['kfz', 'auto', 'werkstatt', 'car', 'motor', 'fahrzeug', 'garage'],\n    'Leckageortung': ['leckage', 'ortung', 'rohrbruch', 'leck'],\n    'Immobilien': ['immobilien', 'makler', 'wohnbau', 'real estate', 'verwaltung', 'property'],\n    'Versicherung': ['versicherung', 'finanz', 'assekuranz', 'makler', 'agentur']\n    }\n    \n    \n    \n    names = df['Handwerker_Name'].astype(str).str.lower()\n    \n    confirmed_mask = np.zeros(len(df), dtype=bool)\n    \n    conflict_series = pd.Series([None] * len(df), index=df.index)\n    \n    for trade, keywords in keywords_mapping.items():\n        if not keywords:\n            continue\n            \n        pattern = '|'.join(map(re.escape, keywords))\n        \n        has_keyword = names.str.contains(pattern, regex=True, na=False)\n        \n        is_current_trade = (df['Gewerk_Name'] == trade)\n        confirmed_mask = confirmed_mask | (has_keyword & is_current_trade)\n        \n        is_conflict = (has_keyword & ~is_current_trade)\n        \n        mask_to_update = is_conflict & conflict_series.isna()\n        conflict_series.loc[mask_to_update] = f\"CONFLICT_WITH_{trade.upper()}\"\n\n    final_result = np.where(\n        confirmed_mask,\n        \"CONFIRMED_BY_NAME\",\n        np.where(\n            conflict_series.notna(), \n            conflict_series, \n            \"NO_KEYWORD_INFO\"\n        )\n    )\n    \n    return final_result",
+      "imports": [
+        "pandas",
+        "numpy",
+        "time",
+        "re",
+        "sentence_transformers.SentenceTransformer",
+        "sklearn.metrics.pairwise.paired_cosine_distances",
+        "torch"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    },
+    {
+      "mode": "function_analysis",
+      "identifier": "metrics.abgleich_auftraege",
+      "source_code": "def abgleich_auftraege(df1, df2):\n    \"\"\"\n    Vergleicht die Kopfdaten von Auftr\u00e4gen (df1) mit der Summe ihrer Positionen (df2).\n\n    Die Funktion gruppiert die Positionsdaten (df2) anhand der 'Kva_RechnungID', bildet\n    die Summen f\u00fcr 'Forderung_Netto' und 'Einigung_Netto' und vergleicht diese mit den\n    in df1 hinterlegten Werten. Gleitkomma-Ungenauigkeiten werden dabei ber\u00fccksichtigt.\n\n    Args:\n        df1 (pd.DataFrame): Dataframe mit den Auftragsdaten (Soll-Werte).\n            Muss zwingend folgende Spalten enthalten:\n            - 'Kva_RechnungID' (Verbindungsschl\u00fcssel)\n            - 'Forderung_Netto'\n            - 'Einigung_Netto'\n            \n        df2 (pd.DataFrame): Dataframe mit den Positionsdaten (Ist-Werte).\n            Muss zwingend folgende Spalten enthalten:\n            - 'Kva_RechnungID' (Verbindungsschl\u00fcssel)\n            - 'Forderung_Netto'\n            - 'Einigung_Netto'\n\n    Returns:\n        pd.DataFrame: Eine Liste der Abweichungen. Der Dataframe enth\u00e4lt nur die IDs,\n        bei denen die Werte nicht \u00fcbereinstimmen.\n        \n        Enthaltene Spalten:\n        - 'Kva_RechnungID': ID des betroffenen Auftrags.\n        - 'Diff_Forderung': Differenzbetrag (Wert in df1 - Summe in df2).\n        - 'Diff_Einigung': Differenzbetrag (Wert in df1 - Summe in df2).\n        \n        Ist die Differenz positiv, ist der Wert im Auftrag h\u00f6her als die Summe der Positionen.\n    \"\"\"\n\n    df2_sum = df2.groupby('KvaRechnung_ID', observed=False)[['Forderung_Netto', 'Einigung_Netto']].sum().reset_index()\n\n    merged = pd.merge(df1, df2_sum, on='KvaRechnung_ID', how='left', suffixes=('_soll', '_ist'))\n\n    cols_to_fix = ['Forderung_Netto_ist', 'Einigung_Netto_ist']\n    merged[cols_to_fix] = merged[cols_to_fix].fillna(0)\n    \n    merged['Diff_Forderung'] = (merged['Forderung_Netto_soll'] - merged['Forderung_Netto_ist']).round(2)\n    merged['Diff_Einigung'] = (merged['Einigung_Netto_soll'] - merged['Einigung_Netto_ist']).round(2)\n    \n    mask_abweichung = (\n        ~np.isclose(merged['Diff_Forderung'], 0) | \n        ~np.isclose(merged['Diff_Einigung'], 0)\n    )\n    \n    abweichungen = merged[mask_abweichung].copy()\n    \n    result_df = abweichungen[['KvaRechnung_ID', 'Diff_Forderung', 'Diff_Einigung',]]\n    \n    return result_df",
+      "imports": [
+        "pandas",
+        "numpy",
+        "time",
+        "re",
+        "sentence_transformers.SentenceTransformer",
+        "sklearn.metrics.pairwise.paired_cosine_distances",
+        "torch"
+      ],
+      "context": {
+        "calls": [],
+        "called_by": []
+      }
+    }
+  ],
+  "classes": []
+}
