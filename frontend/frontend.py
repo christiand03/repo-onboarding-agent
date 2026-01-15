@@ -143,24 +143,17 @@ def save_ollama_cb():
 # ----------------------------------------
 
 def get_last_activity(chat_name):
-    """Ermittelt den Zeitstempel der letzten Aktivität (Nachricht oder Erstellung)."""
-    chat_data = st.session_state.chats.get(chat_name, {})
-    exchanges = chat_data.get("exchanges", [])
-    
-    if exchanges:
-        # Letzte Nachricht nehmen
-        last_ex = exchanges[-1]
-        # Prüfen auf 'datetime' (Frontend) oder 'created_at' (DB)
-        dt = last_ex.get("datetime") or last_ex.get("created_at") or datetime.min
-        
-        if isinstance(dt, str):
-            try: dt = datetime.fromisoformat(dt)
-            except: dt = datetime.min
-        return dt
-    
-    # Wenn keine Nachrichten da sind, das Erstellungsdatum des Chats nutzen
-    return chat_data.get("created_at", datetime.min)
-    
+    """Ermittelt den Zeitstempel der letzten Nachricht in einem Chat."""
+    exchanges = st.session_state.chats.get(chat_name, {}).get("exchanges", [])
+    if not exchanges:
+        return datetime.min
+    # Wir nehmen das Feld 'datetime' aus dem exchange (stelle sicher, dass es ein datetime-objekt ist)
+    last_ex = exchanges[-1]
+    dt = last_ex.get("datetime", datetime.min)
+    if isinstance(dt, str): # Falls es als String aus der DB kommt
+        try: dt = datetime.fromisoformat(dt)
+        except: dt = datetime.min
+    return dt
 
 def load_data_from_db(username: str):
     if "loaded_user" not in st.session_state or st.session_state.loaded_user != username:
@@ -169,18 +162,13 @@ def load_data_from_db(username: str):
         for c in db_chats:
             c_name = c.get("chat_name")
             if c_name:
-                # ÄNDERUNG: created_at aus DB übernehmen
-                st.session_state.chats[c_name] = {
-                    "exchanges": [],
-                    "created_at": c.get("created_at", datetime.min) 
-                }
+                st.session_state.chats[c_name] = {"exchanges": []}
 
         db_exchanges = db.fetch_exchanges_by_user(username)
         for ex in db_exchanges:
             c_name = ex.get("chat_name", "Unbenannt")
             if c_name not in st.session_state.chats:
-                st.session_state.chats[c_name] = {"exchanges": [], "created_at": datetime.min}
-            
+                st.session_state.chats[c_name] = {"exchanges": []}
             if "feedback" not in ex or ex["feedback"] is None:
                 ex["feedback"] = np.nan
             st.session_state.chats[c_name]["exchanges"].append(ex)
@@ -188,7 +176,7 @@ def load_data_from_db(username: str):
         if not st.session_state.chats:
             initial_name = "Chat 1"
             db.insert_chat(username, initial_name)
-            st.session_state.chats[initial_name] = {"exchanges": [], "created_at": datetime.now()}
+            st.session_state.chats[initial_name] = {"exchanges": []}
             st.session_state.active_chat = initial_name
         else:
             # Sortiere Chats nach letzter Aktivität beim ersten Laden
@@ -275,29 +263,6 @@ def render_text_with_mermaid(markdown_text, should_stream=False):
             except Exception:
                 st.code(part, language="mermaid")
 
-
-def handle_workflow_error(e):
-    """Zentrale Funktion, um Fehler aus beiden Workflows benutzerfreundlich aufzubereiten."""
-    err_msg = str(e)
-    logging.error(f"Workflow Error: {traceback.format_exc()}")
-    
-    # Mapping technischer Fehler
-    if "401" in err_msg or "invalid_api_key" in err_msg.lower() or "authentication" in err_msg.lower():
-        return "❌ **API-Key Fehler**: Der bereitgestellte Key ist ungültig oder abgelaufen. Bitte überprüfe deine Einstellungen ⚙️."
-    
-    if "429" in err_msg or "rate limit" in err_msg.lower():
-        return "❌ **Rate Limit**: Zu viele Anfragen in kurzer Zeit. Bitte warte eine Minute oder wechsle das Modell."
-    
-    if "quota" in err_msg.lower() or "limit exceeded" in err_msg.lower():
-        return "❌ **Guthaben erschöpft**: Dein API-Kontingent ist aufgebraucht."
-    
-    if "connection" in err_msg.lower() or "unreachable" in err_msg.lower():
-        return "❌ **Verbindungsfehler**: Der LLM-Server ist nicht erreichbar. Prüfe ggf. die Ollama/OpenSource URL."
-        
-    if "keine antwort" in err_msg.lower() or "empty response" in err_msg.lower():
-        return "❌ **Modell-Fehler**: Das Modell hat keine Antwort geliefert. Das liegt oft an einem falschen Key oder einer falschen URL."
-
-    return f"⚠️ **Ein unerwarteter Fehler ist aufgetreten**: {err_msg}"
 # ----------------------------------------
 # RENDER EXCHANGES
 # ----------------------------------------
@@ -306,22 +271,12 @@ def render_exchange(ex, current_chat_name):
     st.chat_message("user").write(ex["question"])
     
     answer_text = ex.get("answer", "")
-    
-    # ERWEITERTE FEHLER-ERKENNUNG:
-    # Wir prüfen jetzt auch auf die Emojis aus handle_workflow_error
-    is_error = (
-        answer_text.startswith("Fehler") or 
-        answer_text.startswith("Error") or 
-        answer_text.startswith("❌") or 
-        answer_text.startswith("⚠️") or
-        "abgebrochen" in answer_text.lower()
-    )
+    is_error = answer_text.startswith("Fehler") or answer_text.startswith("Error")
 
     if is_error:
-        # Fehlermeldungen werden als rote Box ohne Assistant-Bubble angezeigt
+        # Fehlermeldungen werden ohne Assistant-Bubble und ohne 500px-Container angezeigt
         st.error(answer_text)
-        # Kleiner Button zum Löschen direkt unter dem Error
-        if st.button("🗑️ Fehlermeldung aus Verlauf löschen", key=f"del_err_hist_{ex['_id']}", type="secondary"):
+        if st.button("🗑️ Fehler-Nachricht löschen", key=f"del_err_hist_{ex['_id']}", type="secondary"):
             handle_delete_exchange(current_chat_name, ex)
     else:
         # Normale Antworten
@@ -350,9 +305,10 @@ def render_exchange(ex, current_chat_name):
                 if st.button("🗑️", key=f"del_{ex['_id']}"):
                     handle_delete_exchange(current_chat_name, ex)
 
-            # --- 2. CONTENT CONTAINER ---
+            # --- 2. CONTENT CONTAINER (Nur für echte Antworten) ---
             with st.container(height=500, border=True):
                  render_text_with_mermaid(ex["answer"], should_stream=False)
+
 # ----------------------------------------
 # AUTH SETUP
 # ----------------------------------------
@@ -452,10 +408,7 @@ if st.session_state["authentication_status"]:
                     # KONSISTENZ: Sofort in DB schreiben
                     db.insert_chat(current_user, new_name)
                     # In Session State
-                    st.session_state.chats[new_name] = {
-                        "exchanges": [], 
-                        "created_at": datetime.now() 
-                    }
+                    st.session_state.chats[new_name] = {"exchanges": []}
                     st.session_state.active_chat = new_name
                     st.rerun()
 
@@ -485,7 +438,7 @@ if st.session_state["authentication_status"]:
         with st.container(border=None, gap=None):
             st.toggle("Notebook Modus", key="notebook_mode", help="ermöglicht wenn aktiviert die Dokumentation von Jupyter Notebooks, deaktiviert werden .py files ausgewertet", value=False)  
             with st.popover("⚙️ Einstellungen", type="tertiary"):
-                col1 , col2, col3 = st.columns(3)
+                col1 , col2 = st.columns(2)
                 with col1:
                     st.caption("🤖 Modelle")
                     sbhelp = "None"
@@ -536,85 +489,82 @@ if st.session_state["authentication_status"]:
                 has_opensrc_url = bool(opensrc_url)
                 has_opensrc_key = bool(opensrc_key)
 
+                with col2:
                     
-                # Logik: Zeige Inputs nur für Modelle, die User-Keys brauchen
-                def get_provider(model_name):
-                    if model_name.startswith("gemini"):
-                        return "Google Gemini"
-                    elif model_name == "llama3":
-                        return "ollama"
-                    elif model_name.startswith("gpt-5"):
-                        return "gpt"
-                    else:
-                        return "Open Source LLM"
-                
-                def config_provider(model_name):
-                    if model_name.startswith("gemini"): 
-                        status_icon = "✅" if has_gemini else "❌"
-                        st.markdown(f"**Gemini Key**: {status_icon} {'Gesetzt' if has_gemini else 'Fehlt'}")
-                        with st.form("gemini_form"):
-                            new_gemini = st.text_input("Gemini Key ändern", type="password")
-                            if st.form_submit_button("Speichern") and new_gemini:
-                                db.update_gemini_key(current_user, new_gemini)
-                                st.success("Gespeichert!")
-                                time.sleep(0.5)
-                                st.rerun() 
+                    # Logik: Zeige Inputs nur für Modelle, die User-Keys brauchen
+                    def get_provider(model_name):
+                        if model_name.startswith("gemini"):
+                            return "Google Gemini"
+                        elif model_name == "llama3":
+                            return "ollama"
+                        elif model_name.startswith("gpt-5"):
+                            return "gpt"
+                        else:
+                            return "Open Source LLM"
                     
-                    elif model_name == "llama3":
-                        status_icon = "✅" if has_ollama else "❌"
-                        st.markdown(f"**Llama URL**: {status_icon} {'Gesetzt' if has_ollama else 'Fehlt'}")
-                        current_url_val = ollama_url if ollama_url else ""
-                        with st.form("ollama_form"):
-                            new_ollama = st.text_input("Llama Base URL ändern", value=current_url_val)
-                            if st.form_submit_button("Speichern"):
-                                if new_ollama != current_url_val:
-                                    db.update_ollama_url(current_user, new_ollama)
+                    def config_provider(model_name):
+                        if model_name.startswith("gemini"): 
+                            status_icon = "✅" if has_gemini else "❌"
+                            st.markdown(f"**Gemini Key**: {status_icon} {'Gesetzt' if has_gemini else 'Fehlt'}")
+                            with st.form("gemini_form"):
+                                new_gemini = st.text_input("Gemini Key ändern", type="password")
+                                if st.form_submit_button("Speichern") and new_gemini:
+                                    db.update_gemini_key(current_user, new_gemini)
+                                    st.success("Gespeichert!")
+                                    time.sleep(0.5)
+                                    st.rerun() 
+                        
+                        elif model_name == "llama3":
+                            status_icon = "✅" if has_ollama else "❌"
+                            st.markdown(f"**Llama URL**: {status_icon} {'Gesetzt' if has_ollama else 'Fehlt'}")
+                            current_url_val = ollama_url if ollama_url else ""
+                            with st.form("ollama_form"):
+                                new_ollama = st.text_input("Llama Base URL ändern", value=current_url_val)
+                                if st.form_submit_button("Speichern"):
+                                    if new_ollama != current_url_val:
+                                        db.update_ollama_url(current_user, new_ollama)
+                                        st.success("Gespeichert!")
+                                        time.sleep(0.5)
+                                        st.rerun()
+
+                        elif model_name.startswith("gpt-5"):
+                            status_icon = "✅" if has_gpt else "❌"
+                            st.markdown(f"**GPT Key**: {status_icon} {'Gesetzt' if has_gpt else 'Fehlt'}")
+                            with st.form("gpt_form"):
+                                new_gpt = st.text_input("GPT Key ändern", type="password")
+                                if st.form_submit_button("Speichern") and new_gpt:
+                                    db.update_gpt_key(current_user, new_gpt)
                                     st.success("Gespeichert!")
                                     time.sleep(0.5)
                                     st.rerun()
-
-                    elif model_name.startswith("gpt-5"):
-                        status_icon = "✅" if has_gpt else "❌"
-                        st.markdown(f"**GPT Key**: {status_icon} {'Gesetzt' if has_gpt else 'Fehlt'}")
-                        with st.form("gpt_form"):
-                            new_gpt = st.text_input("GPT Key ändern", type="password")
-                            if st.form_submit_button("Speichern") and new_gpt:
-                                db.update_gpt_key(current_user, new_gpt)
-                                st.success("Gespeichert!")
-                                time.sleep(0.5)
-                                st.rerun()
-                    else:
-                        status_icon = "✅" if has_opensrc_key else "❌"  
-                        st.markdown(f"**Open Source LLM Key**: {status_icon} {'Gesetzt' if has_opensrc_key else 'Fehlt'}")
-                        status_icon_url = "✅" if has_opensrc_url else "❌"
-                        st.markdown(f"**Open Source LLM URL**: {status_icon_url} {'Gesetzt' if has_opensrc_url else 'Fehlt'}")
-                        with st.form("opensrc_form"):
-                            new_opensrc_key = st.text_input("Open Source LLM Key ändern", type="password")
-                            new_opensrc_url = st.text_input("Open Source LLM URL ändern")
-                            if st.form_submit_button("Speichern"):
-                                if new_opensrc_key:
-                                    db.update_opensrc_key(current_user, new_opensrc_key)
-                                if new_opensrc_url:
-                                    db.update_opensrc_url(current_user, new_opensrc_url)
-                                st.success("Gespeichert!")
-                                time.sleep(0.5)
-                                st.rerun()      
+                        else:
+                            status_icon = "✅" if has_opensrc_key else "❌"  
+                            st.markdown(f"**Open Source LLM Key**: {status_icon} {'Gesetzt' if has_opensrc_key else 'Fehlt'}")
+                            status_icon_url = "✅" if has_opensrc_url else "❌"
+                            st.markdown(f"**Open Source LLM URL**: {status_icon_url} {'Gesetzt' if has_opensrc_url else 'Fehlt'}")
+                            with st.form("opensrc_form"):
+                                new_opensrc_key = st.text_input("Open Source LLM Key ändern", type="password")
+                                new_opensrc_url = st.text_input("Open Source LLM URL ändern")
+                                if st.form_submit_button("Speichern"):
+                                    if new_opensrc_key:
+                                        db.update_opensrc_key(current_user, new_opensrc_key)
+                                    if new_opensrc_url:
+                                        db.update_opensrc_url(current_user, new_opensrc_url)
+                                    st.success("Gespeichert!")
+                                    time.sleep(0.5)
+                                    st.rerun()      
 
 
-                
-                if get_provider(sbhelp) == get_provider(sbmain) :
-                    with col2:
+                    st.caption("API Keys Konfiguration")
+                    if get_provider(sbhelp) == get_provider(sbmain) :
                         st.caption("Helper und Main Konfiguration:")
                         config_provider(sbmain)
-                elif get_provider(sbhelp) != get_provider(sbmain) and not st.session_state.notebook_mode:
-                    with col2:
+                    elif get_provider(sbhelp) != get_provider(sbmain) and not st.session_state.notebook_mode:
                         st.caption("Helper Konfiguration:")
                         config_provider(sbhelp)
-                    with col3: 
                         st.caption("Main Konfiguration:")
                         config_provider(sbmain)                           
-                elif st.session_state.notebook_mode:
-                    with col2:
+                    elif st.session_state.notebook_mode:
                         st.caption("Main Konfiguration:")
                         config_provider(sbmain)
 
@@ -695,6 +645,7 @@ if st.session_state["authentication_status"]:
         
         # --- HIER FEHLTE DIE DEFINITION ---
         def check_stop_callback():
+            """Diese Funktion wird vom Backend aufgerufen, um zu prüfen ob der User Stop gedrückt hat."""
             return st.session_state.get("abort_requested", False)
 
         # Stop-Button anzeigen
@@ -744,19 +695,20 @@ if st.session_state["authentication_status"]:
             metrics = result_data["metrics"]
             workflow_success = not (response.startswith("Error:") or response.startswith("Fehler"))
             
-            if not response or len(response.strip()) < 50:
-                raise ValueError("Das Modell hat keine verwertbare Antwort geliefert (Empty Response).")
-
-            workflow_success = True
-            status.update(label="✅ Analyse abgeschlossen!", state="complete", expanded=False)
+            if workflow_success:
+                status.update(label="Analyse abgeschlossen!", state="complete", expanded=False)
+            else:
+                status.update(label="Analyse fehlgeschlagen", state="error", expanded=False)
 
         except InterruptedError:
-            response = "🛑 Die Analyse wurde vom Benutzer abgebrochen."
+            response = "Fehler: Die Analyse wurde vom Benutzer abgebrochen."
             status.update(label="❌ Abgebrochen", state="error", expanded=False)
+            workflow_success = False
         except Exception as e:
-            # HIER GREIFT DER NEUE CATCHER
-            response = handle_workflow_error(e)
+            logging.error(f"CRITICAL ERROR: {traceback.format_exc()}")
+            response = f"Fehler bei der Verarbeitung: {e}"
             status.update(label="⚠️ Fehler aufgetreten", state="error", expanded=False)
+            workflow_success = False
         finally:
             st.session_state.is_running = False
             st.session_state.abort_requested = False
