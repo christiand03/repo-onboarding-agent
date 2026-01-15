@@ -32,8 +32,7 @@ class LLMHelper:
     It centralizes API interaction, error handling, and validates I/O using Pydantic.
     """
     def __init__(self, api_key: str, function_prompt_path: str, class_prompt_path: str, model_name: str = "gemini-2.0-flash-lite", base_url: str = None):
-        if not api_key:
-            raise ValueError("Gemini API Key must be set.")
+        
         
         try:
             with open(function_prompt_path, 'r', encoding='utf-8') as f:

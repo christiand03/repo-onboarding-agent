@@ -24,8 +24,6 @@ class MainLLM:
     Hauptklasse für die Interaktion mit dem LLM.
     """
     def __init__(self, api_key: str, prompt_file_path: str, model_name: str = "gemini-2.5-pro", base_url: str = None):
-        if not api_key:
-            raise ValueError("Gemini API Key must be set.")
         
         try:
             with open(prompt_file_path, 'r', encoding='utf-8') as f:
