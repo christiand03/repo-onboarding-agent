@@ -1,6 +1,11 @@
 from typing import List, Optional, Literal
 from pydantic import BaseModel, ValidationError
 
+from schemas.enums import (
+    AnalysisMode,
+    DiagramFocus,
+    DiagramType
+)
 # --------- Helper LLM FUNCTION OUTPUT Schema ----------
 
 class ParameterDescription(BaseModel):
@@ -112,6 +117,31 @@ class ClassAnalysisInput(BaseModel):
     source_code: str
     imports: List[str]
     context: ClassContextInput
+
+# --------- Diagram Request Schema ----------
+class DiagramRequest(BaseModel):
+    """Input schema for requesting a diagram generation."""
+    nodes: list[dict]
+    edges: list[tuple]
+
+    mode: AnalysisMode = AnalysisMode.STANDARD
+    focus: DiagramFocus = DiagramFocus.ARCHITECTURE
+
+
+class GraphInput(BaseModel):
+    """Repräsentiert deinen CallGraph in serialisierbarer Form"""
+    
+    nodes: list[dict]
+    edges: list[tuple]
+    graph_type: str
+    metadata: dict = {}
+
+class DiagramOutput(BaseModel):
+    """Output schema for generated diagram information."""
+    diagramtype: DiagramType
+    mermaid_code: str
+    explanation: str
+
 
 # ----------------------- Example Dictionaries --------------------------
 if __name__ == "__main__":

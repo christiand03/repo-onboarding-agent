@@ -2,20 +2,18 @@ import os
 import json
 import logging
 import time
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Optional
 
 from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_ollama import ChatOllama
 from langchain_openai import ChatOpenAI
-from langchain.messages import HumanMessage, SystemMessage, AIMessage
-from pydantic import ValidationError
+from langchain_core.messages import HumanMessage, SystemMessage
 
 from schemas.types import (
     FunctionAnalysis, 
     ClassAnalysis,
     FunctionAnalysisInput,
-    FunctionContextInput,
     ClassAnalysisInput,
     ClassContextInput
 )
@@ -178,8 +176,6 @@ class LLMHelper:
         return all_validated_functions
         
             
-    
-
     def generate_for_classes(self, class_inputs: List[ClassAnalysisInput]) -> List[Optional[ClassAnalysis]]:
         """Generates and validates documentation for a batch of classes."""
         if not class_inputs:
@@ -219,9 +215,6 @@ class LLMHelper:
                 time.sleep(WAITING_TIME)
 
         return all_validated_classes
-
-
-
 
 
 def main_orchestrator():
@@ -380,7 +373,7 @@ def main_orchestrator():
     
     # The helper methods expect a LIST of inputs, so we wrap our single object in a list.
     input = [add_item_input, check_stock_input, generate_report_input]
-    analysis = [add_item_analysis, check_stock_analysis, generate_report_analysis] 
+    # analysis = [add_item_analysis, check_stock_analysis, generate_report_analysis] 
 
     function_prompt_file = 'SystemPrompts/SystemPromptFunctionHelperLLM.txt'
     class_prompt_file = 'SystemPrompts/SystemPromptClassHelperLLM.txt'
@@ -406,7 +399,7 @@ def main_orchestrator():
             # Use .model_dump() to convert the Pydantic object back to a dict for JSON serialization
             final_documentation["classes"][doc.identifier] = doc.model_dump() 
         else:
-            logging.warning(f"Failed to generate doc for a class")
+            logging.warning("Failed to generate doc for a class")
 
     # --- Step 5: Display the final aggregated result ---
     logging.info("\n--- Final Generated Documentation ---")
