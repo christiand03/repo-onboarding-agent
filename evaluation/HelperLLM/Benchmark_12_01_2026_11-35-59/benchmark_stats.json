@@ -1,0 +1,68 @@
+[
+    {
+        "helper_model": "alias-reasoning",
+        "evaluator_model": "gemini-3-flash",
+        "status": "failed",
+        "score": 0,
+        "duration_gen_sec": 0,
+        "duration_eval_sec": 0,
+        "items_processed": 0,
+        "error_message": "Leere Antwort vom LLM (keine Funktionen/Klassen generiert)",
+        "timestamp": "2026-01-12 11:36:05"
+    },
+    {
+        "helper_model": "alias-ha",
+        "evaluator_model": "gemini-3-flash",
+        "status": "success",
+        "score": 0,
+        "duration_gen_sec": 226.86,
+        "duration_eval_sec": 63.06,
+        "items_processed": 86,
+        "error_message": null,
+        "timestamp": "2026-01-12 11:36:38"
+    },
+    {
+        "helper_model": "alias-code",
+        "evaluator_model": "gemini-3-flash",
+        "status": "success",
+        "score": 0,
+        "duration_gen_sec": 51.84,
+        "duration_eval_sec": 63.48,
+        "items_processed": 86,
+        "error_message": null,
+        "timestamp": "2026-01-12 11:42:33"
+    },
+    {
+        "helper_model": "meta-llama/Llama-3.3-70B-Instruct",
+        "evaluator_model": "gemini-3-flash",
+        "status": "success",
+        "score": 0,
+        "duration_gen_sec": 152.55,
+        "duration_eval_sec": 63.45,
+        "items_processed": 86,
+        "error_message": null,
+        "timestamp": "2026-01-12 11:45:34"
+    },
+    {
+        "helper_model": "meta-llama/Llama-3.1-8B-Instruct",
+        "evaluator_model": "gemini-3-flash",
+        "status": "success",
+        "score": 0,
+        "duration_gen_sec": 271.44,
+        "duration_eval_sec": 63.26,
+        "items_processed": 60,
+        "error_message": null,
+        "timestamp": "2026-01-12 11:50:15"
+    },
+    {
+        "helper_model": "meta-llama/Llama-4-Scout-17B-16E-Instruct",
+        "evaluator_model": "gemini-3-flash",
+        "status": "pending",
+        "score": 0,
+        "duration_gen_sec": 238.92,
+        "duration_eval_sec": 0,
+        "items_processed": 86,
+        "error_message": null,
+        "timestamp": "2026-01-12 11:56:54"
+    }
+]
