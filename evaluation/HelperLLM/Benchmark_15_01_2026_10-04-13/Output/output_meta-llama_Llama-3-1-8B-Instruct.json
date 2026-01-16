@@ -1,0 +1,1433 @@
+{
+  "functions": {
+    "app_pages.page1.show_page": {
+      "identifier": "app_pages.page1.show_page",
+      "description": {
+        "overall": "This function is responsible for displaying a page with various metrics and charts. It takes in multiple dataframes and uses them to generate key performance indicators (KPIs), charts, and other visualizations. The function is designed to provide a comprehensive overview of the data, including metrics such as row counts, null values, and error frequencies.",
+        "parameters": [
+          {
+            "name": "df",
+            "type": "pandas.DataFrame",
+            "description": "The first dataframe containing data for the page."
+          },
+          {
+            "name": "df2",
+            "type": "pandas.DataFrame",
+            "description": "The second dataframe containing data for the page."
+          },
+          {
+            "name": "metrics_df1",
+            "type": "pandas.DataFrame",
+            "description": "The first metrics dataframe containing additional data for the page."
+          },
+          {
+            "name": "metrics_df2",
+            "type": "pandas.DataFrame",
+            "description": "The second metrics dataframe containing additional data for the page."
+          },
+          {
+            "name": "metrics_combined",
+            "type": "pandas.DataFrame",
+            "description": "The combined metrics dataframe containing additional data for the page."
+          }
+        ],
+        "returns": [],
+        "usage_context": {
+          "calls": "This function calls `metrics.ratio_null_values_rows`.",
+          "called_by": "This function is called by no other functions."
+        }
+      },
+      "error": null
+    },
+    "app_pages.page2.show_page": {
+      "identifier": "app_pages.page2.show_page",
+      "description": {
+        "overall": "This function, `show_page`, is responsible for displaying various metrics and dataframes related to Zeitwerte and Auftr\u00e4ge. It appears to be part of a Streamlit application, utilizing the `st` library for user interface elements. The function takes in several dataframes as parameters and uses them to generate various charts and metrics. The purpose of this function is to provide a visual representation of the data for users to analyze and understand.",
+        "parameters": [
+          {
+            "name": "df",
+            "type": "pandas.DataFrame",
+            "description": "A pandas dataframe containing data"
+          },
+          {
+            "name": "df2",
+            "type": "pandas.DataFrame",
+            "description": "A second pandas dataframe containing data"
+          },
+          {
+            "name": "metrics_df1",
+            "type": "pandas.DataFrame",
+            "description": "A pandas dataframe containing metrics"
+          },
+          {
+            "name": "metrics_df2",
+            "type": "pandas.DataFrame",
+            "description": "A second pandas dataframe containing metrics"
+          },
+          {
+            "name": "metrics_combined",
+            "type": "pandas.DataFrame",
+            "description": "A pandas dataframe containing combined metrics"
+          }
+        ],
+        "returns": [],
+        "usage_context": {
+          "calls": "This function calls `metrics.above_50k` and `metrics.check_zeitwert`.",
+          "called_by": "This function is called by no other functions in the provided context."
+        }
+      },
+      "error": null
+    },
+    "app_pages.page3.show_page": {
+      "identifier": "app_pages.page3.show_page",
+      "description": {
+        "overall": "The `show_page` function is responsible for displaying various metrics and dataframes on a Streamlit page. It appears to be part of a larger application that involves data analysis and visualization. The function takes in multiple dataframes and uses them to generate various metrics and charts.",
+        "parameters": [
+          {
+            "name": "df",
+            "type": "object",
+            "description": "A dataframe used for visualization"
+          },
+          {
+            "name": "df2",
+            "type": "object",
+            "description": "Another dataframe used for visualization"
+          },
+          {
+            "name": "metrics_df1",
+            "type": "object",
+            "description": "A dataframe containing metrics"
+          },
+          {
+            "name": "metrics_df2",
+            "type": "object",
+            "description": "Another dataframe containing metrics"
+          },
+          {
+            "name": "metrics_combined",
+            "type": "object",
+            "description": "A combined dataframe of metrics"
+          }
+        ],
+        "returns": [],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "app_pages.page4.show_page": {
+      "identifier": "app_pages.page4.show_page",
+      "description": {
+        "overall": "This function, `show_page`, is responsible for displaying various metrics and KPIs related to order and position data. It retrieves specific values from `metrics_df1` and `metrics_df2` and uses them to create visualizations using Streamlit. The function appears to be part of a larger application that provides insights into the data.",
+        "parameters": [
+          {
+            "name": "df",
+            "type": "object",
+            "description": "A DataFrame object containing data for the application."
+          },
+          {
+            "name": "df2",
+            "type": "object",
+            "description": "Another DataFrame object containing additional data for the application."
+          },
+          {
+            "name": "metrics_df1",
+            "type": "object",
+            "description": "A DataFrame object containing metrics related to order data."
+          },
+          {
+            "name": "metrics_df2",
+            "type": "object",
+            "description": "A DataFrame object containing metrics related to position data."
+          },
+          {
+            "name": "metrics_combined",
+            "type": "object",
+            "description": "A combined DataFrame object containing metrics from both order and position data."
+          }
+        ],
+        "returns": [],
+        "usage_context": {
+          "calls": "This function calls metrics.discount_check, metrics.false_negative_df, and metrics.false_negative_df2.",
+          "called_by": "This function is not called by any other functions in the provided context."
+        }
+      },
+      "error": null
+    },
+    "app_pages.page5.show_page": {
+      "identifier": "app_pages.page5.show_page",
+      "description": {
+        "overall": "The `show_page` function displays a title on a Streamlit page.",
+        "parameters": [],
+        "returns": [],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "dashboard.load": {
+      "identifier": "dashboard.load",
+      "description": {
+        "overall": "This function loads two dataframes, df and df2, from parquet files located in the 'resources' directory. The function returns both dataframes.",
+        "parameters": [],
+        "returns": [
+          {
+            "name": "df",
+            "type": "pd.DataFrame",
+            "description": "The first loaded dataframe."
+          },
+          {
+            "name": "df2",
+            "type": "pd.DataFrame",
+            "description": "The second loaded dataframe."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "dashboard.compute_metrics_df1": {
+      "identifier": "dashboard.compute_metrics_df1",
+      "description": {
+        "overall": "This function calculates various metrics for a given DataFrame, df1, which appears to be related to Auftragsdaten. It performs multiple checks, calculations, and data cleaning operations, and returns a dictionary containing the results. The function is designed to be efficient, with timing measurements and print statements to track its progress.",
+        "parameters": [],
+        "returns": [
+          {
+            "name": "metrics_df1",
+            "type": "dict",
+            "description": "A dictionary containing various metrics for the DataFrame, including row count, null ratio columns, null ratio rows, and more."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls dashboard.load, metrics.Kundengruppe_containing_test, metrics.above_50k, metrics.allgemeine_statistiken_num, metrics.check_keywords_vectorized, metrics.check_zeitwert, metrics.count_rows, metrics.data_cleanliness, metrics.error_frequency_by_weekday_hour, metrics.false_negative_df, metrics.handwerker_gewerke_outlier, metrics.plausibilitaetscheck_forderung_einigung, metrics.proformabelege, metrics.ratio_null_values_column, and metrics.ratio_null_values_rows.",
+          "called_by": "This function is called by no other functions."
+        }
+      },
+      "error": null
+    },
+    "dashboard.compute_metrics_df2": {
+      "identifier": "dashboard.compute_metrics_df2",
+      "description": {
+        "overall": "This function, `compute_metrics_df2`, calculates various metrics for a DataFrame `df2` containing position data. It uses cached data and prints the calculation times. The function returns a dictionary containing the calculated metrics.",
+        "parameters": [],
+        "returns": [
+          {
+            "name": "metrics_df2",
+            "type": "dict",
+            "description": "A dictionary containing the calculated metrics for `df2`, including row count, null ratio columns, null ratio rows, general statistics, discount check errors, position counts per invoice, plausibility check results, and false negatives."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls dashboard.load, metrics.allgemeine_statistiken_num, metrics.count_rows, metrics.discount_check, metrics.false_negative_df2, metrics.plausibilitaetscheck_forderung_einigung, metrics.position_count, metrics.ratio_null_values_column, and metrics.ratio_null_values_rows.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "dashboard.compute_metrics_combined": {
+      "identifier": "dashboard.compute_metrics_combined",
+      "description": {
+        "overall": "This function calculates combined metrics by loading data, performing uniqueness checks, and comparing orders. It returns a dictionary containing the results of these operations.",
+        "parameters": [],
+        "returns": [
+          {
+            "name": "metrics_combined",
+            "type": "dict",
+            "description": "A dictionary containing the results of the uniqueness checks and order comparisons."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls load, uniqueness_check, and abgleich_auftraege.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "dashboard.compute_positions_over_time": {
+      "identifier": "dashboard.compute_positions_over_time",
+      "description": {
+        "overall": "This function calculates the positions per order over time, caching the result. It loads data, calculates the positions, and returns the result. The calculation is performed using the `mt.positions_per_order_over_time` function. The function prints a message indicating the start and end of the calculation, including the time taken.",
+        "parameters": [],
+        "returns": [
+          {
+            "name": "positions_over_time_df",
+            "type": "pandas.DataFrame",
+            "description": "A pandas DataFrame containing the positions per order over time."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls dashboard.load and metrics.positions_per_order_over_time.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "data_drift.load_data": {
+      "identifier": "data_drift.load_data",
+      "description": {
+        "overall": "The `load_data` function generates a pandas DataFrame containing synthetic data for demonstration purposes. It creates a date range from January 1, 2022, to December 31, 2023, and populates the DataFrame with three columns: 'datum' for dates, 'umsatz' for sales data with a gradual increase and random noise, and 'kunden' for random customer counts. The function returns the generated DataFrame.",
+        "parameters": [],
+        "returns": [
+          {
+            "name": "df",
+            "type": "pd.DataFrame",
+            "description": "A pandas DataFrame containing synthetic data."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "data_drift.filterby_timeframe": {
+      "identifier": "data_drift.filterby_timeframe",
+      "description": {
+        "overall": "This function filters a pandas DataFrame based on a specified time frame. It takes in a DataFrame, a start date, and an end date, converts these dates to timestamps, creates a boolean mask to select rows within the specified time frame, and returns the filtered DataFrame.",
+        "parameters": [
+          {
+            "name": "input_df",
+            "type": "pandas.DataFrame",
+            "description": "The input DataFrame to be filtered."
+          },
+          {
+            "name": "start_date",
+            "type": "datetime",
+            "description": "The start date of the time frame."
+          },
+          {
+            "name": "end_date",
+            "type": "datetime",
+            "description": "The end date of the time frame."
+          }
+        ],
+        "returns": [
+          {
+            "name": "filtered_df",
+            "type": "pandas.DataFrame",
+            "description": "The filtered DataFrame containing rows within the specified time frame."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "data_drift.get_drift_stats": {
+      "identifier": "data_drift.get_drift_stats",
+      "description": {
+        "overall": "This function calculates statistics (mean, median, standard deviation) grouped by frequency for charting purposes. It takes an input DataFrame and a frequency as input, groups the data by the specified frequency, and calculates the specified statistics for the 'umsatz' and 'kunden' columns. The resulting DataFrame is then flattened for easier plotting.",
+        "parameters": [
+          {
+            "name": "input_df",
+            "type": "pandas.DataFrame",
+            "description": "The input DataFrame to calculate statistics for."
+          },
+          {
+            "name": "frequency",
+            "type": "str",
+            "description": "The frequency to group the data by."
+          }
+        ],
+        "returns": [
+          {
+            "name": "stats_df",
+            "type": "pandas.DataFrame",
+            "description": "The resulting DataFrame with calculated statistics."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "data_drift.slicing": {
+      "identifier": "data_drift.slicing",
+      "description": {
+        "overall": "This function creates individual slices for the detail view (Expanders) by grouping input data based on a specified frequency. It uses the pandas library to perform the grouping and returns a dictionary with the slices. If an error occurs during the slicing process, it displays an error message using Streamlit and returns an empty dictionary.",
+        "parameters": [
+          {
+            "name": "input_df",
+            "type": "pandas.DataFrame",
+            "description": "The input data to be sliced."
+          },
+          {
+            "name": "frequency",
+            "type": "str",
+            "description": "The frequency at which the data should be grouped."
+          }
+        ],
+        "returns": [
+          {
+            "name": "slices",
+            "type": "dict",
+            "description": "A dictionary containing the individual slices of the input data."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions in the provided context."
+        }
+      },
+      "error": null
+    },
+    "data_drift_metrics.load": {
+      "identifier": "data_drift_metrics.load",
+      "description": {
+        "overall": "This function loads two datasets from parquet files, sorts them by the 'CRMEingangszeit' column, and merges the second dataset with the first based on the 'KvaRechnung_ID' column. The function returns both datasets.",
+        "parameters": [],
+        "returns": [
+          {
+            "name": "df",
+            "type": "pd.DataFrame",
+            "description": "The first dataset, sorted by 'CRMEingangszeit' and merged with the second dataset."
+          },
+          {
+            "name": "df2",
+            "type": "pd.DataFrame",
+            "description": "The second dataset, sorted by 'CRMEingangszeit' and merged with the first dataset."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "data_drift_metrics.check_start_end_date": {
+      "identifier": "data_drift_metrics.check_start_end_date",
+      "description": {
+        "overall": "This function checks if the end date follows the start date chronologically and reorders them if needed. It takes two datetime parameters, start and end, and returns a pair of chronologically sorted datetime values.",
+        "parameters": [
+          {
+            "name": "start",
+            "type": "datetime",
+            "description": "The assumed beginning of the interval."
+          },
+          {
+            "name": "end",
+            "type": "datetime",
+            "description": "The assumed end of the interval."
+          }
+        ],
+        "returns": [
+          {
+            "name": "start",
+            "type": "datetime",
+            "description": "The chronologically sorted start date."
+          },
+          {
+            "name": "end",
+            "type": "datetime",
+            "description": "The chronologically sorted end date."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "data_drift_metrics.datetime_slice_mask": {
+      "identifier": "data_drift_metrics.datetime_slice_mask",
+      "description": {
+        "overall": "This function, datetime_slice_mask, is a helper function that returns a chronologically sliced Dataset according to the passed datetime. It takes a pandas DataFrame, a start date, and an end date as inputs. The function uses these inputs to create a mask that filters the DataFrame based on the date range. The filtered DataFrame is then converted to a Dataset using the Evidently library.",
+        "parameters": [
+          {
+            "name": "df",
+            "type": "pandas.DataFrame",
+            "description": "Input DataFrame"
+          },
+          {
+            "name": "start_date",
+            "type": "datetime",
+            "description": "Start date for the datetime slice"
+          },
+          {
+            "name": "end_date",
+            "type": "datetime",
+            "description": "End date for the datetime slice"
+          }
+        ],
+        "returns": [
+          {
+            "name": "sliced_ds",
+            "type": "evidently.Dataset",
+            "description": "Sliced DataFrame converted to Dataset"
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "data_drift_metrics.data_drift_evaluation": {
+      "identifier": "data_drift_metrics.data_drift_evaluation",
+      "description": {
+        "overall": "This function evaluates data drift between two samples from a passed DataFrame, using the standard preset in the evidentlyai framework. It samples the DataFrame based on time intervals and saves the resulting Snapshot object as HTML for easy embedding.",
+        "parameters": [
+          {
+            "name": "df",
+            "type": "pandas.DataFrame",
+            "description": "The DataFrame to sample from."
+          },
+          {
+            "name": "start_date_reference",
+            "type": "datetime",
+            "description": "The starting datetime of the reference, baseline dataset."
+          },
+          {
+            "name": "end_date_reference",
+            "type": "datetime",
+            "description": "The ending datetime of the reference, baseline dataset."
+          },
+          {
+            "name": "start_date_eval",
+            "type": "datetime",
+            "description": "The starting datetime of the evaluated dataset."
+          },
+          {
+            "name": "end_date_eval",
+            "type": "datetime",
+            "description": "The ending datetime of the evaluated dataset."
+          }
+        ],
+        "returns": [],
+        "usage_context": {
+          "calls": "This function calls data_drift_metrics.check_start_end_date and data_drift_metrics.datetime_slice_mask.",
+          "called_by": "This function is not called by any other functions in the provided context."
+        }
+      },
+      "error": null
+    },
+    "data_exploration.load": {
+      "identifier": "data_exploration.load",
+      "description": {
+        "overall": "This function loads two parquet files, 'Auftragsdaten_konvertiert' and 'Positionsdaten_konvertiert', into pandas DataFrames. The function returns these DataFrames.",
+        "parameters": [],
+        "returns": [
+          {
+            "name": "df",
+            "type": "pd.DataFrame",
+            "description": "The first parquet file loaded into a pandas DataFrame."
+          },
+          {
+            "name": "df2",
+            "type": "pd.DataFrame",
+            "description": "The second parquet file loaded into a pandas DataFrame."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "db_dashboard.get_db_connection": {
+      "identifier": "db_dashboard.get_db_connection",
+      "description": {
+        "overall": "Establishes a read-only connection to the DuckDB database. This function returns a connection object that can be used to query the database. The connection is established using the `duckdb.connect` function, which takes the database path `DB_PATH` as an argument. The `read_only=True` parameter ensures that the connection is read-only, meaning that no changes can be made to the database.",
+        "parameters": [],
+        "returns": [
+          {
+            "name": "connection",
+            "type": "duckdb.connect",
+            "description": "A read-only connection object to the DuckDB database"
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "db_dashboard.load": {
+      "identifier": "db_dashboard.load",
+      "description": {
+        "overall": "The db_dashboard.load function loads the raw cleaned dataframes from DuckDB. It establishes a connection to the database, executes two SQL queries to retrieve the data, and returns the resulting dataframes. The function ensures that the database connection is closed after use. This function is designed to be used in a data visualization or analysis context, where the loaded data can be further processed or displayed.",
+        "parameters": [],
+        "returns": [
+          {
+            "name": "df",
+            "type": "pandas.DataFrame",
+            "description": "The first dataframe loaded from the database, containing data from the 'auftragsdaten' table."
+          },
+          {
+            "name": "df2",
+            "type": "pandas.DataFrame",
+            "description": "The second dataframe loaded from the database, containing data from the 'positionsdaten' table."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls db_dashboard.get_db_connection.",
+          "called_by": "This function is not called by any other functions in the provided context."
+        }
+      },
+      "error": null
+    },
+    "db_dashboard.get_scalar_metrics": {
+      "identifier": "db_dashboard.get_scalar_metrics",
+      "description": {
+        "overall": "This function, get_scalar_metrics, is a helper function that loads the single-row scalar table from the database. It establishes a connection to the database, executes a SQL query to retrieve the scalar metrics, and returns the result as a pandas DataFrame. The function ensures that the database connection is properly closed after use. The function does not take any parameters and does not return any value.",
+        "parameters": [],
+        "returns": [
+          {
+            "name": "scalar_metrics",
+            "type": "pandas.DataFrame",
+            "description": "A single-row DataFrame containing the scalar metrics."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls db_dashboard.get_db_connection.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "db_dashboard.compute_metrics_df1": {
+      "identifier": "db_dashboard.compute_metrics_df1",
+      "description": {
+        "overall": "This function computes and loads metrics for df1 (Auftragsdaten) from the database. It retrieves various metrics, including null ratios, test data entries, numeric statistics, plausibility differences, cleanliness columns and rows, proforma receipts, above 50k data, zeitwert errors, error frequency, false negatives, handwerker gewerke outliers, and mismatched entries. The function then constructs a dictionary containing these metrics and returns it. The function also prints the time taken to load the metrics.",
+        "parameters": [
+          {
+            "name": "self",
+            "type": "object",
+            "description": "The instance of the class this function belongs to."
+          }
+        ],
+        "returns": [
+          {
+            "name": "metrics_df1",
+            "type": "dict",
+            "description": "A dictionary containing various metrics for df1 (Auftragsdaten)"
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls db_dashboard.get_db_connection and db_dashboard.get_scalar_metrics.",
+          "called_by": "This function is called by no other functions."
+        }
+      },
+      "error": null
+    },
+    "db_dashboard.compute_metrics_df2": {
+      "identifier": "db_dashboard.compute_metrics_df2",
+      "description": {
+        "overall": "This function computes and returns a dictionary containing various metrics for df2 (Positionsdaten) from the database. It loads metrics from the database, calculates additional statistics, and returns a dictionary with the computed metrics. The function takes no arguments and returns a dictionary with the computed metrics.",
+        "parameters": [],
+        "returns": [
+          {
+            "name": "metrics_df2",
+            "type": "dict",
+            "description": "A dictionary containing various metrics for df2 (Positionsdaten) from the database."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls db_dashboard.get_db_connection, db_dashboard.get_scalar_metrics, and db_dashboard.load.",
+          "called_by": "This function is not called by any other functions in the provided context."
+        }
+      },
+      "error": null
+    },
+    "db_dashboard.compute_metrics_combined": {
+      "identifier": "db_dashboard.compute_metrics_combined",
+      "description": {
+        "overall": "This function computes and returns combined metrics from the database. It retrieves scalar metrics and a DataFrame containing order position mismatches. The function then combines these metrics into a dictionary and returns it. The function also prints loading and completion messages, and measures the execution time.",
+        "parameters": [],
+        "returns": [
+          {
+            "name": "metrics_combined",
+            "type": "dict",
+            "description": "A dictionary containing combined metrics, including whether KVA IDs and position IDs are unique, and a DataFrame of order position mismatches."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls db_dashboard.get_db_connection and db_dashboard.get_scalar_metrics.",
+          "called_by": "This function is not called by any other functions in the provided context."
+        }
+      },
+      "error": null
+    },
+    "db_dashboard.compute_positions_over_time": {
+      "identifier": "db_dashboard.compute_positions_over_time",
+      "description": {
+        "overall": "This function computes and returns positions over time from the database. It retrieves data from the 'metric_positions_over_time' table, loads it into a pandas DataFrame, and returns the result. The function also measures and prints the time it takes to execute the query.",
+        "parameters": [],
+        "returns": [
+          {
+            "name": "df_pos_time",
+            "type": "pandas.DataFrame",
+            "description": "A pandas DataFrame containing positions over time from the database"
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls db_dashboard.get_db_connection.",
+          "called_by": "This function is not called by any other functions in the provided context."
+        }
+      },
+      "error": null
+    },
+    "metrics.load_data": {
+      "identifier": "metrics.load_data",
+      "description": {
+        "overall": "This function loads two datasets from parquet files, 'Auftragsdaten_konvertiert' and 'Positionsdaten_konvertiert', using the pandas library. It returns the loaded dataframes as a tuple.",
+        "parameters": [],
+        "returns": [
+          {
+            "name": "df",
+            "type": "pd.DataFrame",
+            "description": "The first loaded dataframe."
+          },
+          {
+            "name": "df2",
+            "type": "pd.DataFrame",
+            "description": "The second loaded dataframe."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "metrics.ratio_null_values_column": {
+      "identifier": "metrics.ratio_null_values_column",
+      "description": {
+        "overall": "This function calculates the null-value-ratios for each column of a supplied pandas DataFrame. It returns a new DataFrame with the null ratio for each column, expressed as a percentage.",
+        "parameters": [
+          {
+            "name": "input_df",
+            "type": "pandas.DataFrame",
+            "description": "The DataFrame to be evaluated for null values."
+          }
+        ],
+        "returns": [
+          {
+            "name": "null_ratio_df",
+            "type": "pd.DataFrame",
+            "description": "A DataFrame containing the null ratio for each column, expressed as a percentage."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "metrics.ratio_null_values_rows": {
+      "identifier": "metrics.ratio_null_values_rows",
+      "description": {
+        "overall": "This function calculates the ratio of rows containing null values in all or chosen columns to the total number of rows in a given DataFrame. It returns a percentage value of rows with at least one null value in the specified columns. If no columns are provided, it evaluates all columns in the DataFrame.",
+        "parameters": [
+          {
+            "name": "input_df",
+            "type": "pandas.DataFrame",
+            "description": "The DataFrame that is to be evaluated."
+          },
+          {
+            "name": "relevant_columns",
+            "type": "list",
+            "description": "A list of column identifiers; the function will only evaluate these columns."
+          }
+        ],
+        "returns": [
+          {
+            "name": "row_ratio",
+            "type": "float",
+            "description": "The percentage value of rows with at least one null value in the given columns."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "metrics.Kundengruppe_containing_test": {
+      "identifier": "metrics.Kundengruppe_containing_test",
+      "description": {
+        "overall": "Determines the number of rows in the 'Auftragsdaten' data set that are part of a test data set. Optionally returns a data frame with all relevant instances. A row is considered test data, if the entry in 'Kundengruppe' is named accordingly.",
+        "parameters": [
+          {
+            "name": "df",
+            "type": "pandas.DataFrame",
+            "description": "'Auftragsdaten'-DataFrame that is to be evaluated."
+          },
+          {
+            "name": "return_frame",
+            "type": "bool",
+            "description": "If True, this function returns a DataFrame with all found test data, by default False"
+          }
+        ],
+        "returns": [
+          {
+            "name": "anzahl_test",
+            "type": "int",
+            "description": "total number of test data rows."
+          },
+          {
+            "name": "test_Kundengruppen",
+            "type": "pandas.DataFrame or None",
+            "description": "DataFrame containing all found test data, returned only if return_frame = True"
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "metrics.allgemeine_statistiken_num": {
+      "identifier": "metrics.allgemeine_statistiken_num",
+      "description": {
+        "overall": "Calculates simple statistical values for all columns containing number data in the provided DataFrame. The function iterates over each numerical column, calculates the mean, median, standard deviation, minimum, and maximum values, and stores these statistics in a nested dictionary. This dictionary is then returned.",
+        "parameters": [
+          {
+            "name": "input_df",
+            "type": "pandas.DataFrame",
+            "description": "DataFrame that is to be evaluated."
+          }
+        ],
+        "returns": [
+          {
+            "name": "statistiken",
+            "type": "dict",
+            "description": "nested dictionary containing a dictionary for each column of input_df of the following form: {mean= float, median= float, std= float, min= float, max= float}"
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions in the provided context."
+        }
+      },
+      "error": null
+    },
+    "metrics.plausibilitaetscheck_forderung_einigung": {
+      "identifier": "metrics.plausibilitaetscheck_forderung_einigung",
+      "description": {
+        "overall": "This function checks for discrepancies between 'Einigung_Netto' and 'Forderung_Netto' values in a given pandas DataFrame. It identifies rows where 'Einigung_Netto' is greater than 'Forderung_Netto', assuming these as significant errors. The function returns a pandas Series of differences, a count of such instances, and the average difference.",
+        "parameters": [
+          {
+            "name": "input_df",
+            "type": "pandas.DataFrame",
+            "description": "A DataFrame to be evaluated for discrepancies."
+          }
+        ],
+        "returns": [
+          {
+            "name": "statistik",
+            "type": "pandas.Series",
+            "description": "A list of differences greater than 0 as float values."
+          },
+          {
+            "name": "count",
+            "type": "int",
+            "description": "The total number of rows with differences greater than 0."
+          },
+          {
+            "name": "avg",
+            "type": "float",
+            "description": "The average difference over all found instances."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "metrics.uniqueness_check": {
+      "identifier": "metrics.uniqueness_check",
+      "description": {
+        "overall": "The uniqueness_check function checks whether the assumed unique ID columns in two data sets are truly unique. It takes two pandas DataFrames, 'df' and 'df2', as input and returns a tuple of two boolean values indicating whether the 'KvaRechnung_ID' and 'Position_ID' columns are unique, respectively. The function uses pandas' is_unique method to check for uniqueness.",
+        "parameters": [
+          {
+            "name": "df",
+            "type": "pandas.DataFrame",
+            "description": "DataFrame that contains the 'Auftragsdaten' data set"
+          },
+          {
+            "name": "df2",
+            "type": "pandas.DataFrame",
+            "description": "DataFrame that contains the 'Positionsdaten' data set"
+          }
+        ],
+        "returns": [
+          {
+            "name": "kvarechnung_id_is_unique",
+            "type": "bool",
+            "description": "True if column is unique"
+          },
+          {
+            "name": "position_id_is_unique",
+            "type": "bool",
+            "description": "True if column is unique"
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "metrics.count_rows": {
+      "identifier": "metrics.count_rows",
+      "description": {
+        "overall": "This function calculates the number of rows in a data frame after filtering. It takes a pandas DataFrame as input and returns the count of rows. The function is designed to be a helper function for data frame evaluation.",
+        "parameters": [
+          {
+            "name": "input_df",
+            "type": "pandas.DataFrame",
+            "description": "The DataFrame to be evaluated."
+          }
+        ],
+        "returns": [
+          {
+            "name": "count",
+            "type": "int",
+            "description": "The count of rows in the DataFrame."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "metrics.split_dataframe": {
+      "identifier": "metrics.split_dataframe",
+      "description": {
+        "overall": "This function splits a given data frame into multiple chunks, simulating a time series data. It is deprecated and made obsolete by added datetime columns. The function takes two parameters: the input data frame and the number of chunks to split it into, with a default value of 5.",
+        "parameters": [
+          {
+            "name": "input_df",
+            "type": "pandas.DataFrame",
+            "description": "The input data frame to be split."
+          },
+          {
+            "name": "chunks",
+            "type": "int",
+            "description": "The number of chunks to split the data frame into. Defaults to 5."
+          }
+        ],
+        "returns": [
+          {
+            "name": "split_data",
+            "type": "numpy.ndarray",
+            "description": "A numpy array containing the split data frame."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "metrics.data_cleanliness": {
+      "identifier": "metrics.data_cleanliness",
+      "description": {
+        "overall": "This function determines the ratio of null-values by columns and percentage of rows containing any amount of null values in a given DataFrame, with optional grouping by a specified column. It returns the percentage of rows with at least one null value, the percentage of null entries in each column, and the row and column ratios for each group. The function can be used to evaluate the quality of a dataset and identify potential issues.",
+        "parameters": [
+          {
+            "name": "input_df",
+            "type": "pandas.DataFrame",
+            "description": "The DataFrame that is to be evaluated."
+          },
+          {
+            "name": "group_by_col",
+            "type": "string",
+            "description": "The column identifier for grouping, defaults to None."
+          },
+          {
+            "name": "specific_group",
+            "type": "string",
+            "description": "Passes a group entry to filter the result by, if any; defaults to None."
+          }
+        ],
+        "returns": [
+          {
+            "name": "null_ratio_rows",
+            "type": "float or None",
+            "description": "The percentage value of rows with at least one null value in the given columns."
+          },
+          {
+            "name": "null_ratio_cols",
+            "type": "DataFrame or None",
+            "description": "The DataFrame containing the percentage amount of null entries in each column."
+          },
+          {
+            "name": "grouped_row_ratios",
+            "type": "pandas.Series or None",
+            "description": "The Series containing the row ratios of all groups as float."
+          },
+          {
+            "name": "grouped_col_ratios",
+            "type": "pandas.DataFrame or None",
+            "description": "The DataFrame containing groups and null-value-ratios per column for each."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls metrics.ratio_null_values_column and metrics.ratio_null_values_rows.",
+          "called_by": "This function is called by no other functions."
+        }
+      },
+      "error": null
+    },
+    "metrics.groupby_col": {
+      "identifier": "metrics.groupby_col",
+      "description": {
+        "overall": "This function groups a pandas DataFrame by a specified column using the `groupby` method. It takes an input DataFrame and a column identifier as parameters, and returns a grouped DataFrame. The function is designed to be used in data analysis and manipulation tasks.",
+        "parameters": [
+          {
+            "name": "input_df",
+            "type": "pandas.DataFrame",
+            "description": "The input DataFrame to be evaluated."
+          },
+          {
+            "name": "col",
+            "type": "string",
+            "description": "The identifier of the column to be grouped by."
+          }
+        ],
+        "returns": [
+          {
+            "name": "input_df_grouped",
+            "type": "pandas.DataFrame",
+            "description": "A grouped DataFrame."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions in the provided context."
+        }
+      },
+      "error": null
+    },
+    "metrics.discount_check": {
+      "identifier": "metrics.discount_check",
+      "description": {
+        "overall": "This function checks if a row in the 'Positionsdaten' data set describes a discount or similar and if the 'Einigung_Netto' and 'Forderung_Netto' information accurately reflects this. It returns the number of potentially faulty rows.",
+        "parameters": [
+          {
+            "name": "df2",
+            "type": "pandas.DataFrame",
+            "description": "DataFrame containing the 'Positionsdaten' data set"
+          }
+        ],
+        "returns": [
+          {
+            "name": "potential_errors",
+            "type": "int",
+            "description": "The number of potentially faulty rows"
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "metrics.proformabelege": {
+      "identifier": "metrics.proformabelege",
+      "description": {
+        "overall": "This function checks for pro forma receipts in a given pandas DataFrame, returning a DataFrame of found receipts and the count of such receipts.",
+        "parameters": [
+          {
+            "name": "df",
+            "type": "pandas.DataFrame",
+            "description": "The DataFrame to be evaluated for pro forma receipts."
+          }
+        ],
+        "returns": [
+          {
+            "name": "proforma",
+            "type": "pandas.DataFrame",
+            "description": "A DataFrame containing all found pro forma receipt rows."
+          },
+          {
+            "name": "proforma_count",
+            "type": "int",
+            "description": "The amount of found receipts."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "metrics.position_count": {
+      "identifier": "metrics.position_count",
+      "description": {
+        "overall": "This function, `position_count`, takes a pandas DataFrame as input and returns a new DataFrame containing the count of positions for each unique KvaRechnung_ID. It groups the input DataFrame by 'KvaRechnung_ID', counts the occurrences of 'Position_ID', and resets the index to create a new DataFrame with the desired output.",
+        "parameters": [
+          {
+            "name": "input_df",
+            "type": "pandas.DataFrame",
+            "description": "A DataFrame that is to be evaluated."
+          }
+        ],
+        "returns": [
+          {
+            "name": "position_count",
+            "type": "pandas.DataFrame",
+            "description": "A DataFrame with the columns 'KvaRechnung_ID' and the amount of associated positions."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "metrics.false_negative_df": {
+      "identifier": "metrics.false_negative_df",
+      "description": {
+        "overall": "This function checks if, when at least two values in the Tuple (Forderung, Empfehlung, Einigung) in the 'Auftragsdaten' data set are negative, the last remaining value is also negative. All instances where this doesn't hold are collected and counted.",
+        "parameters": [
+          {
+            "name": "df",
+            "type": "pandas.DataFrame",
+            "description": "DataFrame with 'Auftragsdaten' data set that is to be evaluated."
+          }
+        ],
+        "returns": [
+          {
+            "name": "error_count",
+            "type": "int",
+            "description": "Number of entries in any of the three columns Forderung, Empfehlung or Einigung failing the check."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "metrics.false_negative_df2": {
+      "identifier": "metrics.false_negative_df2",
+      "description": {
+        "overall": "This function checks the 'Positionsdaten' data set for entries in the columns 'Menge', 'Menge_Einigung', 'EP', 'Ep_Einigung', 'Forderung_Netto', and 'Einigung_Netto' that are out of sensible value range. It returns the total error count over all columns.",
+        "parameters": [
+          {
+            "name": "df2",
+            "type": "pandas.DataFrame",
+            "description": "DataFrame containing 'Positionsdaten' data set that is to be evaluated."
+          }
+        ],
+        "returns": [
+          {
+            "name": "total_errors",
+            "type": "int",
+            "description": "Total amount of non-valid entries aggregated over all relevant columns."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "metrics.above_50k": {
+      "identifier": "metrics.above_50k",
+      "description": {
+        "overall": "This function checks for all receipts or positions in a given DataFrame that exceed a limit of \u20ac50,000, indicating potential suspicion and requiring manual vetting.",
+        "parameters": [
+          {
+            "name": "df",
+            "type": "pandas.DataFrame",
+            "description": "A DataFrame to be evaluated for suspiciously high positions."
+          }
+        ],
+        "returns": [
+          {
+            "name": "suspicious_data",
+            "type": "pandas.DataFrame",
+            "description": "A Data frame containing suspiciously high positions."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "metrics.outliers_by_damage": {
+      "identifier": "metrics.outliers_by_damage",
+      "description": {
+        "overall": "This function calculates the upper and lower outliers outside the desired quantile range (symmetric over mean) for each kind of damage in a given DataFrame. It assumes 'Forderung_Netto' as the column of interest. The function takes into account specific damage type labels and desired quantile ranges. It returns a DataFrame containing all suspicious rows.",
+        "parameters": [
+          {
+            "name": "df",
+            "type": "pandas.DataFrame",
+            "description": "DataFrame to be evaluated"
+          },
+          {
+            "name": "schadenart",
+            "type": "string",
+            "description": "specific damage type label to filter for"
+          },
+          {
+            "name": "set_quantile",
+            "type": "float",
+            "description": "desired quantile range"
+          },
+          {
+            "name": "column_choice",
+            "type": "str",
+            "description": "numeric column containing outliers"
+          }
+        ],
+        "returns": [
+          {
+            "name": "df_outlier",
+            "type": "pandas.DataFrame",
+            "description": "df containing all suspicious rows"
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "metrics.check_zeitwert": {
+      "identifier": "metrics.check_zeitwert",
+      "description": {
+        "overall": "This function checks if the value in the column 'Differenz_vor_Zeitwert_Netto' satisfies the condition [Zeitwert = Forderung-Einigung] and calculates the relative error. It only validates 'Auftragsdaten' data sets.",
+        "parameters": [
+          {
+            "name": "df",
+            "type": "pandas.DataFrame",
+            "description": "DataFrame containing 'Auftragsdaten' data set that is to be evaluated."
+          }
+        ],
+        "returns": [
+          {
+            "name": "zeitwert_error",
+            "type": "pandas.Series",
+            "description": "Series of all error values (float) found in the data frame"
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "metrics.positions_per_order_over_time": {
+      "identifier": "metrics.positions_per_order_over_time",
+      "description": {
+        "overall": "This function calculates the average number of positions per order over time, grouping the data by month. It takes two dataframes, `df` and `df2`, as input, along with the name of the time column. The function returns a new dataframe with columns for the time period, average positions per order, total positions, number of orders, and growth rate percentage.",
+        "parameters": [
+          {
+            "name": "df",
+            "type": "DataFrame",
+            "description": "Auftragsdaten with Spalte 'KvaRechnung_ID' and a time column."
+          },
+          {
+            "name": "df2",
+            "type": "DataFrame",
+            "description": "Positionsdaten with Spalten 'KvaRechnung_ID' and 'Position_ID'."
+          },
+          {
+            "name": "time_col",
+            "type": "str",
+            "description": "Name of the time column in orders_df (e.g., 'CRMEingangszeit')."
+          }
+        ],
+        "returns": [
+          {
+            "name": "result",
+            "type": "DataFrame",
+            "description": "A new dataframe with columns: 'Zeitperiode', 'Avg_Positionen_pro_Auftrag', 'Total_Positionen', 'Anzahl_Auftraege', and 'Growth_rate_%'."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "metrics.error_frequency_by_weekday_hour": {
+      "identifier": "metrics.error_frequency_by_weekday_hour",
+      "description": {
+        "overall": "This function aggregates the error frequency (NaN values) of orders by weekday and hour. An order is considered faulty if it contains at least one NaN value in any of the relevant columns. It takes a pandas DataFrame as input and returns a new DataFrame with the aggregated error rates.",
+        "parameters": [
+          {
+            "name": "df",
+            "type": "pandas.DataFrame",
+            "description": "A pandas DataFrame containing order data, which must include 'KvaRechnung_ID' and the time column."
+          },
+          {
+            "name": "time_col",
+            "type": "string",
+            "description": "The name of the time column in the DataFrame, e.g., 'CRMEingangszeit'."
+          },
+          {
+            "name": "relevant_columns",
+            "type": "list",
+            "description": "A list of columns to check for NaN values. If None, all columns except 'KvaRechnung_ID' and 'time_col' are checked."
+          }
+        ],
+        "returns": [
+          {
+            "name": "result",
+            "type": "pandas.DataFrame",
+            "description": "A DataFrame with columns: 'weekday' (name of the weekday), 'hour' (hour of the day), 'total_rows' (number of orders in this time slot), 'error_rows' (number of faulty orders in this slot), and 'error_rate' (error rate in percent)."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "metrics.get_mismatched_entries": {
+      "identifier": "metrics.get_mismatched_entries",
+      "description": {
+        "overall": "This function calculates the similarity scores between 'Gewerk_Name' and 'Handwerker_Name' columns in a given DataFrame. It uses the SentenceTransformer model to encode the names and then computes the cosine distance between the embeddings. The function returns a DataFrame with the similarity scores and identifies the mismatched entries based on a specified threshold.",
+        "parameters": [
+          {
+            "name": "df",
+            "type": "pandas.DataFrame",
+            "description": "The input DataFrame containing the 'Gewerk_Name' and 'Handwerker_Name' columns."
+          },
+          {
+            "name": "threshold",
+            "type": "float",
+            "description": "The minimum similarity score for an entry to be considered a match."
+          }
+        ],
+        "returns": [
+          {
+            "name": "mismatches",
+            "type": "pandas.DataFrame",
+            "description": "A DataFrame containing the mismatched entries with their similarity scores."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "metrics.handwerker_gewerke_outlier": {
+      "identifier": "metrics.handwerker_gewerke_outlier",
+      "description": {
+        "overall": "This function processes a pandas DataFrame to identify outliers in the number of Gewerke per Handwerker. It calculates the ratio of Gewerke per Handwerker and flags those with more than one Gewerke and a ratio below 0.2 as outliers.",
+        "parameters": [
+          {
+            "name": "df",
+            "type": "pandas.DataFrame",
+            "description": "The input DataFrame containing Handwerker_Name and Gewerk_Name columns."
+          }
+        ],
+        "returns": [
+          {
+            "name": "stats",
+            "type": "pandas.DataFrame",
+            "description": "A DataFrame containing the Handwerker_Name, Gewerk_Name, count, total_count, ratio, anzahl_gewerke, and is_outlier columns."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "metrics.check_keywords_vectorized": {
+      "identifier": "metrics.check_keywords_vectorized",
+      "description": {
+        "overall": "This function checks if the names of handymen in a given DataFrame match keywords associated with specific trades. It returns a series of labels indicating whether the names are confirmed by name, in conflict with another trade, or have no keyword information.",
+        "parameters": [
+          {
+            "name": "df",
+            "type": "pandas.DataFrame",
+            "description": "A DataFrame containing information about handymen, including their names and trades."
+          }
+        ],
+        "returns": [
+          {
+            "name": "final_result",
+            "type": "pandas.Series",
+            "description": "A series of labels indicating whether the names are confirmed by name, in conflict with another trade, or have no keyword information."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "metrics.abgleich_auftraege": {
+      "identifier": "metrics.abgleich_auftraege",
+      "description": {
+        "overall": "This function compares the header data of orders (df1) with the sum of their positions (df2). It groups the position data (df2) by 'Kva_RechnungID', calculates the sums for 'Forderung_Netto' and 'Einigung_Netto', and compares these with the values stored in df1. Round-off errors are taken into account.",
+        "parameters": [
+          {
+            "name": "df1",
+            "type": "pd.DataFrame",
+            "description": "Dataframe with order data (should values). Must contain the following columns: 'Kva_RechnungID' (connection key), 'Forderung_Netto', 'Einigung_Netto'"
+          },
+          {
+            "name": "df2",
+            "type": "pd.DataFrame",
+            "description": "Dataframe with position data (actual values). Must contain the following columns: 'Kva_RechnungID' (connection key), 'Forderung_Netto', 'Einigung_Netto'"
+          }
+        ],
+        "returns": [
+          {
+            "name": "result_df",
+            "type": "pd.DataFrame",
+            "description": "A list of discrepancies. The dataframe contains only the IDs where the values do not match. It contains the following columns: 'Kva_RechnungID': ID of the affected order, 'Diff_Forderung': difference amount (value in df1 - sum in df2), 'Diff_Einigung': difference amount (value in df1 - sum in df2). If the difference is positive, the value in the order is higher than the sum of the positions."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    }
+  },
+  "classes": {}
+}
