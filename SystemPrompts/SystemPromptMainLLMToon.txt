@@ -51,9 +51,6 @@ Your output must be a single Markdown string. Do not wrap the output in JSON or 
     [Description of important use cases and list of primary commands.] # Derived by synthesizing all gained Information
 
     ## 4. Architecture
-    [Generate a Mermaid Architecture Diagram. As the main input for the creation use the `basic_info` given for the project. The Diagram should comprehend the basic design of the repository.
-    I should also give an overview about the procedures that are executed in order. Don't use parenthesis for the vertice names. Instead use correct Mermaid.js syntax.]
-
 
 ## 5. Code Analysis
 [Iterate through files as defined in `ast_schema`. Create a subsection for each file.]

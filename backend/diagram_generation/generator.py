@@ -1,6 +1,7 @@
 import ast
 from pathlib import Path
 import sys
+import re
 
 
 sys.path.append(str(Path(__file__).parent.parent))
@@ -9,7 +10,9 @@ from diagram_generation.call_resolver import CallResolver
 from diagram_generation.callgraph import TreeVisitor
 from diagram_generation.data_types import ProjectIndex, ResolvedCall
 from diagram_generation.emitter import (
-    MermaidSequenceEmitter
+    MermaidSequenceEmitter,
+    MermaidClassDiagramEmitter,
+    MermaidOverviewArchitectureEmitter
 )
 from diagram_generation.symbol_collector import SymbolCollector, attach_with_parents
 
@@ -50,7 +53,7 @@ def analyze_project(all_files: list[RepoFile]):
     return project, resolved_calls
 
 
-def main_diagram_generation(py_files: list[str]) -> dict[str, str]:
+def main_diagram_generation(py_files: list[str]) -> tuple[dict, dict, str]:
     project, resolved_calls = analyze_project(py_files)
     call_from_same_function: dict[str, list[ResolvedCall]] = {}
 
@@ -63,24 +66,39 @@ def main_diagram_generation(py_files: list[str]) -> dict[str, str]:
                 call_from_same_function[caller_name] = []
             call_from_same_function[caller_name].append(res_call)
 
+    class_diagrams = MermaidClassDiagramEmitter().emit(project.modules)
+    component_diagram = MermaidOverviewArchitectureEmitter().emit(project.modules)
+
     seqs: dict[str, str] = {}
     for function, calls in call_from_same_function.items():
         seq = MermaidSequenceEmitter().emit(calls)
         seqs[function] = seq
 
-    return seqs
+    return seqs, class_diagrams, component_diagram
 
 
-def enrich_report_with_diagrams(final_report: str, diagrams: dict) -> str:
+def enrich_report_with_diagrams(final_report: str, diagrams: dict, component_diagram: str, class_diagrams: dict) -> str:
     """Fügt Diagramme aus dem `diagrams`-Dictionary in den `final_report` ein."""
     report_lines = final_report.splitlines()
     enriched_report = []
 
     for line in report_lines:
         enriched_report.append(line)
-        for function_name, diagram in diagrams.items():
-            if f"#### Function: `{function_name}`" in line:
-                enriched_report.append(diagram)
+        if "#### Function:" in line:
+            for filename, seq_diagram in diagrams.items():
+                    if filename in line:
+                        enriched_report.append(seq_diagram)
+        
+        if "## 4. Architecture" in line:
+            enriched_report.append(component_diagram)
+        
+        
+        if "#### Class:" in line:
+            for class_name, class_diagram in class_diagrams.items():
+                if re.search(rf"\b{re.escape(class_name)}\b", line):
+                    enriched_report.append(class_diagram)
+
+        
     return "\n".join(enriched_report)
 
 
@@ -95,12 +113,12 @@ if __name__ == "__main__":
     for file in all_files:
         if file.path.endswith(".py"):
             py_files.append(file)
-    diagrams_per_function = main_diagram_generation(py_files)
+    diagrams_per_function, class_diagram, component_diagram = main_diagram_generation(py_files)
 
     with open(Path(__file__).parent.parent.parent / "result" / "report_01_12_2025_12-26-46_Helper_gemini-flash-latest_MainLLM_gemini-2.5-pro.md", "r") as file:
         report = file.read()
     
-    enriched_report = enrich_report_with_diagrams(report, diagrams_per_function)
+    enriched_report = enrich_report_with_diagrams(report, diagrams_per_function, component_diagram, class_diagram)
     with open("Test_enriched_report_2.md", "w") as file:
         file.write(enriched_report)
 
