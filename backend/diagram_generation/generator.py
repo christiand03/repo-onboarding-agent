@@ -12,7 +12,7 @@ from diagram_generation.data_types import ProjectIndex, ResolvedCall
 from diagram_generation.emitter import (
     MermaidSequenceEmitter,
     MermaidClassDiagramEmitter,
-    MermaidOverviewArchitectureEmitter
+    MermaidOverviewEmitter
 )
 from diagram_generation.symbol_collector import SymbolCollector, attach_with_parents
 
@@ -67,7 +67,7 @@ def main_diagram_generation(py_files: list[str]) -> tuple[dict, dict, str]:
             call_from_same_function[caller_name].append(res_call)
 
     class_diagrams = MermaidClassDiagramEmitter().emit(project.modules)
-    component_diagram = MermaidOverviewArchitectureEmitter().emit(project.modules)
+    component_diagram = MermaidOverviewEmitter().emit(project.modules)
 
     seqs: dict[str, str] = {}
     for function, calls in call_from_same_function.items():
@@ -87,6 +87,7 @@ def enrich_report_with_diagrams(final_report: str, diagrams: dict, component_dia
         if "#### Function:" in line:
             for filename, seq_diagram in diagrams.items():
                     if filename in line:
+                        enriched_report.append(f"   **Sequence diagram for {filename}**")
                         enriched_report.append(seq_diagram)
         
         if "## 4. Architecture" in line:

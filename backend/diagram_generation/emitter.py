@@ -75,6 +75,28 @@ class MermaidOverviewArchitectureEmitter:
         return "\n".join(lines)
 
 
+class MermaidOverviewEmitter:
+    def emit(self, modules: dict[str, ModuleSymbol]) -> str:
+        lines = ["```mermaid"]
+        lines.append("graph TD")  # Use top-down layout for better visualization of hierarchy
+
+        # Collect all unique package relationships
+        relationships = set()
+
+        for module in modules.values():
+            packages = module.overlying_packages
+            # Create edges between consecutive packages in the hierarchy
+            for i in range(len(packages) - 1):
+                relationships.add((packages[i], packages[i + 1]))
+
+        # Add relationships to the diagram
+        for src, target in relationships:
+            lines.append(f"    {src} --> {target}")
+
+        lines.append("```")
+        return "\n".join(lines)
+        
+       
 class MermaidClassDiagramEmitter:
     def emit(self, modules: dict[str, ModuleSymbol]) -> dict[str, str]:
 

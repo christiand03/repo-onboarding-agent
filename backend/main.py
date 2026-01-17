@@ -485,6 +485,7 @@ def enrich_report_with_diagrams(final_report: str, diagrams: dict, component_dia
         if "#### Function:" in line:
             for filename, seq_diagram in diagrams.items():
                     if filename in line:
+                        enriched_report.append(f"   **Sequence diagram for {filename}**")
                         enriched_report.append(seq_diagram)
         
         if "## 4. Architecture" in line:
