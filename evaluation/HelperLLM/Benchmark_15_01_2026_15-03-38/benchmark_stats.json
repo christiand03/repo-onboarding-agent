@@ -1,0 +1,35 @@
+[
+    {
+        "helper_model": "alias-reasoning",
+        "evaluator_model": "gemini-2.5-flash",
+        "status": "failed",
+        "score": 0,
+        "duration_gen_sec": 0,
+        "duration_eval_sec": 0,
+        "items_processed": 0,
+        "error_message": "Leere Antwort vom LLM (keine Funktionen/Klassen generiert)",
+        "timestamp": "2026-01-15 15:03:40"
+    },
+    {
+        "helper_model": "alias-ha",
+        "evaluator_model": "gemini-2.5-flash",
+        "status": "success",
+        "score": 64,
+        "duration_gen_sec": 284.87,
+        "duration_eval_sec": 143.66,
+        "items_processed": 76,
+        "error_message": null,
+        "timestamp": "2026-01-15 15:03:59"
+    },
+    {
+        "helper_model": "alias-code",
+        "evaluator_model": "gemini-2.5-flash",
+        "status": "pending",
+        "score": 0,
+        "duration_gen_sec": 61.32,
+        "duration_eval_sec": 0,
+        "items_processed": 123,
+        "error_message": null,
+        "timestamp": "2026-01-15 15:12:12"
+    }
+]

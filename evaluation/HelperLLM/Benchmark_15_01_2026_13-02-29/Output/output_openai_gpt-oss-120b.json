@@ -1,0 +1,2939 @@
+{
+  "functions": {},
+  "classes": {
+    "backend.AST_Schema.ASTVisitor": {
+      "identifier": "backend.AST_Schema.ASTVisitor",
+      "description": {
+        "overall": "The **ASTVisitor** class is a concrete implementation of ``ast.NodeVisitor`` that walks a Python abstract syntax tree (AST) to extract a lightweight schema describing a module's imports, functions, and classes. It records the raw source code, file location, and project root, then resolves the module's dotted path using ``path_to_module``. While traversing, it populates a ``schema`` dictionary with three top\u2011level collections (imports, functions, classes) and captures contextual information for each discovered class and function. The visitor is intended to be instantiated with the source text of a file and then applied to the parsed AST to produce a serialisable representation of the module's structure.",
+        "init_method": {
+          "description": "The constructor stores the provided source code, file path, and project root, computes the module's dotted path via ``path_to_module``, and initializes an empty schema dictionary that will be filled during the AST walk. It also prepares an internal placeholder for the class currently being visited.",
+          "parameters": [
+            {
+              "name": "source_code",
+              "type": "str",
+              "description": "The full text of the Python file that will be parsed into an AST."
+            },
+            {
+              "name": "file_path",
+              "type": "str",
+              "description": "Filesystem path to the file being analysed."
+            },
+            {
+              "name": "project_root",
+              "type": "str",
+              "description": "Root directory of the project; used together with ``file_path`` to compute the module's import path."
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "backend.AST_Schema.ASTVisitor.visit_Import",
+            "description": {
+              "overall": "This method handles ``import`` statements encountered in the AST. For each alias in the ``Import`` node it appends the imported module name to the ``schema['imports']`` list. After processing the aliases it delegates further traversal to ``generic_visit`` so that any nested nodes are visited. The method does not return a value; its purpose is to record top\u2011level imports for later schema generation.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "ASTVisitor",
+                  "description": "The visitor instance."
+                },
+                {
+                  "name": "node",
+                  "type": "ast.Import",
+                  "description": "The AST node representing an ``import`` statement."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "The method does not invoke any other functions or methods.",
+                "called_by": "No other methods are recorded as calling ``visit_Import``."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "backend.AST_Schema.ASTVisitor.visit_ImportFrom",
+            "description": {
+              "overall": "This method processes ``from ... import ...`` statements. It iterates over each alias in the ``ImportFrom`` node and records a fully\u2011qualified import string (``module.name``) in ``schema['imports']``. As with ``visit_Import``, it then calls ``generic_visit`` to continue traversing any child nodes. The method returns ``None`` and solely contributes to the import collection of the schema.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "ASTVisitor",
+                  "description": "The visitor instance."
+                },
+                {
+                  "name": "node",
+                  "type": "ast.ImportFrom",
+                  "description": "The AST node representing a ``from ... import`` statement."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "The method does not call any other functions or methods.",
+                "called_by": "No other methods are recorded as calling ``visit_ImportFrom``."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "backend.AST_Schema.ASTVisitor.visit_ClassDef",
+            "description": {
+              "overall": "When a class definition node is encountered, this method builds a dictionary describing the class and appends it to ``schema['classes']``. The dictionary includes metadata such as the fully\u2011qualified identifier, original name, docstring, source segment, and start/end line numbers, as well as an empty ``context`` placeholder for later method analysis. The current class context is stored in ``self._current_class`` so that subsequent function visits can be associated with this class. After populating the class entry, the method walks the class body via ``generic_visit`` and finally clears the current class placeholder.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "ASTVisitor",
+                  "description": "The visitor instance."
+                },
+                {
+                  "name": "node",
+                  "type": "ast.ClassDef",
+                  "description": "The AST node representing a class definition."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "The method calls ``generic_visit`` to continue traversing the class body.",
+                "called_by": "No other methods are recorded as calling ``visit_ClassDef``."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "backend.AST_Schema.ASTVisitor.visit_FunctionDef",
+            "description": {
+              "overall": "For each function definition node, this method determines whether the function belongs to a class (i.e., ``self._current_class`` is set). If it does, it creates a method context entry containing the method's identifier, name, argument list, docstring, and line numbers, and stores it inside the current class's ``context['method_context']`` list. If the function is top\u2011level, it creates a separate function analysis entry and adds it to ``schema['functions']``. After recording the appropriate information, the method invokes ``generic_visit`` to walk the function body.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "ASTVisitor",
+                  "description": "The visitor instance."
+                },
+                {
+                  "name": "node",
+                  "type": "ast.FunctionDef",
+                  "description": "The AST node representing a function definition."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "The method calls ``generic_visit`` to traverse the function body.",
+                "called_by": "No other methods are recorded as calling ``visit_FunctionDef``."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "backend.AST_Schema.ASTVisitor.visit_AsyncFunctionDef",
+            "description": {
+              "overall": "This method simply forwards asynchronous function definition nodes to ``visit_FunctionDef`` so that they are processed using the same logic as regular functions. It does not add any additional behaviour beyond the delegation.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "ASTVisitor",
+                  "description": "The visitor instance."
+                },
+                {
+                  "name": "node",
+                  "type": "ast.AsyncFunctionDef",
+                  "description": "The AST node representing an async function definition."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "The method calls ``visit_FunctionDef`` to handle the node.",
+                "called_by": "No other methods are recorded as calling ``visit_AsyncFunctionDef``."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "The class relies on the external helper function ``backend.AST_Schema.path_to_module`` to translate a file path into a dotted module identifier.",
+          "instantiated_by": "There are currently no recorded locations in the codebase where ``ASTVisitor`` is instantiated."
+        }
+      },
+      "error": null
+    },
+    "backend.AST_Schema.ASTAnalyzer": {
+      "identifier": "backend.AST_Schema.ASTAnalyzer",
+      "description": {
+        "overall": "The **ASTAnalyzer** class coordinates static analysis of a Python code base. It parses each Python file in a repository, extracts structural information (imports, functions, classes) via an **ASTVisitor**, and builds a comprehensive schema describing the files. Afterwards it merges external relationship data to annotate every function and class with the calls they make and the places they are called from, while also computing class\u2011level dependencies. The class therefore provides a high\u2011level abstraction for generating an enriched AST\u2011based representation of a repository that can be used for further analysis such as dependency tracking or call\u2011graph construction.",
+        "init_method": {
+          "description": "The constructor takes no arguments and performs no initialization work; it simply creates an empty instance of **ASTAnalyzer**.",
+          "parameters": []
+        },
+        "methods": [
+          {
+            "identifier": "merge_relationship_data",
+            "description": {
+              "overall": "This method enriches a previously built **full_schema** with call relationship information. It extracts outgoing and incoming call maps from the supplied **raw_relationships** dictionary. For each function in every file it records the functions it calls and the functions that call it. For each class it records which functions instantiate it and, by examining method calls, derives a list of external dependencies for the class. Finally, the updated **full_schema** containing the augmented context information is returned.",
+              "parameters": [
+                {
+                  "name": "full_schema",
+                  "type": "dict",
+                  "description": "A dictionary representing the repository schema produced by **analyze_repository**, containing file paths mapped to their extracted AST nodes."
+                },
+                {
+                  "name": "raw_relationships",
+                  "type": "dict",
+                  "description": "A mapping with two top\u2011level keys, **outgoing** and **incoming**, each holding dictionaries that map identifiers (function or method names) to lists of identifiers they call or are called by."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "",
+                  "type": "dict",
+                  "description": "The same **full_schema** dictionary, now augmented with call and dependency information in the context of each function, method, and class."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not directly call any other functions or methods.",
+                "called_by": "No other methods are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "analyze_repository",
+            "description": {
+              "overall": "This method builds a complete AST\u2011based schema for a list of files belonging to a repository. It first determines the common project root path, then iterates over each file, skipping non\u2011Python files and empty contents. For each Python file it parses the source code into an AST, creates an **ASTVisitor** (providing the source code, file path, and project root), and lets the visitor collect imports, functions, and classes. The collected schema for each file is stored under the file's path in the **full_schema** dictionary. Syntax errors are caught and reported, and the final aggregated schema is returned.",
+              "parameters": [
+                {
+                  "name": "files",
+                  "type": "list",
+                  "description": "A list of file objects, each exposing a **path** attribute (the file's location) and a **content** attribute (the source code as a string)."
+                },
+                {
+                  "name": "repo",
+                  "type": "GitRepository",
+                  "description": "An object representing the Git repository; it is not used directly in the current implementation but may provide contextual information."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "",
+                  "type": "dict",
+                  "description": "A dictionary with a single key **files** that maps each processed file path to its extracted **ast_nodes** (imports, functions, classes)."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method calls **backend.AST_Schema.ASTVisitor** to traverse the abstract syntax tree of each Python file.",
+                "called_by": "No other methods are recorded as calling this method."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "The class depends on **backend.AST_Schema.ASTVisitor**, which is used to extract AST nodes from each source file.",
+          "instantiated_by": "No specific instantiation points are provided in the supplied context."
+        }
+      },
+      "error": null
+    },
+    "backend.File_Dependency.FileDependencyGraph": {
+      "identifier": "backend.File_Dependency.FileDependencyGraph",
+      "description": {
+        "overall": "FileDependencyGraph is a subclass of ast.NodeVisitor that walks the abstract syntax tree of a Python file and builds a mapping of import dependencies for that file within a repository. It records both absolute and relative imports, resolves relative imports to actual module or symbol names using repository\u2011wide helper functions, and stores the results in the `import_dependencies` dictionary. The class therefore provides the core logic for constructing a file\u2011level dependency graph of a code base.",
+        "init_method": {
+          "description": "The constructor stores the name of the file to be analysed and the root directory of the repository, establishing the context required for later import resolution.",
+          "parameters": [
+            {
+              "name": "filename",
+              "type": "str",
+              "description": "The name or path of the Python file whose imports are being analysed."
+            },
+            {
+              "name": "repo_root",
+              "type": "str | Path",
+              "description": "The root directory of the repository that contains the file."
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "_resolve_module_name",
+            "description": {
+              "overall": "This method resolves relative `from .. import name` statements to concrete module or symbol names that exist in the repository. It extracts the import level and the imported names, locates candidate files that match the current file, and walks up the directory hierarchy according to the import level. Two inner helper functions \u2013 `module_file_exists` and `init_exports_symbol` \u2013 are used to check for the presence of a module file or an exported symbol in a package's `__init__.py`. The method aggregates all successfully resolved names, de\u2011duplicates and sorts them, and raises an ImportError if no resolution is possible. The final result is a list of resolved names that can be recorded as dependencies.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ImportFrom",
+                  "description": "An AST node representing a relative `from \u2026 import \u2026` statement that needs to be resolved."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "resolved",
+                  "type": "list[str]",
+                  "description": "A list of module or symbol names that were successfully resolved for the relative import."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method calls the external helper functions `backend.File_Dependency.get_all_temp_files`, `backend.File_Dependency.init_exports_symbol`, and `backend.File_Dependency.module_file_exists` to locate files and verify symbol exports.",
+                "called_by": "No other methods are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_Import",
+            "description": {
+              "overall": "When an `import` or `from \u2026 import \u2026` node is visited, this method records the imported module or name in the `import_dependencies` dictionary for the current file. It ensures that an entry for the current filename exists, then adds either the provided base name (for relative imports) or the alias name to the set of dependencies. After updating the mapping, it continues the generic AST traversal. This method therefore captures direct import relationships between files.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "Import | ImportFrom",
+                  "description": "The AST node representing the import statement being processed."
+                },
+                {
+                  "name": "base_name",
+                  "type": "str | None",
+                  "description": "Optional base module name derived from a preceding relative\u2011import handling; if `None`, the alias name is used."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not call any external functions.",
+                "called_by": "No other methods are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_ImportFrom",
+            "description": {
+              "overall": "This method handles `from \u2026 import \u2026` statements. If the import has an explicit module name, it extracts the last component of the module path and forwards the node to `visit_Import` with that base name. For relative imports (where `module` is `None`), it attempts to resolve the import using `_resolve_module_name`; each resolved base name is then passed to `visit_Import`. ImportErrors are caught and reported via a printed message. Finally, the generic visitor continues traversal. The method thus bridges absolute and relative import handling into a unified dependency recording process.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ImportFrom",
+                  "description": "The AST node representing the `from \u2026 import \u2026` statement."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not call any external functions according to the provided context.",
+                "called_by": "No other methods are recorded as calling this method."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "The class relies on external helper functions `backend.File_Dependency.get_all_temp_files`, `backend.File_Dependency.init_exports_symbol`, and `backend.File_Dependency.module_file_exists` to locate files and verify symbol exports during relative import resolution.",
+          "instantiated_by": "There are no recorded locations where this class is instantiated."
+        }
+      },
+      "error": null
+    },
+    "backend.HelperLLM.LLMHelper": {
+      "identifier": "backend.HelperLLM.LLMHelper",
+      "description": {
+        "overall": "LLMHelper centralises interaction with various Large Language Model back\u2011ends (Google Gemini, OpenAI, Ollama or a custom SCADSLLM endpoint). It loads system prompts for function\u2011 and class\u2011level documentation, selects the appropriate LLM client based on the supplied model name, and configures a batch size that matches the capabilities of the chosen model. The class then provides two high\u2011level methods \u2013 `generate_for_functions` and `generate_for_classes` \u2013 which convert input Pydantic models into JSON payloads, send them to the LLM in appropriately sized batches, handle errors, and respect rate\u2011limit pauses. By exposing the raw LLM client as `raw_llm` and wrapping the structured\u2011output LLMs as `function_llm` and `class_llm`, the helper offers both low\u2011level and high\u2011level interfaces for documentation generation.",
+        "init_method": {
+          "description": "The constructor validates the provided API key, reads system\u2011prompt files for functions and classes, determines the correct LLM client based on the model name, and configures batch processing settings. It also creates structured\u2011output LLM wrappers for function and class analysis and stores the raw LLM client for direct use.",
+          "parameters": [
+            {
+              "name": "api_key",
+              "type": "str",
+              "description": "API key required by the selected LLM provider."
+            },
+            {
+              "name": "function_prompt_path",
+              "type": "str",
+              "description": "Filesystem path to the system prompt used when generating function documentation."
+            },
+            {
+              "name": "class_prompt_path",
+              "type": "str",
+              "description": "Filesystem path to the system prompt used when generating class documentation."
+            },
+            {
+              "name": "model_name",
+              "type": "str",
+              "description": "Identifier of the LLM model to use (e.g., \"gemini-2.0-flash-lite\"). Defaults to \"gemini-2.0-flash-lite\"."
+            },
+            {
+              "name": "base_url",
+              "type": "str | None",
+              "description": "Optional base URL for custom LLM endpoints; falls back to environment defaults when not supplied."
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "_configure_batch_settings",
+            "description": {
+              "overall": "This private helper determines an appropriate batch size for the LLM based on the supplied model name. It contains a series of conditional branches that map known model identifiers to empirically chosen batch limits (e.g., Gemini flash models, Llama, GPT\u20115 variants, or custom models). If the model name does not match any known pattern, a conservative default of 2 is used and a warning is logged. The computed batch size is stored on the instance as `self.batch_size` for later use by the generation methods.",
+              "parameters": [
+                {
+                  "name": "model_name",
+                  "type": "str",
+                  "description": "The name of the LLM model for which to configure batch processing."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not call any other functions.",
+                "called_by": "It is invoked by the class constructor (`__init__`) to set the initial batch size."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "generate_for_functions",
+            "description": {
+              "overall": "`generate_for_functions` accepts a list of `FunctionAnalysisInput` objects and returns a list of optionally validated `FunctionAnalysis` results. It serialises each input model to a JSON string, pairs it with the pre\u2011loaded function system prompt, and groups the conversations into batches defined by `self.batch_size`. For each batch it calls the structured\u2011output LLM (`self.function_llm.batch`) while respecting a configurable concurrency limit, logs successes or errors, and inserts `None` placeholders when a batch fails. Between batches it optionally sleeps for a fixed waiting period to avoid rate\u2011limit violations. The final list preserves the order of the original inputs, containing either validated analysis objects or `None` for failed calls.",
+              "parameters": [
+                {
+                  "name": "function_inputs",
+                  "type": "List[FunctionAnalysisInput]",
+                  "description": "A list of Pydantic models describing the functions to be documented."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "result",
+                  "type": "List[Optional[FunctionAnalysis]]",
+                  "description": "A list aligned with `function_inputs` where each element is either a validated `FunctionAnalysis` object or `None` if the LLM call failed."
+                }
+              ],
+              "usage_context": {
+                "calls": "The method does not call any other user\u2011defined functions; it uses standard library utilities (`json`, `time`) and the LLM wrapper (`self.function_llm.batch`).",
+                "called_by": "No other methods in this class call `generate_for_functions`; it is intended to be used by external code that needs function documentation."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "generate_for_classes",
+            "description": {
+              "overall": "`generate_for_classes` mirrors the behaviour of `generate_for_functions` but operates on class documentation. It receives a list of `ClassAnalysisInput` models, converts each to a JSON payload, and pairs it with the class system prompt. The method then processes the payloads in batches, invoking `self.class_llm.batch` to obtain structured `ClassAnalysis` results, handling errors by inserting `None` placeholders, and respecting the same rate\u2011limit waiting period between batches. The returned list maintains the order of the input list, providing either validated class analysis objects or `None` where a batch failed.",
+              "parameters": [
+                {
+                  "name": "class_inputs",
+                  "type": "List[ClassAnalysisInput]",
+                  "description": "A list of Pydantic models describing the classes to be documented."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "result",
+                  "type": "List[Optional[ClassAnalysis]]",
+                  "description": "A list aligned with `class_inputs` where each element is either a validated `ClassAnalysis` object or `None` if the LLM call failed."
+                }
+              ],
+              "usage_context": {
+                "calls": "The method does not call any other user\u2011defined functions; it uses standard library utilities (`json`, `time`) and the LLM wrapper (`self.class_llm.batch`).",
+                "called_by": "No other methods in this class call `generate_for_classes`; it is intended to be used by external code that needs class documentation."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "The class does not have external dependencies listed in the provided context.",
+          "instantiated_by": "No information about where this class is instantiated is provided."
+        }
+      },
+      "error": null
+    },
+    "backend.MainLLM.MainLLM": {
+      "identifier": "backend.MainLLM.MainLLM",
+      "description": {
+        "overall": "The **MainLLM** class provides a unified interface for interacting with various large language model (LLM) back\u2011ends (Google Gemini, OpenAI\u2011compatible APIs, Ollama, or custom SCADSLLM endpoints). It loads a system prompt from a file, selects the appropriate LangChain chat model based on the supplied `model_name`, and exposes two high\u2011level methods: `call_llm` for a single synchronous request and `stream_llm` for a streaming response. By abstracting model selection and message formatting, it enables the rest of the application to work with any supported LLM without caring about the underlying client implementation.",
+        "init_method": {
+          "description": "Initialises the MainLLM instance by reading a system prompt file, storing the chosen model name, and constructing a LangChain chat model (`ChatGoogleGenerativeAI`, `ChatOpenAI`, or `ChatOllama`) appropriate for the supplied `model_name`. It also validates the presence of an API key and, for custom SCADSLLM models, ensures the required environment variable is set.",
+          "parameters": [
+            {
+              "name": "api_key",
+              "type": "str",
+              "description": "API key used to authenticate with the selected LLM provider."
+            },
+            {
+              "name": "prompt_file_path",
+              "type": "str",
+              "description": "Filesystem path to a UTF\u20118 text file containing the system prompt that will be sent to the LLM."
+            },
+            {
+              "name": "model_name",
+              "type": "str",
+              "description": "Identifier of the LLM model to use (e.g., \"gemini-2.5-pro\", \"gpt-4\", \"alias\u2011my\u2011model\"). Determines which LangChain client class is instantiated."
+            },
+            {
+              "name": "base_url",
+              "type": "str | None",
+              "description": "Optional base URL for custom or Ollama endpoints when `model_name` does not match a known provider."
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "call_llm",
+            "description": {
+              "overall": "Builds a message list consisting of the stored system prompt and the user\u2011provided input, then invokes the configured LLM client synchronously. If the call succeeds, the method returns the textual content of the LLM's response; otherwise it logs the exception and returns `None`.",
+              "parameters": [
+                {
+                  "name": "user_input",
+                  "type": "str",
+                  "description": "The end\u2011user's query or instruction that will be sent to the LLM."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "response_content",
+                  "type": "Optional[str]",
+                  "description": "The text generated by the LLM if the request succeeds; `None` if an error occurs."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other functions directly; it only uses the `self.llm.invoke` method provided by the underlying LangChain client.",
+                "called_by": "No other functions are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "stream_llm",
+            "description": {
+              "overall": "Creates the same message list as `call_llm` but invokes the LLM client in streaming mode. It iterates over the returned stream, yielding each chunk's content as it arrives. If an exception occurs, an error message string is yielded instead of raising.",
+              "parameters": [
+                {
+                  "name": "user_input",
+                  "type": "str",
+                  "description": "The end\u2011user's query or instruction that will be streamed to the LLM."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "chunk_content",
+                  "type": "Iterator[str]",
+                  "description": "A generator yielding the textual content of each streamed chunk from the LLM, or an error message string if the stream fails."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other functions directly; it only uses the `self.llm.stream` method provided by the underlying LangChain client.",
+                "called_by": "No other functions are recorded as calling this method."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "The class relies on external libraries such as `langchain_google_genai`, `langchain_ollama`, `langchain_openai`, and `langchain_core` for LLM client implementations and message handling, but no additional runtime dependencies are listed in the provided context.",
+          "instantiated_by": "No information about where this class is instantiated is provided in the context."
+        }
+      },
+      "error": null
+    },
+    "backend.basic_info.ProjektInfoExtractor": {
+      "identifier": "backend.basic_info.ProjektInfoExtractor",
+      "description": {
+        "overall": "ProjektInfoExtractor is a utility class that gathers basic project metadata from common repository files such as README, pyproject.toml and requirements.txt. It builds a structured dictionary containing a project overview (title, description, status, key features, tech stack) and installation information (dependencies, setup instructions, quick\u2011start guide). The class orchestrates the extraction through the public `extrahiere_info` method, which delegates to several private helpers for cleaning content, locating files, parsing markdown sections, and reading TOML or requirements files. The resulting dictionary can be used to generate documentation or provide a quick summary of a repository.",
+        "init_method": {
+          "description": "The constructor creates a placeholder constant `INFO_NICHT_GEFUNDEN` and initializes the `info` attribute with a nested dictionary that holds empty slots for project overview and installation details. These slots are later populated by the parsing methods.",
+          "parameters": [
+            {
+              "name": "self",
+              "type": "ProjektInfoExtractor",
+              "description": "The instance being created."
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "_clean_content",
+            "description": {
+              "overall": "Removes null\u2011byte characters that can appear when a file encoded as UTF\u201116 is mistakenly read as UTF\u20118. If the supplied `content` is falsy, it returns an empty string. Otherwise it replaces every '\\x00' byte with an empty string and returns the cleaned text.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "ProjektInfoExtractor",
+                  "description": "The instance on which the method is called."
+                },
+                {
+                  "name": "content",
+                  "type": "str",
+                  "description": "The raw text content that may contain null\u2011bytes."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "",
+                  "type": "str",
+                  "description": "The cleaned string with all null\u2011bytes removed, or an empty string if the input was falsy."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other functions.",
+                "called_by": "No other functions are shown to call this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_finde_datei",
+            "description": {
+              "overall": "Searches a list of file objects for the first one whose path ends with any of the supplied filename patterns, ignoring case. It iterates over each file and each pattern, returning the matching file object as soon as a match is found. If no file matches, the method returns `None`.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "ProjektInfoExtractor",
+                  "description": "The instance on which the method is called."
+                },
+                {
+                  "name": "patterns",
+                  "type": "List[str]",
+                  "description": "A list of filename suffixes (e.g., \"readme.md\") to match against."
+                },
+                {
+                  "name": "dateien",
+                  "type": "List[Any]",
+                  "description": "A list of file\u2011like objects that expose a `path` attribute."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "",
+                  "type": "Optional[Any]",
+                  "description": "The first matching file object, or `None` if no match is found."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other functions.",
+                "called_by": "No other functions are shown to call this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_extrahiere_sektion_aus_markdown",
+            "description": {
+              "overall": "Extracts the text that follows a Markdown level\u20112 heading (##) matching any of the supplied keywords. It builds a regular\u2011expression pattern that is case\u2011insensitive and captures everything up to the next level\u20112 heading or the end of the document. If a matching section is found, the stripped content is returned; otherwise `None` is returned.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "ProjektInfoExtractor",
+                  "description": "The instance on which the method is called."
+                },
+                {
+                  "name": "inhalt",
+                  "type": "str",
+                  "description": "The full Markdown document text."
+                },
+                {
+                  "name": "keywords",
+                  "type": "List[str]",
+                  "description": "A list of possible section titles to look for (e.g., \"Features\", \"Tech Stack\")."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "",
+                  "type": "Optional[str]",
+                  "description": "The extracted section text without the heading, or `None` if no matching heading is found."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other functions.",
+                "called_by": "No other functions are shown to call this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_parse_readme",
+            "description": {
+              "overall": "Parses the content of a README file to fill missing fields in the `info` dictionary. It first cleans the raw content, then extracts the title from the first level\u20111 heading, a short description from the text following the title, and uses `_extrahiere_sektion_aus_markdown` to obtain key features, tech stack, status, setup instructions, and quick\u2011start guide based on various possible headings. Each extracted piece is stored in the appropriate location within `self.info` if it was previously unset.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "ProjektInfoExtractor",
+                  "description": "The instance on which the method is called."
+                },
+                {
+                  "name": "inhalt",
+                  "type": "str",
+                  "description": "The raw text of the README file."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method calls `_clean_content` and `_extrahiere_sektion_aus_markdown` to process the README text.",
+                "called_by": "No other functions are shown to call this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_parse_toml",
+            "description": {
+              "overall": "Parses the content of a `pyproject.toml` file to extract project metadata. After cleaning the content, it checks whether the `tomllib` module is available; if not, it prints a warning and aborts. When available, it loads the TOML data, reads the `project` table, and copies the `name`, `description`, and `dependencies` fields into the corresponding entries of `self.info`. Errors during parsing are caught and reported via a warning message.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "ProjektInfoExtractor",
+                  "description": "The instance on which the method is called."
+                },
+                {
+                  "name": "inhalt",
+                  "type": "str",
+                  "description": "The raw text of the pyproject.toml file."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not call any other functions directly (apart from the standard library `tomllib`).",
+                "called_by": "No other functions are shown to call this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_parse_requirements",
+            "description": {
+              "overall": "Parses a `requirements.txt` file to obtain a list of dependencies. It first cleans the content, then, only if the `dependencies` field in `self.info` has not already been populated by the TOML parser, it splits the file into non\u2011comment, non\u2011empty lines and stores the resulting list in the `installation.dependencies` entry.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "ProjektInfoExtractor",
+                  "description": "The instance on which the method is called."
+                },
+                {
+                  "name": "inhalt",
+                  "type": "str",
+                  "description": "The raw text of the requirements.txt file."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not call any other functions.",
+                "called_by": "No other functions are shown to call this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "extrahiere_info",
+            "description": {
+              "overall": "Coordinates the whole extraction process for a repository. It first locates the README, pyproject.toml, and requirements.txt files using `_finde_datei`. It then parses the TOML file (if present), the requirements file, and finally the README, allowing later steps to overwrite earlier data where appropriate. After parsing, it normalises the dependencies field into a bullet\u2011list string, derives a fallback project title from the repository URL when needed, and returns the fully populated `info` dictionary.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "ProjektInfoExtractor",
+                  "description": "The instance on which the method is called."
+                },
+                {
+                  "name": "dateien",
+                  "type": "List[Any]",
+                  "description": "A list of file\u2011like objects representing the repository's files; each object must provide `path` and `content` attributes."
+                },
+                {
+                  "name": "repo_url",
+                  "type": "str",
+                  "description": "The URL of the repository (used to infer a title if none is found)."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "",
+                  "type": "Dict[str, Any]",
+                  "description": "A dictionary containing the extracted project overview and installation information."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method calls `_finde_datei`, `_parse_toml`, `_parse_requirements` and `_parse_readme` to process the discovered files.",
+                "called_by": "No other functions are shown to call this method."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "The class does not rely on any external dependencies beyond the standard library modules imported (re, os, tomllib, and typing).",
+          "instantiated_by": "No instantiation locations are provided in the context."
+        }
+      },
+      "error": null
+    },
+    "backend.callgraph.CallGraph": {
+      "identifier": "backend.callgraph.CallGraph",
+      "description": {
+        "overall": "The **CallGraph** class walks a Python abstract syntax tree (AST) to construct a directed call graph of all functions and methods defined in a source file. It records import aliases, class scopes, and local definitions to resolve callee names to fully\u2011qualified identifiers that include the filename and, when applicable, the class name. The resulting graph is stored in a NetworkX ``DiGraph`` and an auxiliary ``edges`` dictionary for later analysis. The class therefore abstracts the process of static call\u2011graph generation for a single Python module.",
+        "init_method": {
+          "description": "The constructor stores the target filename and initializes the internal state required for graph construction, including the current function/class trackers, dictionaries for local definitions and import mappings, a NetworkX directed graph, a set of discovered functions, and a container for edge relationships.",
+          "parameters": [
+            {
+              "name": "filename",
+              "type": "str",
+              "description": "Path to the Python source file whose AST will be visited."
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "_recursive_call",
+            "description": {
+              "overall": "Recursively walks an ``ast`` node representing a function call to collect the individual name components that make up the callee. It handles three node types: ``ast.Call`` (by descending into the ``func`` attribute), ``ast.Name`` (returning the identifier as a single\u2011element list), and ``ast.Attribute`` (building a dotted path by concatenating the attribute name to the result of the recursive call on its value). The method returns an ordered list of strings that together represent the callee's name hierarchy. This helper is used by ``visit_Call`` to extract raw name parts before they are resolved to fully\u2011qualified identifiers.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.AST",
+                  "description": "The AST node to analyse; can be a ``Call``, ``Name`` or ``Attribute`` node."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "",
+                  "type": "list[str]",
+                  "description": "A list of name components that, when joined with dots, form the callee's dotted name."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other functions within the class.",
+                "called_by": "No other methods in this class are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_resolve_all_callee_names",
+            "description": {
+              "overall": "Takes a list of callee name component lists (as produced by ``_recursive_call``) and resolves each to a fully\u2011qualified identifier. The resolution order is: first check ``local_defs`` for a simple or dotted match, then consult ``import_mapping`` to map the first component to an imported module, and finally fall back to constructing a name that includes the current filename and, if applicable, the current class context. The method returns a list of resolved strings that can be used as graph nodes. This logic enables the call graph to correctly link calls to locally defined functions, imported symbols, and methods within classes.",
+              "parameters": [
+                {
+                  "name": "callee_nodes",
+                  "type": "list[list[str]]",
+                  "description": "A list where each element is a list of name components representing a potential callee."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "",
+                  "type": "list[str]",
+                  "description": "Fully\u2011qualified callee identifiers derived from the input name components."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other functions within the class.",
+                "called_by": "No other methods in this class are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_make_full_name",
+            "description": {
+              "overall": "Constructs a fully\u2011qualified name string for a function or method using the stored filename, an optional class name, and the base name of the function. If a class name is provided, the format is ``{filename}::{class_name}::{basename}``; otherwise it is ``{filename}::{basename}``. This helper centralises the naming convention used throughout the graph construction process.",
+              "parameters": [
+                {
+                  "name": "basename",
+                  "type": "str",
+                  "description": "The simple name of the function or method."
+                },
+                {
+                  "name": "class_name",
+                  "type": "str | None",
+                  "description": "The name of the enclosing class, if the function is a method; otherwise ``None``."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "",
+                  "type": "str",
+                  "description": "A fully\u2011qualified identifier in the form ``filename::[class_name::]basename``."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other functions within the class.",
+                "called_by": "No other methods in this class are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_current_caller",
+            "description": {
+              "overall": "Determines the identifier of the function currently being visited. If ``self.current_function`` is set, that value is returned; otherwise a placeholder string referencing the filename (or ``<global-scope>`` if no filename is known) is produced. This method is used by ``visit_Call`` to attribute call edges to the correct caller node.",
+              "parameters": [],
+              "returns": [
+                {
+                  "name": "",
+                  "type": "str",
+                  "description": "The identifier of the current caller, or a placeholder such as ``<filename>`` or ``<global-scope>``."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other functions within the class.",
+                "called_by": "No other methods in this class are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_Import",
+            "description": {
+              "overall": "Visits ``import`` statements in the AST. For each alias, it records a mapping from the alias (or the original module name if no alias is used) to the fully\u2011qualified module name in ``self.import_mapping``. After populating the mapping, it continues the generic AST traversal. This enables later name resolution to translate imported symbols to their source modules.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.Import",
+                  "description": "The ``Import`` AST node containing one or more imported module aliases."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not call any other functions within the class.",
+                "called_by": "No other methods in this class are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_ImportFrom",
+            "description": {
+              "overall": "Handles ``from ... import ...`` statements. It extracts the base module name (using only the last component) and maps each imported name or its alias to that module name in ``self.import_mapping``. The method then proceeds with the generic visit to traverse any nested nodes. This mapping is later consulted by ``_resolve_all_callee_names``.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.ImportFrom",
+                  "description": "The ``ImportFrom`` AST node representing a relative or absolute import."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not call any other functions within the class.",
+                "called_by": "No other methods in this class are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_ClassDef",
+            "description": {
+              "overall": "Visits a class definition node. It saves the previous ``current_class`` value, sets ``self.current_class`` to the name of the class being visited, recursively traverses the class body, and finally restores the previous class context. This tracking allows method definitions to be associated with their enclosing class when building fully\u2011qualified names.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.ClassDef",
+                  "description": "The ``ClassDef`` AST node representing a class definition."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not call any other functions within the class.",
+                "called_by": "No other methods in this class are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_FunctionDef",
+            "description": {
+              "overall": "Processes a regular function or method definition. It builds a fully\u2011qualified name using ``_make_full_name`` (including the current class if applicable), stores this name in ``self.local_defs`` for later resolution, adds the function node to the call\u2011graph, recursively visits the function body, and finally records the function in ``self.function_set``. The method also restores the previous ``current_function`` after traversal, ensuring correct caller tracking for nested definitions.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.FunctionDef",
+                  "description": "The ``FunctionDef`` AST node representing a function or method."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not call any other functions within the class.",
+                "called_by": "No other methods in this class are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_AsyncFunctionDef",
+            "description": {
+              "overall": "Handles asynchronous function definitions by delegating to ``visit_FunctionDef`` so that async functions are treated identically to regular functions for graph construction.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.AsyncFunctionDef",
+                  "description": "The ``AsyncFunctionDef`` AST node representing an async function."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not call any other functions within the class.",
+                "called_by": "No other methods in this class are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_Call",
+            "description": {
+              "overall": "Visits a call expression. It determines the current caller identifier via ``_current_caller``, extracts the callee's raw name components using ``_recursive_call``, resolves those components to fully\u2011qualified names with ``_resolve_all_callee_names``, and records an edge from the caller to each resolved callee in ``self.edges``. After updating the edge structure, it continues generic traversal of the call's arguments and sub\u2011nodes.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.Call",
+                  "description": "The ``Call`` AST node representing a function or method invocation."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not call any other functions within the class.",
+                "called_by": "No other methods in this class are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_If",
+            "description": {
+              "overall": "Visits an ``if`` statement. If the test condition matches the typical ``if __name__ == '__main__'`` pattern, it temporarily sets ``self.current_function`` to ``<main_block>`` so that any calls inside the block are attributed to a special main\u2011module node. For all other ``if`` statements, it simply performs a generic visit. This special handling ensures that script\u2011level entry points are represented in the call graph.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.If",
+                  "description": "The ``If`` AST node representing a conditional statement."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not call any other functions within the class.",
+                "called_by": "No other methods in this class are recorded as calling this method."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "This class does not declare any external dependencies beyond the standard library modules and the imported ``networkx`` package.",
+          "instantiated_by": "No locations in the provided context are recorded as instantiating this class."
+        }
+      },
+      "error": null
+    },
+    "backend.diagram_generation.call_resolver.CallResolver": {
+      "identifier": "backend.diagram_generation.call_resolver.CallResolver",
+      "description": {
+        "overall": "The **CallResolver** class translates raw call representations (instances of `RawCall`) into concrete resolved calls (`ResolvedCall`) using a `ProjectIndex`. It handles direct function calls, imported symbols, method calls on `self`, and dynamic look\u2011ups across all classes, producing a mapping from module names to lists of resolved calls.",
+        "init_method": {
+          "description": "Initialises a `CallResolver` with a `ProjectIndex` that provides access to modules, classes and imports. The provided project index is stored on the instance for later resolution of calls.",
+          "parameters": [
+            {
+              "name": "self",
+              "type": "CallResolver",
+              "description": "Reference to the instance being created."
+            },
+            {
+              "name": "project",
+              "type": "ProjectIndex",
+              "description": "The project index containing module, class and import information used for call resolution."
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "resolve_all",
+            "description": {
+              "overall": "Iterates over a dictionary that maps module names to lists of `RawCall` objects, resolves each raw call by delegating to the `resolved` method, and aggregates the results into a new dictionary mapping the same module names to lists of `ResolvedCall` objects. The method ensures that every module key exists in the result before extending its list. Finally, the fully populated mapping is returned.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "CallResolver",
+                  "description": "The current `CallResolver` instance."
+                },
+                {
+                  "name": "calls",
+                  "type": "dict[str, list[RawCall]]",
+                  "description": "A mapping from module names to the raw call objects that need to be resolved."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "resolved",
+                  "type": "dict[str, list[ResolvedCall]]",
+                  "description": "A dictionary where each key is a module name and each value is the list of resolved calls for that module."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other functions or methods.",
+                "called_by": "No other functions or methods call this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "resolved",
+            "description": {
+              "overall": "Determines the concrete type of the function node stored in a `RawCall`. If the node is a simple name (`ast.Name`) it delegates to `_resolve_name`; if it is an attribute access (`ast.Attribute`) it delegates to `_resolve_attribute`. When the node type is unrecognised, it returns a single `ResolvedCall` with `callee=None` and `call_type=CallType.UNKNOWN`.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "CallResolver",
+                  "description": "The current `CallResolver` instance."
+                },
+                {
+                  "name": "call",
+                  "type": "RawCall",
+                  "description": "The raw call object whose function node should be resolved."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "resolved_calls",
+                  "type": "list[ResolvedCall]",
+                  "description": "A list of possible resolved calls for the given raw call."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other functions or methods.",
+                "called_by": "No other functions or methods call this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_resolve_name",
+            "description": {
+              "overall": "Resolves a simple name reference (`ast.Name`) within a call. It first checks whether the name refers to a function defined in the same module and, if so, returns a `ResolvedCall` with `call_type=DIRECT`. If the name is an imported symbol, it extracts the target module and attribute, looks up the function in that module, and returns a `ResolvedCall` with `call_type=IMPORTED`. When the name cannot be resolved, it returns a `ResolvedCall` with `callee=None` and `call_type=UNKNOWN`.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "CallResolver",
+                  "description": "The current `CallResolver` instance."
+                },
+                {
+                  "name": "call",
+                  "type": "RawCall",
+                  "description": "The raw call containing context information."
+                },
+                {
+                  "name": "node",
+                  "type": "ast.Name",
+                  "description": "The AST node representing the simple name to resolve."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "resolved_calls",
+                  "type": "list[ResolvedCall]",
+                  "description": "A list containing the resolved call(s) for the given name."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other functions or methods.",
+                "called_by": "No other functions or methods call this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_resolve_attribute",
+            "description": {
+              "overall": "Resolves attribute accesses (`ast.Attribute`) within a call. It handles three main cases: (1) attribute access on `self` to resolve method calls on the current class; (2) attribute access on a module alias imported in the current module, resolving to an imported function; (3) dynamic resolution by searching all classes in the project for a method matching the attribute name, returning one or more `ResolvedCall` objects with `call_type=DYNAMIC`. If none of these strategies succeed, it returns a `ResolvedCall` with `callee=None` and `call_type=UNKNOWN`.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "CallResolver",
+                  "description": "The current `CallResolver` instance."
+                },
+                {
+                  "name": "call",
+                  "type": "RawCall",
+                  "description": "The raw call providing contextual information."
+                },
+                {
+                  "name": "node",
+                  "type": "ast.Attribute",
+                  "description": "The AST node representing the attribute access to resolve."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "resolved_calls",
+                  "type": "list[ResolvedCall]",
+                  "description": "A list of possible resolved calls for the attribute access."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other functions or methods.",
+                "called_by": "No other functions or methods call this method."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "The class does not have external dependencies beyond the imports listed.",
+          "instantiated_by": "No other components instantiate this class."
+        }
+      },
+      "error": null
+    },
+    "backend.diagram_generation.callgraph.TreeVisitor": {
+      "identifier": "backend.diagram_generation.callgraph.TreeVisitor",
+      "description": {
+        "overall": "The **TreeVisitor** class walks a Python abstract syntax tree (AST) of a module to collect call\u2011graph information. It extends ``ast.NodeVisitor`` and keeps track of the currently visited class and function symbols while traversing the tree. For each function call it encounters, it creates a ``RawCall`` object that records the caller, the callee AST node, source line number, and contextual information such as the module, function, and class involved. The collected ``RawCall`` objects can later be used to build a call\u2011graph for the whole project.",
+        "init_method": {
+          "description": "Initialises the visitor with the module symbol that represents the file being analysed and a project index that provides access to all modules in the project. It also prepares internal state used during traversal, such as the currently active function and class symbols and a list that will store discovered calls.",
+          "parameters": [
+            {
+              "name": "module",
+              "type": "ModuleSymbol",
+              "description": "The symbol representing the module whose AST is being visited."
+            },
+            {
+              "name": "project",
+              "type": "ProjectIndex",
+              "description": "An index of all modules in the project, used for cross\u2011module lookup when analysing attribute calls."
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "visit_ClassDef",
+            "description": {
+              "overall": "Handles ``ast.ClassDef`` nodes encountered during the walk. It saves the previously active class (if any), looks up the corresponding ``ClassSymbol`` from the module's class dictionary and stores it in ``self.current_class``. The method then delegates to ``generic_visit`` so that the visitor continues traversing the body of the class definition while the new class context is active. After the subtree has been processed, the original class context is restored.\n\nThe method does not return a value and does not invoke any other helper functions.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ClassDef",
+                  "description": "The AST node representing the class definition being visited."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not call any other functions.",
+                "called_by": "No other functions are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_FunctionDef",
+            "description": {
+              "overall": "Processes ``ast.FunctionDef`` nodes. The method remembers the previously active function, then determines whether the function belongs to a class (using ``self.current_class``) or is a top\u2011level module function. It retrieves the appropriate ``FunctionSymbol`` from either the class's method dictionary or the module's function dictionary and stores it in ``self.current_function``. ``generic_visit`` is called to walk the function body while the correct function context is active, after which the original function context is restored.\n\nLike ``visit_ClassDef``, this method returns ``None`` and does not invoke other helpers.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "FunctionDef",
+                  "description": "The AST node representing the function definition being visited."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not call any other functions.",
+                "called_by": "No other functions are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_Call",
+            "description": {
+              "overall": "Captures ``ast.Call`` nodes that appear inside a function body. If there is no active ``self.current_function`` (i.e., the call is outside any tracked function), the method returns immediately. For simple name calls it checks whether the called name exists in the module's function dictionary; for attribute calls it attempts a more complex lookup against the project modules (the current implementation contains commented\u2011out logic and a placeholder check). When the call passes these filters, a ``RawCall`` instance is created containing the caller symbol, the callee AST node, the source line number, and a ``CallContext`` that bundles module, function, and class information. The ``RawCall`` is appended to ``self.calls`` and the visitor continues traversing any nested nodes via ``generic_visit``.\n\nThe method does not return a value.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.AST",
+                  "description": "The AST node representing the function call."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not call any other functions directly; it records call information for later use.",
+                "called_by": "No other functions are recorded as calling this method."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "This class has no external dependencies.",
+          "instantiated_by": "There are no recorded locations where this class is instantiated."
+        }
+      },
+      "error": null
+    },
+    "backend.diagram_generation.data_types.FunctionSymbol": {
+      "identifier": "backend.diagram_generation.data_types.FunctionSymbol",
+      "description": {
+        "overall": "FunctionSymbol is a lightweight data container that holds metadata describing a Python function. It records the function's name, the module where it is defined, its fully\u2011qualified name, whether it is asynchronous, a list of its input parameter names, a flag indicating if it returns a symbol, and the line number of its definition. The class consists solely of annotated attributes and provides no behavior beyond storing this information, making it suitable for passing function descriptors through the diagram\u2011generation pipeline.",
+        "init_method": {
+          "description": "The class does not define a custom __init__ method; Python's default initializer is used, and instance attributes are populated directly from the class annotations when an object is instantiated.",
+          "parameters": []
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "There are no external dependencies for this class.",
+          "instantiated_by": "No locations in the codebase are recorded as instantiating this class."
+        }
+      },
+      "error": null
+    },
+    "backend.diagram_generation.data_types.ClassSymbol": {
+      "identifier": "backend.diagram_generation.data_types.ClassSymbol",
+      "description": {
+        "overall": "ClassSymbol is a lightweight data container that models a Python class symbol for diagram generation. It stores the class's name, the module in which it is defined, and a mapping of method names to their corresponding FunctionSymbol representations. The class does not implement any behaviour beyond holding this metadata, serving as a simple abstraction for downstream processing.",
+        "init_method": {
+          "description": "ClassSymbol does not define an explicit __init__ method; it relies on the default object initializer. The class-level annotations indicate the intended instance attributes (name, module, methods) which are expected to be set after instantiation or via dataclass\u2011like usage.",
+          "parameters": []
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "The class does not have external dependencies.",
+          "instantiated_by": "No information about where this class is instantiated is provided."
+        }
+      },
+      "error": null
+    },
+    "backend.diagram_generation.data_types.ModuleSymbol": {
+      "identifier": "backend.diagram_generation.data_types.ModuleSymbol",
+      "description": {
+        "overall": "ModuleSymbol is a lightweight data container that models the symbolic representation of a Python module within the diagram\u2011generation subsystem. It stores the module's name, a list of packages that overlay the module, mappings of function and class symbols defined in the module, and a dictionary of import aliases. The class does not implement any behaviour; it merely groups related metadata for downstream processing.",
+        "init_method": {
+          "description": "The class relies on Python's default object initializer; no explicit __init__ method is defined, so instances are created with the default constructor that accepts no arguments beyond the implicit self.",
+          "parameters": []
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "The class does not have external dependencies.",
+          "instantiated_by": "No information about where this class is instantiated is provided."
+        }
+      },
+      "error": null
+    },
+    "backend.diagram_generation.data_types.CallContext": {
+      "identifier": "backend.diagram_generation.data_types.CallContext",
+      "description": {
+        "overall": "CallContext is a lightweight data container that encapsulates the module, function, and optional class symbols associated with a particular call site, providing a structured way to pass this contextual information throughout the backend diagram\u2011generation process.",
+        "init_method": {
+          "description": "The class does not define an explicit __init__ method; it relies on the default dataclass\u2011like initializer that stores the provided module, function, and optional class symbols as instance attributes.",
+          "parameters": []
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "This class does not depend on any external modules or packages beyond the standard typing imports that are already present in the file.",
+          "instantiated_by": "No recorded locations instantiate this class in the supplied context."
+        }
+      },
+      "error": null
+    },
+    "backend.diagram_generation.data_types.RawCall": {
+      "identifier": "backend.diagram_generation.data_types.RawCall",
+      "description": {
+        "overall": "RawCall is a lightweight data container that records the essential information about a function call encountered during diagram generation. It stores a reference to the calling function (`caller`), the AST node representing the called function (`func_node`), the source line number where the call occurs (`lineno`), and the surrounding call context (`context`). No behavior is implemented; the class merely groups these attributes for downstream processing.",
+        "init_method": {
+          "description": "The class does not declare an explicit __init__ method, so Python supplies the default initializer that accepts only the implicit `self` argument and leaves all annotated attributes unset until they are assigned externally.",
+          "parameters": []
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "This class does not rely on any external modules beyond the type hints imported elsewhere in the project.",
+          "instantiated_by": "No instantiation sites are provided in the current context."
+        }
+      },
+      "error": null
+    },
+    "backend.diagram_generation.data_types.CallType": {
+      "identifier": "backend.diagram_generation.data_types.CallType",
+      "description": {
+        "overall": "CallType is an enumeration that categorizes the nature of a function or method call within the backend diagram generation system. It defines five possible values\u2014DIRECT, METHOD, IMPORTED, DYNAMIC, and UNKNOWN\u2014each represented by a corresponding string literal.",
+        "init_method": {
+          "description": "The CallType enum does not define a custom __init__ method; it relies on the default Enum initialization provided by the base class.",
+          "parameters": []
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "This class has no external runtime dependencies beyond the standard library imports.",
+          "instantiated_by": "There are no recorded instantiations of CallType in the provided context."
+        }
+      },
+      "error": null
+    },
+    "backend.diagram_generation.data_types.ResolvedCall": {
+      "identifier": "backend.diagram_generation.data_types.ResolvedCall",
+      "description": {
+        "overall": "ResolvedCall is a lightweight data container that captures information about a function call resolution. It stores the calling function symbol, an optional callee function symbol, the type of call (e.g., direct, indirect), and the source line number where the call occurs. The class relies on type annotations to define its fields and does not implement any behavior beyond holding this data.",
+        "init_method": {
+          "description": "The class does not define an explicit __init__ method; instance attributes are declared via class variable annotations, so Python provides a default initializer that accepts values for these fields.",
+          "parameters": []
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "The class has no external dependencies.",
+          "instantiated_by": "No usage locations for instantiation were provided."
+        }
+      },
+      "error": null
+    },
+    "backend.diagram_generation.data_types.ProjectIndex": {
+      "identifier": "backend.diagram_generation.data_types.ProjectIndex",
+      "description": {
+        "overall": "ProjectIndex acts as a lightweight container that maps module names to their corresponding `ModuleSymbol` objects and provides a convenient way to retrieve every `ClassSymbol` defined across all stored modules. It does not define its own constructor, relying on the default dataclass\u2011like initialization where the `modules` attribute is expected to be supplied after instantiation.",
+        "init_method": {
+          "description": "The class does not define an explicit `__init__` method; it uses the default constructor, so no parameters are required at creation time. The `modules` attribute is a class\u2011level dictionary that should be populated with `ModuleSymbol` instances by the caller after the object is created.",
+          "parameters": []
+        },
+        "methods": [
+          {
+            "identifier": "all_classes",
+            "description": {
+              "overall": "The `all_classes` method gathers every `ClassSymbol` from each `ModuleSymbol` stored in the `modules` dictionary and returns them as a flat list. It iterates over the values of `self.modules`, then over each module's `classes` dictionary, collecting each class symbol. The method provides a simple aggregation utility for callers that need to work with the complete set of class symbols in the project index.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "ProjectIndex",
+                  "description": "The instance of `ProjectIndex` on which the method operates."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "class_list",
+                  "type": "list[ClassSymbol]",
+                  "description": "A list containing every `ClassSymbol` found in all modules managed by the index."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other functions or methods.",
+                "called_by": "No other functions or methods are recorded as calling `all_classes`."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "all_classes",
+            "description": {
+              "overall": "The `all_classes` method aggregates all class symbols from the stored modules and returns them as a flat list. It iterates over each module in `self.modules` and then over each class within a module, collecting the class symbols. This provides callers with a convenient way to access every class defined in the project without needing to navigate the module hierarchy themselves.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "ProjectIndex",
+                  "description": "The instance of `ProjectIndex`."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "class_list",
+                  "type": "list[ClassSymbol]",
+                  "description": "A list of all `ClassSymbol` objects across all modules."
+                }
+              ],
+              "usage_context": {
+                "calls": "The method does not invoke any other functions or methods.",
+                "called_by": "No recorded callers for this method."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "The class does not depend on any external modules beyond those imported elsewhere in the package.",
+          "instantiated_by": "There are no recorded locations where `ProjectIndex` is instantiated."
+        }
+      },
+      "error": null
+    },
+    "backend.diagram_generation.emitter.MermaidSequenceEmitter": {
+      "identifier": "backend.diagram_generation.emitter.MermaidSequenceEmitter",
+      "description": {
+        "overall": "MermaidSequenceEmitter is a utility class that converts a collection of ResolvedCall objects into a Mermaid\u2011formatted sequence diagram. The public `emit` method orchestrates the generation by first collecting all participants, then emitting a line for each call and, when applicable, a line for the corresponding return. Helper methods `_collect_participants`, `_emit_call`, and `_emit_response` handle the low\u2011level string construction, converting qualified names to Mermaid\u2011compatible identifiers via the external `mermaid_id` function. The final diagram is wrapped in a fenced code block suitable for rendering by Mermaid parsers.",
+        "init_method": {
+          "description": "The class does not define a custom constructor; it relies on Python's default `__init__`, which creates an empty instance without initializing any attributes.",
+          "parameters": []
+        },
+        "methods": [
+          {
+            "identifier": "emit",
+            "description": {
+              "overall": "The `emit` method generates a complete Mermaid sequence diagram from a list of `ResolvedCall` objects. It starts by creating a list of lines containing the Mermaid code fence and the `sequenceDiagram` directive. It then collects all participants using `_collect_participants` and adds a participant declaration for each. Calls are sorted by their line number, and for each call a line is added via `_emit_call`; if the callee returns a value, an additional line is added via `_emit_response`. Finally, the method closes the code fence and returns the assembled diagram as a single string.",
+              "parameters": [
+                {
+                  "name": "calls",
+                  "type": "list[ResolvedCall]",
+                  "description": "A list of `ResolvedCall` objects representing the function calls that should appear in the sequence diagram."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "mermaid_diagram",
+                  "type": "str",
+                  "description": "The complete Mermaid\u2011formatted sequence diagram, including the opening and closing code fences."
+                }
+              ],
+              "usage_context": {
+                "calls": "The emit method does not call any external functions.",
+                "called_by": "No other functions or methods are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_collect_participants",
+            "description": {
+              "overall": "The `_collect_participants` method extracts a list of unique participant identifiers from the provided calls. It iterates over each `ResolvedCall`, adds the caller's qualified name (converted with `mermaid_id`) to the participants list, and then adds the callee's qualified name if it exists and is not already present. If a callee is missing, a placeholder \"?\" is added. The method returns the ordered list of participant identifiers that will be declared in the Mermaid diagram.",
+              "parameters": [
+                {
+                  "name": "calls",
+                  "type": "list[ResolvedCall]",
+                  "description": "The collection of `ResolvedCall` objects from which participants are derived."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "participants",
+                  "type": "list[str]",
+                  "description": "A list of participant names formatted for Mermaid, preserving the order in which they were discovered."
+                }
+              ],
+              "usage_context": {
+                "calls": "The _collect_participants method calls the mermaid_id function to convert qualified names into Mermaid identifiers.",
+                "called_by": "No other functions or methods are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_emit_response",
+            "description": {
+              "overall": "The `_emit_response` method creates a Mermaid line that represents a return from a callee back to its caller. It resolves both the callee and caller qualified names using `mermaid_id` and formats them into the Mermaid arrow syntax with a \"return\" label. The resulting string is intended to be inserted into the diagram after the corresponding call line.",
+              "parameters": [
+                {
+                  "name": "call",
+                  "type": "ResolvedCall",
+                  "description": "The `ResolvedCall` instance for which a return line should be emitted."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "response_line",
+                  "type": "str",
+                  "description": "A Mermaid\u2011formatted line representing the return from the callee to the caller."
+                }
+              ],
+              "usage_context": {
+                "calls": "The _emit_response method calls the mermaid_id function to convert qualified names into Mermaid identifiers.",
+                "called_by": "No other functions or methods are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_emit_call",
+            "description": {
+              "overall": "The `_emit_call` method generates a Mermaid line that represents a function call from a caller to a callee. It resolves the caller's qualified name with `mermaid_id`. If a callee is present, its name is also resolved and the call label is taken from the callee's input parameters; otherwise, placeholders \"?\" and \"unknown\" are used. The method returns the formatted line ready to be added to the diagram.",
+              "parameters": [
+                {
+                  "name": "call",
+                  "type": "ResolvedCall",
+                  "description": "The `ResolvedCall` object describing the call to be emitted."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "call_line",
+                  "type": "str",
+                  "description": "A Mermaid\u2011formatted line representing the call, including the caller, callee, and a label of the input parameters."
+                }
+              ],
+              "usage_context": {
+                "calls": "The _emit_call method calls the mermaid_id function to convert qualified names into Mermaid identifiers.",
+                "called_by": "No other functions or methods are recorded as calling this method."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "MermaidSequenceEmitter depends on the mermaid_id utility from backend.diagram_generation.emitter.",
+          "instantiated_by": "The class is not shown to be instantiated elsewhere in the provided context."
+        }
+      },
+      "error": null
+    },
+    "backend.diagram_generation.emitter.MermaidOverviewArchitectureEmitter": {
+      "identifier": "backend.diagram_generation.emitter.MermaidOverviewArchitectureEmitter",
+      "description": {
+        "overall": "The **MermaidOverviewArchitectureEmitter** class is responsible for producing a Mermaid\u2011syntax graph that visualises the high\u2011level import relationships between a collection of Python modules. It iterates over the supplied module symbols, extracts the short module names, and creates directed edges for each import that points to another module present in the collection. The resulting string can be rendered by Mermaid to give a quick overview of the architecture\u2019s module dependency graph.",
+        "init_method": {
+          "description": "The class does not define an explicit constructor; it relies on the default `object.__init__` and therefore requires no initialization parameters.",
+          "parameters": []
+        },
+        "methods": [
+          {
+            "identifier": "emit",
+            "description": {
+              "overall": "The `emit` method builds a Mermaid graph representing module import relationships. It starts with the header `graph TD`, then iterates over each provided `ModuleSymbol`. For each module it extracts the short name (the part after the last dot) as the source node. It then walks the module's `imports` mapping; if an imported target is also present in the supplied `modules` dictionary, it adds a directed edge from the source node to the target's short name. Finally, it joins all lines with newline characters and returns the complete Mermaid diagram as a string.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "MermaidOverviewArchitectureEmitter",
+                  "description": "The instance on which the method is invoked."
+                },
+                {
+                  "name": "modules",
+                  "type": "dict[str, ModuleSymbol]",
+                  "description": "A mapping from fully\u2011qualified module names to `ModuleSymbol` objects describing each module and its imports."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "mermaid_graph",
+                  "type": "str",
+                  "description": "A Mermaid\u2011compatible graph description that visualises the module import relationships."
+                }
+              ],
+              "usage_context": {
+                "calls": "The method does not call any other functions or methods; it only uses built\u2011in operations and accesses attributes of the supplied `ModuleSymbol` objects.",
+                "called_by": "No external callers are recorded in the provided context."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "The class does not rely on any external runtime dependencies beyond the imported data\u2011type definitions (`ModuleSymbol`, `ResolvedCall`).",
+          "instantiated_by": "There is no information about where this class is instantiated in the current context."
+        }
+      },
+      "error": null
+    },
+    "backend.diagram_generation.emitter.MermaidClassDiagramEmitter": {
+      "identifier": "backend.diagram_generation.emitter.MermaidClassDiagramEmitter",
+      "description": {
+        "overall": "The **MermaidClassDiagramEmitter** class is responsible for converting a collection of module symbols into a textual representation of a class diagram using the Mermaid syntax. It walks through each module, extracts class definitions and their methods, and emits Mermaid\u2011compatible lines that declare classes, list their public and (intended) private methods, and illustrate import relationships between modules. The resulting multiline string can be fed directly to a Mermaid renderer to visualise the architecture of the codebase. This class therefore provides a thin, declarative abstraction that bridges internal symbol models and an external diagramming format.",
+        "init_method": {
+          "description": "The class does not define an explicit ``__init__`` method, so Python's default object initializer is used. No custom instance attributes are created during construction.",
+          "parameters": []
+        },
+        "methods": [
+          {
+            "identifier": "emit",
+            "description": {
+              "overall": "The ``emit`` method generates a complete Mermaid class diagram from a mapping of module names to ``ModuleSymbol`` objects. It starts by creating the diagram header ``classDiagram`` and then iterates over every module and each class within those modules. For each class it emits a Mermaid class block, listing all methods \u2013 marking those whose names match a private\u2011method pattern with a leading ``-`` and all others as public with a leading ``+``. After processing classes, it adds relationship arrows that represent import dependencies between modules. Finally, it joins all accumulated lines with newline characters and returns the resulting string.\n\nThe method relies on the helper function ``mermaid_id`` to produce safe identifier strings for classes, modules, and imported symbols.\n\nIf the input ``modules`` dictionary is empty, the method will simply return the header line ``classDiagram``.\n\nOverall, ``emit`` encapsulates the transformation logic from internal symbol structures to a Mermaid\u2011compatible textual diagram.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "MermaidClassDiagramEmitter",
+                  "description": "The instance of the emitter class."
+                },
+                {
+                  "name": "modules",
+                  "type": "dict[str, ModuleSymbol]",
+                  "description": "A mapping from module names to ``ModuleSymbol`` objects that contain class and import information."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "diagram_str",
+                  "type": "str",
+                  "description": "The complete Mermaid class diagram as a single multiline string."
+                }
+              ],
+              "usage_context": {
+                "calls": "The ``emit`` method calls the helper function ``backend.diagram_generation.emitter.mermaid_id`` to convert class and module names into Mermaid\u2011compatible identifiers.",
+                "called_by": "No other functions or methods are recorded as calling ``emit`` in the provided context."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "This class depends on the external helper function ``backend.diagram_generation.emitter.mermaid_id`` for generating safe Mermaid identifiers.",
+          "instantiated_by": "The provided context does not show any location where ``MermaidClassDiagramEmitter`` is instantiated."
+        }
+      },
+      "error": null
+    },
+    "backend.diagram_generation.symbol_collector.SymbolCollector": {
+      "identifier": "backend.diagram_generation.symbol_collector.SymbolCollector",
+      "description": {
+        "overall": "The **SymbolCollector** class walks a Python abstract syntax tree (AST) and builds a symbolic representation of a module, including its imports, classes, functions, and their signatures. It stores this information in a `ModuleSymbol` instance, which later serves as input for diagram generation. The collector records import mappings, class definitions with their methods, and top\u2011level functions, handling both synchronous and asynchronous definitions.",
+        "init_method": {
+          "description": "Initialises a `SymbolCollector` for a specific module. It creates a `ModuleSymbol` instance that holds the module name, the list of overlying packages, and empty containers for functions, classes and imports.",
+          "parameters": [
+            {
+              "name": "module_name",
+              "type": "str",
+              "description": "The name of the module being analysed."
+            },
+            {
+              "name": "packages",
+              "type": "list[str]",
+              "description": "A list of package names that overlie the module (used for fully\u2011qualified naming)."
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "_has_return",
+            "description": {
+              "overall": "Scans a `FunctionDef` AST node to determine whether the function contains any `return` statements. It iterates over each statement in the function body, sets a flag when a `Return` node is encountered, and finally returns the flag as a boolean.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "FunctionDef",
+                  "description": "The AST node representing the function whose body is examined."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "",
+                  "type": "bool",
+                  "description": "True if at least one `return` statement is present; otherwise False."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other functions or methods.",
+                "called_by": "No other methods are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_declare_input_parameters",
+            "description": {
+              "overall": "Extracts the names of all input parameters from a `FunctionDef` AST node. It walks through the `args` attribute of the node, collects each argument's identifier, and returns the list of parameter names.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "FunctionDef",
+                  "description": "The AST node representing the function whose parameters are to be listed."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "",
+                  "type": "list[str]",
+                  "description": "A list containing the names of the function's input parameters."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other functions or methods.",
+                "called_by": "No other methods are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_Import",
+            "description": {
+              "overall": "Processes an `Import` statement in the AST. For each imported name, it records a mapping from the alias (or original name) to the fully\u2011qualified module name inside the collector's `ModuleSymbol.imports` dictionary, then continues generic traversal of child nodes.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "Import",
+                  "description": "The AST node representing the import statement."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method calls `self.generic_visit(node)` to continue walking the AST.",
+                "called_by": "No other methods are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_ImportFrom",
+            "description": {
+              "overall": "Handles `from ... import ...` statements. If the imported module is known, it records each imported name (or its alias) with a fully\u2011qualified reference in `ModuleSymbol.imports`, then proceeds with generic traversal of the node's children.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ImportFrom",
+                  "description": "The AST node representing the relative or absolute import."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method calls `self.generic_visit(node)` after processing the import mappings.",
+                "called_by": "No other methods are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_ClassDef",
+            "description": {
+              "overall": "Visits a class definition node, creates a `ClassSymbol` for it, and stores it in the module's class registry. It then iterates over the class body to locate function definitions, determines whether each function has a return statement, extracts its input parameters, builds a `FunctionSymbol` for each method, and adds these symbols to the class's method dictionary. Finally, it continues generic traversal of the class node.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ClassDef",
+                  "description": "The AST node representing the class definition."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method calls `_has_return`, `_declare_input_parameters`, and `self.generic_visit(node)` while processing the class.",
+                "called_by": "No other methods are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_AsyncFunctionDef",
+            "description": {
+              "overall": "Processes an asynchronous function definition that is not nested inside a class. If the function is top\u2011level, it checks for return statements, extracts input parameters, creates a `FunctionSymbol` representing the function, stores it in the module's function registry, and then continues generic traversal of the node.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "AsyncFunctionDef",
+                  "description": "The AST node representing the asynchronous function definition."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method calls `_has_return`, `_declare_input_parameters`, and `self.generic_visit(node)`.",
+                "called_by": "No other methods are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_FunctionDef",
+            "description": {
+              "overall": "Handles a regular (synchronous) function definition by delegating to `visit_AsyncFunctionDef`, thereby treating both sync and async functions uniformly.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "FunctionDef",
+                  "description": "The AST node representing the function definition."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method calls `self.visit_AsyncFunctionDef(node)`.",
+                "called_by": "No other methods are recorded as calling this method."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "The class does not have any listed external dependencies.",
+          "instantiated_by": "No usage locations are recorded where this class is instantiated."
+        }
+      },
+      "error": null
+    },
+    "backend.getRepo.RepoFile": {
+      "identifier": "backend.getRepo.RepoFile",
+      "description": {
+        "overall": "RepoFile represents a single file inside a Git repository and provides lazy access to its underlying Git blob, decoded text content, and size. The class caches these values after the first access, allowing efficient repeated reads. It also offers small utility methods for word\u2011count analysis, dictionary serialization, and a readable string representation. Overall, RepoFile abstracts the low\u2011level Git objects into a convenient, Python\u2011friendly interface for file\u2011level operations.",
+        "init_method": {
+          "description": "The RepoFile class represents a single file in a Git repository. Its constructor stores the file path and the commit tree from which the file originates, and initializes internal placeholders for the blob, content, and size, which are loaded lazily when accessed.",
+          "parameters": [
+            {
+              "name": "file_path",
+              "type": "str",
+              "description": "Path to the file within the repository."
+            },
+            {
+              "name": "commit_tree",
+              "type": "git.Tree",
+              "description": "Tree object of the commit that contains the file."
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "blob",
+            "description": {
+              "overall": "The `blob` property lazily retrieves the Git blob object corresponding to the file path from the stored commit tree. On first access, it attempts to fetch the blob using the tree's mapping; if the path is not present, it raises a FileNotFoundError. The retrieved blob is cached in the private `_blob` attribute for subsequent accesses, avoiding repeated tree lookups. This property provides a convenient way to work with the low\u2011level Git object representing the file's contents.",
+              "parameters": [],
+              "returns": [
+                {
+                  "name": "blob",
+                  "type": "git.Blob",
+                  "description": "The Git blob object for the file."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other functions or methods.",
+                "called_by": "No other methods are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "content",
+            "description": {
+              "overall": "The `content` property lazily loads and returns the decoded text content of the file. It first ensures the underlying blob is available by accessing the `blob` property, then reads the blob's data stream and decodes it as UTF\u20118, ignoring decoding errors. The resulting string is cached in `_content` so that subsequent reads are fast. This property abstracts away the raw blob handling and provides the file's textual content directly.",
+              "parameters": [],
+              "returns": [
+                {
+                  "name": "content",
+                  "type": "str",
+                  "description": "Decoded file content as a UTF\u20118 string."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other functions or methods.",
+                "called_by": "No other methods are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "size",
+            "description": {
+              "overall": "The `size` property lazily loads and returns the size of the file in bytes. On first access it obtains the size from the underlying Git blob and stores it in the private `_size` attribute. Subsequent accesses return the cached value, avoiding additional blob queries. This provides a quick way to know the file's byte length without reading its full content.",
+              "parameters": [],
+              "returns": [
+                {
+                  "name": "size",
+                  "type": "int",
+                  "description": "Size of the file in bytes."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other functions or methods.",
+                "called_by": "No other methods are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "analyze_word_count",
+            "description": {
+              "overall": "The `analyze_word_count` method provides a simple analysis of the file by counting the number of words in its content. It accesses the `content` property to obtain the full text, splits the string on whitespace, and returns the length of the resulting list. This gives a quick metric of the file's size in terms of word count. The method is intended as an example of how analysis functions can be built on top of the lazy\u2011loaded content.",
+              "parameters": [],
+              "returns": [
+                {
+                  "name": "word_count",
+                  "type": "int",
+                  "description": "Number of words in the file content."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other functions or methods.",
+                "called_by": "No other methods are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "__repr__",
+            "description": {
+              "overall": "The `__repr__` method returns a concise string representation of the RepoFile instance, showing the class name and the file path. This aids debugging and logging by providing a readable identifier for the object.",
+              "parameters": [],
+              "returns": [
+                {
+                  "name": "repr_str",
+                  "type": "str",
+                  "description": "String representation of the RepoFile instance."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other functions or methods.",
+                "called_by": "No other methods are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "to_dict",
+            "description": {
+              "overall": "The `to_dict` method serializes selected metadata of the RepoFile instance into a dictionary. It always includes the file path, the base name extracted via `os.path.basename`, the file size, and a static type field set to \"file\". If the optional `include_content` flag is True, the method also adds the full decoded content under the key \"content\". This representation is useful for JSON\u2011compatible output or API responses.",
+              "parameters": [
+                {
+                  "name": "include_content",
+                  "type": "bool",
+                  "description": "If True, the file's content is added to the resulting dictionary; defaults to False."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "data",
+                  "type": "dict",
+                  "description": "Dictionary containing file metadata and optionally its content."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other functions or methods.",
+                "called_by": "No other methods are recorded as calling this method."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "The class does not rely on any external dependencies beyond the standard library and the imported modules.",
+          "instantiated_by": "No information about where this class is instantiated is provided in the context."
+        }
+      },
+      "error": null
+    },
+    "backend.getRepo.GitRepository": {
+      "identifier": "backend.getRepo.GitRepository",
+      "description": {
+        "overall": "The **GitRepository** class abstracts the handling of a remote Git repository. It clones the repository into a temporary directory, builds a collection of **RepoFile** objects representing each file, can generate a hierarchical file\u2011tree representation, and cleans up the temporary resources when finished. The class also implements the context\u2011manager protocol so it can be used safely with a ``with`` statement.",
+        "init_method": {
+          "description": "Initialises a ``GitRepository`` instance by storing the repository URL, creating a temporary directory, and cloning the remote repository into that directory. It also records the latest commit and its tree for later file\u2011lookup operations.",
+          "parameters": [
+            {
+              "name": "repo_url",
+              "type": "str",
+              "description": "The URL of the remote Git repository to be cloned."
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "get_all_files",
+            "description": {
+              "overall": "Retrieves every file tracked in the cloned repository and returns them as a list of **RepoFile** objects. It uses ``git ls-files`` to obtain the relative paths, creates a ``RepoFile`` for each path using the commit tree, stores the list on the instance, and finally returns the list.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "GitRepository",
+                  "description": "The current repository instance."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "files",
+                  "type": "list[RepoFile]",
+                  "description": "A list of ``RepoFile`` instances, one for each file in the repository."
+                }
+              ],
+              "usage_context": {
+                "calls": "The method creates ``RepoFile`` objects for each path it discovers.",
+                "called_by": "No other method in this class calls ``get_all_files`` directly, but it is invoked internally by ``get_file_tree`` when the file list is empty."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "close",
+            "description": {
+              "overall": "Deletes the temporary directory that was created for the clone and clears the stored reference. The method is safe to call multiple times because it checks whether the directory path is still present.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "GitRepository",
+                  "description": "The current repository instance."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "The method does not call any other functions; it only manipulates instance attributes.",
+                "called_by": "It is called from ``__init__`` when cloning fails and from the context\u2011manager ``__exit__`` method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "__enter__",
+            "description": {
+              "overall": "Implements the ``__enter__`` part of the context\u2011manager protocol by simply returning the repository instance itself, allowing ``with GitRepository(...) as repo:`` usage.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "GitRepository",
+                  "description": "The current repository instance."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "self",
+                  "type": "GitRepository",
+                  "description": "The repository instance, enabling attribute access inside the ``with`` block."
+                }
+              ],
+              "usage_context": {
+                "calls": "No external calls are made.",
+                "called_by": "Invoked automatically when the object is used in a ``with`` statement."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "__exit__",
+            "description": {
+              "overall": "Implements the ``__exit__`` part of the context\u2011manager protocol. It forwards all arguments to ``close`` to ensure the temporary directory is removed, regardless of whether an exception occurred.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "GitRepository",
+                  "description": "The current repository instance."
+                },
+                {
+                  "name": "exc_type",
+                  "type": "type | None",
+                  "description": "Exception type, if an exception was raised inside the ``with`` block."
+                },
+                {
+                  "name": "exc_val",
+                  "type": "BaseException | None",
+                  "description": "Exception instance, if an exception was raised."
+                },
+                {
+                  "name": "exc_tb",
+                  "type": "TracebackType | None",
+                  "description": "Traceback object associated with the exception."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "Calls ``close`` to clean up resources.",
+                "called_by": "Automatically invoked when exiting a ``with`` block that used the repository."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "get_file_tree",
+            "description": {
+              "overall": "Builds a nested dictionary representing the directory tree of the repository. If the file list has not been populated yet, it first calls ``get_all_files``. It then iterates over each ``RepoFile`` path, creates intermediate directory nodes as needed, and inserts each file (optionally with its content) as a leaf node. The final structure mirrors a typical file\u2011system tree with ``name``, ``type`` and ``children`` keys.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "GitRepository",
+                  "description": "The current repository instance."
+                },
+                {
+                  "name": "include_content",
+                  "type": "bool",
+                  "description": "If ``True``, the file content is included in each leaf node by delegating to ``RepoFile.to_dict``."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "tree",
+                  "type": "dict",
+                  "description": "A nested dictionary representing the repository's directory hierarchy."
+                }
+              ],
+              "usage_context": {
+                "calls": "The method may call ``get_all_files`` when the internal file list is empty; it also relies on each ``RepoFile``'s ``to_dict`` method.",
+                "called_by": "No other method in this class calls ``get_file_tree`` directly."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "The class depends on the ``RepoFile`` class from ``backend.getRepo`` to represent individual repository files.",
+          "instantiated_by": "There are no recorded locations in the provided context that instantiate ``GitRepository``."
+        }
+      },
+      "error": null
+    },
+    "backend.relationship_analyzer.ProjectAnalyzer": {
+      "identifier": "backend.relationship_analyzer.ProjectAnalyzer",
+      "description": {
+        "overall": "ProjectAnalyzer walks a Python project's directory tree, parses each source file into an AST, collects definitions of functions, classes and methods, and then resolves call relationships between those definitions. It builds a call\u2011graph mapping each callee to the callers that reference it and can expose both the raw call\u2011graph and a simplified incoming/outgoing relationship dictionary. The class abstracts the whole static\u2011analysis pipeline so that other components can query the structural relationships of a code base without dealing with file\u2011system traversal or AST handling.",
+        "init_method": {
+          "description": "The constructor stores the absolute path of the project root, prepares containers for definitions, the call\u2011graph, cached ASTs, and a set of directory names to ignore during traversal.",
+          "parameters": [
+            {
+              "name": "project_root",
+              "type": "str",
+              "description": "Path to the root directory of the Python project to be analyzed."
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "analyze",
+            "description": {
+              "overall": "The `analyze` method orchestrates the full static analysis workflow. It first discovers all Python files under the project root, then iterates over those files to collect definitions of functions, classes and methods. A second pass resolves call relationships between the collected definitions. After processing, it clears the cached ASTs to free memory and finally returns the populated call\u2011graph mapping each callee to a list of caller information objects.",
+              "parameters": [],
+              "returns": [
+                {
+                  "name": "call_graph",
+                  "type": "defaultdict(list)",
+                  "description": "A mapping where each key is a fully\u2011qualified callee identifier and the value is a list of dictionaries describing the callers."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method calls the private helpers `_find_py_files`, `_collect_definitions` and `_resolve_calls` to perform its work.",
+                "called_by": "No other methods in this class are recorded as calling `analyze`."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "get_raw_relationships",
+            "description": {
+              "overall": "`get_raw_relationships` transforms the internal call\u2011graph into two dictionaries that enumerate outgoing and incoming relationships for each definition. It iterates over the call\u2011graph, populating a set of callees for each caller (outgoing) and a set of callers for each callee (incoming). The sets are then converted to sorted lists and returned in a single dictionary.",
+              "parameters": [],
+              "returns": [
+                {
+                  "name": "relationships",
+                  "type": "dict",
+                  "description": "A dictionary with two keys, `outgoing` and `incoming`, each mapping definition identifiers to sorted lists of related identifiers."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other methods; it only processes the existing `call_graph` data.",
+                "called_by": "No other methods in this class are recorded as calling `get_raw_relationships`."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_find_py_files",
+            "description": {
+              "overall": "`_find_py_files` walks the file system starting at `project_root`, skipping directories listed in `ignore_dirs`. For each directory it yields, it collects any file ending with `.py` and returns a list of absolute file paths for all discovered Python source files.",
+              "parameters": [],
+              "returns": [
+                {
+                  "name": "py_files",
+                  "type": "list[str]",
+                  "description": "A list of absolute paths to Python source files found under the project root."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method calls `os.walk` from the standard library to traverse the directory tree.",
+                "called_by": "It is called by the `analyze` method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_collect_definitions",
+            "description": {
+              "overall": "`_collect_definitions` reads a Python file, parses its source into an AST, and walks the tree to record definitions of functions, methods, and classes. For each definition it builds a fully\u2011qualified name using `path_to_module` and stores metadata (file, line number, type) in the `definitions` dictionary. It also caches the parsed AST in `file_asts` for later use. Errors during file reading or parsing are logged and result in a `None` entry in the AST cache.",
+              "parameters": [
+                {
+                  "name": "filepath",
+                  "type": "str",
+                  "description": "Absolute path to the Python source file to be processed."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method calls the helper `path_to_module` from the same package to convert a file path to a module dotted path.",
+                "called_by": "It is invoked twice per file by the `analyze` method \u2013 once during the definition\u2011collection phase."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_get_parent",
+            "description": {
+              "overall": "`_get_parent` searches the AST for the immediate parent node of a given node. It walks the tree, checking each node's children, and returns the first parent that contains the target node, or `None` if no parent is found.",
+              "parameters": [
+                {
+                  "name": "tree",
+                  "type": "ast.AST",
+                  "description": "The root AST node of a parsed Python module."
+                },
+                {
+                  "name": "node",
+                  "type": "ast.AST",
+                  "description": "The AST node whose parent is being sought."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "parent",
+                  "type": "ast.AST | None",
+                  "description": "The parent node of `node` if found, otherwise `None`."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other methods.",
+                "called_by": "It is used internally by `_collect_definitions` to distinguish methods from top\u2011level functions."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_resolve_calls",
+            "description": {
+              "overall": "`_resolve_calls` retrieves the cached AST for a given file and uses a `CallResolverVisitor` to walk the tree and discover call expressions. The visitor returns a mapping of callee identifiers to caller information, which is merged into the class's `call_graph`. Errors during resolution are logged.",
+              "parameters": [
+                {
+                  "name": "filepath",
+                  "type": "str",
+                  "description": "Absolute path to the Python source file whose calls are to be resolved."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method instantiates and uses `backend.relationship_analyzer.CallResolverVisitor` to perform the AST walk.",
+                "called_by": "It is called by the `analyze` method during the second pass over the discovered Python files."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "The class relies on `backend.relationship_analyzer.CallResolverVisitor` for call resolution and `backend.relationship_analyzer.path_to_module` for converting file paths to module names.",
+          "instantiated_by": "No known locations instantiate this class."
+        }
+      },
+      "error": null
+    },
+    "backend.relationship_analyzer.CallResolverVisitor": {
+      "identifier": "backend.relationship_analyzer.CallResolverVisitor",
+      "description": {
+        "overall": "CallResolverVisitor walks a Python abstract syntax tree (AST) to discover which callables (functions, methods, classes) are invoked from each location in a module. It resolves qualified names for imports, class instantiations, and attribute accesses, then records caller metadata (file, line, caller identifier, and caller type) in a mapping keyed by the callee's qualified name. The visitor maintains scopes for imported symbols and tracks instance types to resolve method calls on objects. This information can later be used to build a call graph or to analyze relationships between definitions across a codebase.",
+        "init_method": {
+          "description": "The constructor stores the path of the file being analysed, computes its module path using the external helper `path_to_module`, and records the set of known definitions. It also initialises several internal bookkeeping structures such as the import scope, instance type map, the current caller identifier, and a container for collected call information.",
+          "parameters": [
+            {
+              "name": "filepath",
+              "type": "str",
+              "description": "The absolute or relative path to the Python source file that will be visited."
+            },
+            {
+              "name": "project_root",
+              "type": "str",
+              "description": "The root directory of the project; used together with `filepath` to compute the module's dotted path."
+            },
+            {
+              "name": "definitions",
+              "type": "Any",
+              "description": "A collection (e.g., set or dict) containing the qualified names of definitions that are considered valid call targets."
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "visit_ClassDef",
+            "description": {
+              "overall": "When the visitor encounters a class definition node, it temporarily records the class name in `self.current_class_name`. It then recursively visits the body of the class using `generic_visit`, allowing inner methods and nested definitions to be processed with the correct class context. After the traversal of the class body finishes, the original class name (or `None`) is restored. This method does not produce a return value; its purpose is to maintain correct contextual information for subsequent node visits.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "CallResolverVisitor",
+                  "description": "The visitor instance."
+                },
+                {
+                  "name": "node",
+                  "type": "ast.ClassDef",
+                  "description": "The AST node representing the class definition."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not call any other functions.",
+                "called_by": "No other methods are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_FunctionDef",
+            "description": {
+              "overall": "When a function or method definition node is visited, the method builds a fully\u2011qualified identifier for the callable, incorporating the module path and, if applicable, the enclosing class name. It stores the previous caller identifier, updates `self.current_caller_name` to the new identifier, and then recursively visits the function body. After processing the body, the original caller identifier is restored. This enables later `visit_Call` nodes to know precisely which function or method they belong to. The method returns nothing.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "CallResolverVisitor",
+                  "description": "The visitor instance."
+                },
+                {
+                  "name": "node",
+                  "type": "ast.FunctionDef",
+                  "description": "The AST node representing the function or method definition."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not call any other functions.",
+                "called_by": "No other methods are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_Call",
+            "description": {
+              "overall": "For each call expression node, the method attempts to resolve the callee's fully\u2011qualified name using the helper `_resolve_call_qname`. If a qualified name is found and it exists in the supplied `definitions` set, the method determines the type of the caller (module, function, method, or local function) based on the current context. It then constructs a dictionary containing the source file name, line number, caller identifier, and caller type, and appends this information to `self.calls` under the callee's name. Finally, it continues generic traversal to process any nested nodes. The method does not return a value.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "CallResolverVisitor",
+                  "description": "The visitor instance."
+                },
+                {
+                  "name": "node",
+                  "type": "ast.Call",
+                  "description": "The AST node representing the call expression."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not call any other functions.",
+                "called_by": "No other methods are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_Import",
+            "description": {
+              "overall": "When an import statement is visited, the method iterates over each imported alias, adding an entry to `self.scope` that maps the alias (or original name) to the fully\u2011qualified module name. This scope dictionary is later used to resolve names to their originating modules. After updating the scope, the method proceeds with a generic visit to handle any child nodes. The method returns nothing.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "CallResolverVisitor",
+                  "description": "The visitor instance."
+                },
+                {
+                  "name": "node",
+                  "type": "ast.Import",
+                  "description": "The AST node representing the import statement."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not call any other functions.",
+                "called_by": "No other methods are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_ImportFrom",
+            "description": {
+              "overall": "For a `from ... import ...` statement, the method computes the absolute module path, handling relative import levels by adjusting the current module's dotted path. It then records each imported name (or its alias) in `self.scope` with the fully\u2011qualified name. After updating the scope, it continues generic traversal. The method does not produce a return value.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "CallResolverVisitor",
+                  "description": "The visitor instance."
+                },
+                {
+                  "name": "node",
+                  "type": "ast.ImportFrom",
+                  "description": "The AST node representing the import\u2011from statement."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not call any other functions.",
+                "called_by": "No other methods are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_Assign",
+            "description": {
+              "overall": "When an assignment node is visited, the method checks whether the right\u2011hand side is a call to a name that resolves to a known class in `self.scope` and `self.definitions`. If so, it records the variable name on the left\u2011hand side in `self.instance_types`, mapping it to the qualified class name. This enables later resolution of method calls on that instance. The method then proceeds with generic visitation of child nodes and returns nothing.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "CallResolverVisitor",
+                  "description": "The visitor instance."
+                },
+                {
+                  "name": "node",
+                  "type": "ast.Assign",
+                  "description": "The AST node representing the assignment."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not call any other functions.",
+                "called_by": "No other methods are recorded as calling this method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_resolve_call_qname",
+            "description": {
+              "overall": "This helper attempts to translate a function node (either a simple name or an attribute access) into a fully\u2011qualified dotted name. For a plain name, it first looks in the import `scope`; if not found, it checks whether the name corresponds to a definition in the current module. For attribute accesses where the base is a known instance, it uses `self.instance_types` to build a class\u2011method qualified name. If the base is a known module from the scope, it constructs a module\u2011function qualified name. If none of these rules apply, the method returns `None`. No value is returned beyond the resolved name string or `None`.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "CallResolverVisitor",
+                  "description": "The visitor instance."
+                },
+                {
+                  "name": "func_node",
+                  "type": "ast.AST",
+                  "description": "The AST node representing the function being called (either `ast.Name` or `ast.Attribute`)."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "qualified_name",
+                  "type": "str | None",
+                  "description": "The resolved fully\u2011qualified name of the callable, or `None` if it cannot be resolved."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other functions.",
+                "called_by": "It is called by `visit_Call` to resolve the callee's name."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "The class relies on the external helper `backend.relationship_analyzer.path_to_module` to convert file paths into module dotted names.",
+          "instantiated_by": "No recorded locations instantiate this class."
+        }
+      },
+      "error": null
+    },
+    "schemas.enums.AnalysisMode": {
+      "identifier": "schemas.enums.AnalysisMode",
+      "description": {
+        "overall": "The `AnalysisMode` class is an enumeration that defines the supported levels of analysis for the system. It inherits from `str` and `Enum`, allowing each member to behave like a string while providing enum semantics. The members \u2013 `OVERVIEW`, `STANDARD`, `DETAILED`, and `DEEP_DIVE` \u2013 map to lowercase string identifiers that can be used throughout the codebase to select the desired analysis granularity.",
+        "init_method": {
+          "description": "No explicit `__init__` method is defined; the class relies on the default constructor provided by `Enum` and `str`.",
+          "parameters": []
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "This class does not depend on any external modules beyond the standard library `enum`.",
+          "instantiated_by": "There are no recorded locations where `AnalysisMode` is instantiated in the provided context."
+        }
+      },
+      "error": null
+    },
+    "schemas.enums.DiagramFocus": {
+      "identifier": "schemas.enums.DiagramFocus",
+      "description": {
+        "overall": "The `DiagramFocus` class is an enumeration that defines the possible focal points for visualizing diagrams within the system. It inherits from `str` and `Enum`, allowing each member to behave like a string while providing a fixed set of valid options. The members represent architecture, data flow, dependencies, and call graph perspectives, enabling consistent specification of diagram focus throughout the codebase.",
+        "init_method": {
+          "description": "The class does not define an explicit `__init__` method; enumeration members are created automatically by the `Enum` metaclass.",
+          "parameters": []
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "This class does not rely on any external dependencies beyond the standard library `enum` module.",
+          "instantiated_by": "No parts of the provided context instantiate this enumeration directly."
+        }
+      },
+      "error": null
+    },
+    "schemas.enums.DiagramType": {
+      "identifier": "schemas.enums.DiagramType",
+      "description": {
+        "overall": "DiagramType is an enumeration that defines the set of supported Mermaid diagram types. Each enum member is a string constant that can be used throughout the codebase to refer to a specific diagram style (e.g., class diagrams, sequence diagrams, flowcharts, etc.). By inheriting from both `str` and `Enum`, the members behave like regular strings while also providing the safety and readability of an enum.",
+        "init_method": {
+          "description": "The class does not define an explicit `__init__` method; enum members are created automatically by the `Enum` metaclass.",
+          "parameters": []
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "The class does not depend on any external modules beyond the standard library `enum`.",
+          "instantiated_by": "No locations in the provided context instantiate this enum directly."
+        }
+      },
+      "error": null
+    },
+    "schemas.enums.GraphType": {
+      "identifier": "schemas.enums.GraphType",
+      "description": {
+        "overall": "GraphType is an enumeration that defines the supported types of input graphs for the system. It provides three possible values\u2014CALLGRAPH, DEPENDENCY, and COMBINED\u2014each represented as a string. By subclassing `str` and `Enum`, the members can be used wherever a string identifier is required while also benefiting from enum semantics. This centralises graph\u2011type constants, improving readability and type safety across the codebase.",
+        "init_method": {
+          "description": "GraphType inherits from `str` and `Enum`; therefore, no custom `__init__` method is defined. The Enum metaclass automatically creates each member when the module is imported, initializing the class without explicit parameters.",
+          "parameters": []
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "This class relies only on the standard\u2011library `enum` module and does not have additional external dependencies.",
+          "instantiated_by": "Enum members are accessed directly (e.g., `GraphType.CALLGRAPH`) and are not instantiated elsewhere in the provided context."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.ParameterDescription": {
+      "identifier": "schemas.types.ParameterDescription",
+      "description": {
+        "overall": "ParameterDescription is a lightweight Pydantic data model that encapsulates metadata about a single function parameter. It stores the parameter's name, its type (as a string), and a human\u2011readable description. The class provides automatic validation and serialization through its BaseModel inheritance.",
+        "init_method": {
+          "description": "Instances of ParameterDescription are created by supplying values for the three fields: name, type, and description. The inherited BaseModel constructor validates the inputs and assigns them to the corresponding instance attributes.",
+          "parameters": []
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "The class does not have any external dependencies beyond the imported modules.",
+          "instantiated_by": "No information is provided about where this class is instantiated."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.ReturnDescription": {
+      "identifier": "schemas.types.ReturnDescription",
+      "description": {
+        "overall": "ReturnDescription is a lightweight Pydantic model that encapsulates metadata about a function's return value. It stores the return variable's name, its type as a string, and a human\u2011readable description of what the return value represents. The class provides a structured way to convey return\u2011value information for documentation or analysis purposes.",
+        "init_method": {
+          "description": "Instances are created using the BaseModel constructor supplied by Pydantic, which expects values for the three declared fields: name, type, and description.",
+          "parameters": []
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "This class does not rely on any external modules beyond the imported pydantic.BaseModel.",
+          "instantiated_by": "No specific instantiation sites are provided in the current context."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.UsageContext": {
+      "identifier": "schemas.types.UsageContext",
+      "description": {
+        "overall": "The `UsageContext` class is a simple Pydantic model that represents the calling context of a function. It stores two string attributes: `calls`, which records the name (or identifier) of the function that invokes the target function, and `called_by`, which records the name (or identifier) of the function that is invoked by the target function. By encapsulating these two pieces of information, the model provides a lightweight, structured way to capture bidirectional call relationships within a code\u2011base. It can be instantiated directly with string arguments or populated automatically by Pydantic when parsing data.",
+        "init_method": {
+          "description": "The class relies on Pydantic's autogenerated `__init__`, which accepts the two fields `calls` and `called_by` as keyword arguments and assigns them to the instance.",
+          "parameters": [
+            {
+              "name": "calls",
+              "type": "str",
+              "description": "A string describing the function that calls the target function."
+            },
+            {
+              "name": "called_by",
+              "type": "str",
+              "description": "A string describing the function that is called by the target function."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "The class does not have any external runtime dependencies beyond the imports required for the Pydantic `BaseModel`.",
+          "instantiated_by": "There are no recorded locations in the provided context where `UsageContext` is instantiated."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.FunctionDescription": {
+      "identifier": "schemas.types.FunctionDescription",
+      "description": {
+        "overall": "FunctionDescription is a Pydantic model that encapsulates a detailed analysis of a function, including a free\u2011form overall summary, a list of parameter descriptions, a list of return value descriptions, and contextual usage information. It provides a structured, validated container for function metadata that downstream components can consume for documentation or diagram generation. The model does not implement custom behavior beyond the fields defined by the BaseModel.",
+        "init_method": {
+          "description": "The class relies on Pydantic's default BaseModel initializer, which accepts the declared fields (`overall`, `parameters`, `returns`, `usage_context`) as keyword arguments and performs validation.",
+          "parameters": []
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "This class depends only on standard typing constructs and the `pydantic.BaseModel` class imported elsewhere in the project.",
+          "instantiated_by": "No instantiation sites are provided in the current context, so the class is not shown to be created anywhere specific."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.FunctionAnalysis": {
+      "identifier": "schemas.types.FunctionAnalysis",
+      "description": {
+        "overall": "FunctionAnalysis is a Pydantic model that encapsulates the result of analyzing a function. It stores the function's unique identifier, a detailed description (captured by the nested `FunctionDescription` model), and an optional error message if analysis failed. By inheriting from `BaseModel`, it gains automatic validation, serialization, and default handling for these fields.",
+        "init_method": {
+          "description": "The class inherits from `pydantic.BaseModel`, so initialization is performed by the BaseModel constructor. Instances are created by supplying values for the defined fields: `identifier`, `description`, and optionally `error`. No custom `__init__` method is defined in the source code.",
+          "parameters": []
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "This class does not rely on any external runtime dependencies beyond the imported `typing` and `pydantic` modules.",
+          "instantiated_by": "No specific instantiation sites are provided in the context; the class can be instantiated wherever a function analysis result needs to be represented."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.ConstructorDescription": {
+      "identifier": "schemas.types.ConstructorDescription",
+      "description": {
+        "overall": "ConstructorDescription is a Pydantic model that encapsulates a textual description of a class's ``__init__`` method and a list of ``ParameterDescription`` objects representing each constructor parameter. It provides a structured, validated container for constructor metadata that can be used by downstream analysis or documentation pipelines.",
+        "init_method": {
+          "description": "The class inherits Pydantic's default ``BaseModel`` initializer, which automatically creates instance attributes for the declared fields (``description`` and ``parameters``) and accepts optional keyword arguments for model configuration.",
+          "parameters": []
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "This class does not depend on any external runtime components beyond the standard ``typing`` module and ``pydantic`` which are already imported.",
+          "instantiated_by": "No known locations instantiate ``ConstructorDescription`` in the provided context."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.ClassContext": {
+      "identifier": "schemas.types.ClassContext",
+      "description": {
+        "overall": "The **ClassContext** model is a lightweight Pydantic data container that records a class's external dependencies and the locations where it is instantiated. It provides two string fields\u2014`dependencies` and `instantiated_by`\u2014that can be populated with comma\u2011separated identifiers or descriptive text. By inheriting from `BaseModel`, it gains automatic validation, serialization, and a generated `__init__` method that accepts these two fields.",
+        "init_method": {
+          "description": "Because the class inherits from `pydantic.BaseModel`, a constructor is generated automatically that accepts the declared fields `dependencies` and `instantiated_by` as keyword arguments and assigns them to the instance.",
+          "parameters": [
+            {
+              "name": "dependencies",
+              "type": "str",
+              "description": "A string describing the external modules, packages, or services that the represented class depends on."
+            },
+            {
+              "name": "instantiated_by",
+              "type": "str",
+              "description": "A string indicating where (which modules or functions) the represented class is instantiated."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "This class has no external dependencies listed in the provided context.",
+          "instantiated_by": "There are no recorded locations where this class is instantiated in the provided context."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.ClassDescription": {
+      "identifier": "schemas.types.ClassDescription",
+      "description": {
+        "overall": "ClassDescription is a Pydantic model that aggregates the results of a class analysis, including a textual overall summary, a structured description of the constructor, a list of analyzed methods, and contextual information about dependencies and instantiation sites.",
+        "init_method": {
+          "description": "The class does not define a custom __init__ method; it relies on the autogenerated Pydantic BaseModel initializer, which accepts values for the declared fields (overall, init_method, methods, usage_context) and validates them.",
+          "parameters": []
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "This class does not depend on any external components.",
+          "instantiated_by": "No other code instantiates this class within the provided context."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.ClassAnalysis": {
+      "identifier": "schemas.types.ClassAnalysis",
+      "description": {
+        "overall": "ClassAnalysis is a Pydantic BaseModel that encapsulates the result of analyzing a Python class. It stores the class's identifier, a detailed description of its structure and behavior, and an optional error message if analysis fails.",
+        "init_method": {
+          "description": "The class does not define an explicit __init__ method; it relies on the default initializer provided by pydantic.BaseModel, which accepts the declared fields.",
+          "parameters": []
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "This class does not have any external dependencies recorded.",
+          "instantiated_by": "No information is provided about where this class is instantiated."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.CallInfo": {
+      "identifier": "schemas.types.CallInfo",
+      "description": {
+        "overall": "The **CallInfo** class is a lightweight Pydantic model that captures details about a single call site discovered by the relationship analyzer. It stores the source file, the caller function name, the call mode (e.g., method, function, module), and the line number where the call occurs. Instances of this class are used in the `called_by` and `instantiated_by` collections to trace how functions and classes interact within the codebase.",
+        "init_method": {
+          "description": "The class inherits from `pydantic.BaseModel`, so it relies on the default BaseModel initializer to populate its fields from keyword arguments.",
+          "parameters": []
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "This class does not depend on any external modules beyond the standard imports and the Pydantic library already listed.",
+          "instantiated_by": "No specific locations in the provided context instantiate this class."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.FunctionContextInput": {
+      "identifier": "schemas.types.FunctionContextInput",
+      "description": {
+        "overall": "The `FunctionContextInput` class is a Pydantic `BaseModel` that encapsulates the structured context required for analyzing a function. It records the list of function names that the analyzed function calls (`calls`) and a list of `CallInfo` objects describing where the function is called from (`called_by`). This model provides a clear, typed container for passing function\u2011call relationships through the analysis pipeline.",
+        "init_method": {
+          "description": "The class relies on Pydantic's autogenerated `__init__`, which accepts the fields defined in the model (`calls` and `called_by`). No custom initialization logic is present.",
+          "parameters": []
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "The class does not depend on any external modules beyond the standard `typing` types and the Pydantic library already imported in the file.",
+          "instantiated_by": "There are no recorded locations where this class is instantiated in the provided context."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.FunctionAnalysisInput": {
+      "identifier": "schemas.types.FunctionAnalysisInput",
+      "description": {
+        "overall": "FunctionAnalysisInput is a Pydantic model that defines the required input schema for generating a FunctionAnalysis object. It captures the analysis mode, a unique identifier for the function, the raw source code, a list of import statements, and a context object describing the function's execution environment. The class provides a structured, type\u2011checked container that downstream components can rely on for consistent function\u2011analysis data.",
+        "init_method": {
+          "description": "The class relies on Pydantic's autogenerated __init__ method, which assigns the provided values to the model fields (mode, identifier, source_code, imports, and context). No custom initialization logic is present.",
+          "parameters": []
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "This class does not depend on any external modules beyond the imports listed in the file (typing, pydantic, and internal schema enums).",
+          "instantiated_by": "No instantiation sites are recorded in the provided context."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.MethodContextInput": {
+      "identifier": "schemas.types.MethodContextInput",
+      "description": {
+        "overall": "MethodContextInput serves as a Pydantic data model that encapsulates structured context information for a class's methods. It records the method's identifier, the list of calls it makes, information about callers, the argument names, and an optional docstring. By inheriting from `pydantic.BaseModel`, it gains validation, serialization, and convenient model\u2011based access to this metadata, enabling other components of the system to reason about method relationships and documentation.",
+        "init_method": {
+          "description": "MethodContextInput is a Pydantic model that defines fields for method context without a custom `__init__` implementation; the base model handles initialization.",
+          "parameters": []
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "The class does not have external dependencies.",
+          "instantiated_by": "No information is provided about where this class is instantiated."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.ClassContextInput": {
+      "identifier": "schemas.types.ClassContextInput",
+      "description": {
+        "overall": "The **ClassContextInput** model is a Pydantic data container that encapsulates the contextual information required to analyse another class. It stores three collections: a list of external dependencies required by the target class, a list describing where and how the target class is instantiated, and a list of per\u2011method context objects that capture call relationships. By aggregating this data, the model provides a uniform structure for downstream analysis components.",
+        "init_method": {
+          "description": "The class inherits the default Pydantic constructor, which accepts values for each declared field and validates them against the type hints. No custom __init__ logic is defined; the constructor simply assigns the provided arguments to the instance attributes.",
+          "parameters": [
+            {
+              "name": "dependencies",
+              "type": "List[str]",
+              "description": "A list of strings naming external modules, packages, or other resources that the analysed class depends on."
+            },
+            {
+              "name": "instantiated_by",
+              "type": "List[CallInfo]",
+              "description": "A list of CallInfo objects describing the locations (e.g., file, function) where the analysed class is instantiated."
+            },
+            {
+              "name": "method_context",
+              "type": "List[MethodContextInput]",
+              "description": "A list of MethodContextInput objects, each detailing the call graph information for a specific method of the analysed class."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "The class does not rely on any external dependencies.",
+          "instantiated_by": "No information is provided about where this class is instantiated."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.ClassAnalysisInput": {
+      "identifier": "schemas.types.ClassAnalysisInput",
+      "description": {
+        "overall": "ClassAnalysisInput is a Pydantic model that defines the required input for generating a ClassAnalysis object. It captures the analysis mode, a unique identifier for the target class, the raw source code of that class, any import statements needed, and a context object describing dependencies and instantiation sites. The model serves as a structured container that downstream components can validate and consume.",
+        "init_method": {
+          "description": "The constructor initializes the Pydantic model with the provided analysis mode, identifier, source code, imports list, and context object.",
+          "parameters": [
+            {
+              "name": "mode",
+              "type": "Literal[\"class_analysis\"]",
+              "description": "The analysis mode, fixed to the literal string \"class_analysis\"."
+            },
+            {
+              "name": "identifier",
+              "type": "str",
+              "description": "A string that uniquely identifies the class to be analyzed."
+            },
+            {
+              "name": "source_code",
+              "type": "str",
+              "description": "The raw source code of the target class definition."
+            },
+            {
+              "name": "imports",
+              "type": "List[str]",
+              "description": "A list of import statements required by the source file."
+            },
+            {
+              "name": "context",
+              "type": "ClassContextInput",
+              "description": "An object containing additional context such as dependencies and instantiation locations."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "This class does not have external dependencies.",
+          "instantiated_by": "No information is provided about where this class is instantiated."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.DiagramRequest": {
+      "identifier": "schemas.types.DiagramRequest",
+      "description": {
+        "overall": "DiagramRequest is a Pydantic model that defines the input schema for requesting a diagram generation. It captures the structural elements of a diagram (nodes and edges) together with optional configuration options such as the analysis mode and the diagram focus. The class serves as a typed container that validates incoming data before it is processed by the diagram generation pipeline.",
+        "init_method": {
+          "description": "The class is instantiated via the automatically generated Pydantic __init__, which accepts values for all declared fields, applying type validation and default values where provided.",
+          "parameters": [
+            {
+              "name": "nodes",
+              "type": "list[dict]",
+              "description": "A list of dictionaries describing the individual nodes to be included in the diagram."
+            },
+            {
+              "name": "edges",
+              "type": "list[tuple]",
+              "description": "A list of tuples representing connections between nodes."
+            },
+            {
+              "name": "mode",
+              "type": "AnalysisMode",
+              "description": "The analysis mode to use when generating the diagram; defaults to AnalysisMode.STANDARD."
+            },
+            {
+              "name": "focus",
+              "type": "DiagramFocus",
+              "description": "The aspect of the diagram to emphasize; defaults to DiagramFocus.ARCHITECTURE."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "The class does not have any external runtime dependencies beyond the imported enums and Pydantic BaseModel.",
+          "instantiated_by": "There are no recorded locations in the provided context where DiagramRequest is instantiated."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.GraphInput": {
+      "identifier": "schemas.types.GraphInput",
+      "description": {
+        "overall": "The `GraphInput` class is a Pydantic `BaseModel` that provides a serializable representation of a call graph. It stores a collection of node dictionaries, edge tuples, a string indicating the graph type, and an optional metadata dictionary. The model relies on Pydantic's autogenerated `__init__` to validate and assign these fields.",
+        "init_method": {
+          "description": "Pydantic automatically generates an `__init__` method that accepts the model fields as arguments and assigns them to instance attributes, performing type validation.",
+          "parameters": [
+            {
+              "name": "nodes",
+              "type": "list[dict]",
+              "description": "A list of dictionaries, each describing a node in the call graph."
+            },
+            {
+              "name": "edges",
+              "type": "list[tuple]",
+              "description": "A list of tuples representing directed edges between nodes."
+            },
+            {
+              "name": "graph_type",
+              "type": "str",
+              "description": "A string identifier for the type of graph (e.g., \"call\", \"dependency\")."
+            },
+            {
+              "name": "metadata",
+              "type": "dict",
+              "description": "Optional additional information about the graph; defaults to an empty dictionary."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "The class does not rely on any external modules beyond the imported `pydantic.BaseModel` and standard typing utilities.",
+          "instantiated_by": "No instantiation sites are provided in the current context."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.DiagramOutput": {
+      "identifier": "schemas.types.DiagramOutput",
+      "description": {
+        "overall": "DiagramOutput serves as a structured output schema for generated diagram information. It encapsulates the diagram type (DiagramType), the Mermaid diagram source code, and a textual explanation, providing a clear contract for downstream consumers of the diagram generation process.",
+        "init_method": {
+          "description": "DiagramOutput is a Pydantic model that is initialized with the fields defined in the class: diagramtype, mermaid_code, and explanation. The automatically generated __init__ method accepts these values and assigns them to the corresponding instance attributes.",
+          "parameters": []
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "This class does not have any external runtime dependencies beyond the imports listed.",
+          "instantiated_by": "No known locations instantiate DiagramOutput."
+        }
+      },
+      "error": null
+    }
+  }
+}
