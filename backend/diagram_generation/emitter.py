@@ -54,42 +54,57 @@ class MermaidSequenceEmitter:
 
 class MermaidOverviewArchitectureEmitter:
     def emit(self, modules: dict[str, ModuleSymbol]) -> str:
-        lines = ["graph TD"]
-        
+        lines = ["```mermaid"]
+        lines.append("graph LR")
+        import_list: list[str] = [ key for module in modules.values() for key in module.imports.keys()]
+        filtered_list: list[str] = []
+
+        for import_name in import_list:
+            if import_name in filtered_list:
+                continue
+            filtered_list.append(import_name)
+
+
         for module in modules.values():
             src = module.name.split(".")[-1]
-
-            for target in module.imports.values():
+            for target in filtered_list:
                 if target in modules:
                     dst = target.split(".")[-1]
                     lines.append(f"    {src} --> {dst}")
-
+        lines.append("```")
         return "\n".join(lines)
 
 
 class MermaidClassDiagramEmitter:
-    def emit(self, modules: dict[str, ModuleSymbol]) -> str:
-        lines: list[str] = ["classDiagram"]
+    def emit(self, modules: dict[str, ModuleSymbol]) -> dict[str, str]:
 
+        class_diagrams: dict[str, str] = {}
         for module in modules.values():
-            for cls in module.classes.values():
+            for name, cls in module.classes.items():
+                lines: list[str] = ["```mermaid"]
+                lines.append("classDiagram")
                 class_id = mermaid_id(cls.name)
                 lines.append(f"    class {class_id} {{")
 
                 for method in cls.methods.values():
-                    if method.name.startswith(r"_[a-Z]+"):
+                    if method.name.startswith("_") and method.name != "__init__":
                         lines.append(f"        -{method.name}()")
+                        continue
                     lines.append(f"        +{method.name}()")
 
                 lines.append("    }")
+                lines.append("```")
+                class_diagrams[name] = "\n".join(lines)
+                lines = []
 
-        for module in modules.values():
-            src = mermaid_id(module.name)
-            for imported in module.imports.values():
-                dst = mermaid_id(imported)
-                lines.append(f"    {src} ..> {dst} : imports")
 
-        return "\n".join(lines)
+        # for module in modules.values():
+        #     src = mermaid_id(module.name)
+        #     for imported in module.imports.values():
+        #         dst = mermaid_id(imported)
+        #         lines.append(f"    {src} ..> {dst} : imports")
+        # lines.append("```")
+        return class_diagrams
 
 
 def mermaid_id(name: str) -> str:

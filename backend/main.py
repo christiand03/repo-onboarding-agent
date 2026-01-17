@@ -369,7 +369,7 @@ def main_workflow(user_input, api_keys: dict, model_names: dict, status_callback
 
     total_helper_time = net_time_func + net_time_class
 
-    diagrams = generator.main_diagram_generation(repo_files)
+    diagrams, class_diagrams, component_diagram = generator.main_diagram_generation(repo_files)
     # MainLLM Input Vorbereitung
     main_llm_input = {
         "basic_info": basic_project_info,
@@ -378,20 +378,8 @@ def main_workflow(user_input, api_keys: dict, model_names: dict, status_callback
         "analysis_results": analysis_results,
     }
 
-    # Speichern als JSON (Optional)
-    # main_llm_input_json = json.dumps(main_llm_input, indent=2)
-    # with open("output.json", "w", encoding="utf-8") as f:
-    #     f.write(main_llm_input_json)
-    #     logging.info("JSON-Datei wurde gespeichert.")
-
     # Konvertiere Input in Toon Format
     main_llm_input_toon = encode(main_llm_input)
-
-    #Speichern in TOON Format (Optional)
-    # with open("output.toon", "w", encoding="utf-8") as f:
-    #     f.write(main_llm_input_toon)
-    #     logging.info("output.toon erfolgreich gespeichert.")
-    
     # Token Evaluation
     savings_data = None
     try:
@@ -432,7 +420,7 @@ def main_workflow(user_input, api_keys: dict, model_names: dict, status_callback
         logging.error(f"Error during Main LLM final report generation: {e}")
         raise
 
-    enriched_final_report = enrich_report_with_diagrams(final_report, diagrams)
+    enriched_final_report = enrich_report_with_diagrams(final_report, diagrams, component_diagram, class_diagrams)
     # --- Speichern der Ergebnisse ---
     output_dir = "result"
     stats_dir = "Statistics" # Neuer Ordner
@@ -487,7 +475,7 @@ def main_workflow(user_input, api_keys: dict, model_names: dict, status_callback
     }
     
 
-def enrich_report_with_diagrams(final_report: str, diagrams: dict) -> str:
+def enrich_report_with_diagrams(final_report: str, diagrams: dict, component_diagram: str, class_diagrams: dict) -> str:
     """Fügt Diagramme aus dem `diagrams`-Dictionary in den `final_report` ein."""
     report_lines = final_report.splitlines()
     enriched_report = []
@@ -495,9 +483,17 @@ def enrich_report_with_diagrams(final_report: str, diagrams: dict) -> str:
     for line in report_lines:
         enriched_report.append(line)
         if "#### Function:" in line:
-            for filename, diagram in diagrams.items():
+            for filename, seq_diagram in diagrams.items():
                     if filename in line:
-                        enriched_report.append(diagram)
+                        enriched_report.append(seq_diagram)
+        
+        if "## 4. Architecture" in line:
+            enriched_report.append(component_diagram)
+        
+        if "#### Class:" in line:
+            for class_name, class_diagram in class_diagrams.items():
+                if re.search(rf"\b{re.escape(class_name)}\b", line):
+                    enriched_report.append(class_diagram)
 
     return "\n".join(enriched_report)
 
@@ -574,7 +570,7 @@ def notebook_workflow(input, api_keys, model, status_callback=None, check_stop=N
             info_extractor = ProjektInfoExtractor()
             basic_project_info = info_extractor.extrahiere_info(dateien=repo_files, repo_url=repo_url)
             
-            update_status(f"🔗 Bereite Notebooks vor...")
+            update_status("🔗 Bereite Notebooks vor...")
             # convert to XML/Toon (erfordert repo_files)
             processed_data = process_repo_notebooks(repo_files)
             
