@@ -1,0 +1,3856 @@
+{
+  "functions": {
+    "backend.AST_Schema.path_to_module": {
+      "identifier": "backend.AST_Schema.path_to_module",
+      "description": {
+        "overall": "The `path_to_module` function converts a file path into a Python module path. It takes two parameters: `filepath` and `project_root`. The function attempts to calculate the relative path of the file with respect to the project root. If this fails, it falls back to using the file's basename. The function then removes any '.py' extension from the path and replaces path separators with dots to form a Python module path. If the resulting path ends with '__init__', this suffix is removed before returning the module path.",
+        "parameters": [
+          {
+            "name": "filepath",
+            "type": "str",
+            "description": "The path to the file to be converted into a Python module path."
+          },
+          {
+            "name": "project_root",
+            "type": "str",
+            "description": "The root directory of the project."
+          }
+        ],
+        "returns": [
+          {
+            "name": "module_path",
+            "type": "str",
+            "description": "The Python module path equivalent to the input file path."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.File_Dependency.build_file_dependency_graph": {
+      "identifier": "backend.File_Dependency.build_file_dependency_graph",
+      "description": {
+        "overall": "The `build_file_dependency_graph` function constructs a directed graph representing file dependencies within a given repository. It utilizes the `networkx` library to create the graph and the `ast` module to parse the abstract syntax tree (AST) of the provided file. The function takes in a filename, an AST, and the repository root as parameters. It returns a `networkx.DiGraph` object representing the file dependencies. The function leverages a custom `FileDependencyGraph` visitor to traverse the AST and collect import dependencies. These dependencies are then used to populate the graph with nodes and edges, where each node represents a file and each edge represents a dependency between files.",
+        "parameters": [
+          {
+            "name": "filename",
+            "type": "str",
+            "description": "The name of the file for which to build the dependency graph."
+          },
+          {
+            "name": "tree",
+            "type": "AST",
+            "description": "The abstract syntax tree (AST) of the provided file."
+          },
+          {
+            "name": "repo_root",
+            "type": "str",
+            "description": "The root directory of the repository."
+          }
+        ],
+        "returns": [
+          {
+            "name": "graph",
+            "type": "nx.DiGraph",
+            "description": "A directed graph representing the file dependencies."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls backend.File_Dependency.FileDependencyGraph.",
+          "called_by": "This function is called by no other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.File_Dependency.build_repository_graph": {
+      "identifier": "backend.File_Dependency.build_repository_graph",
+      "description": {
+        "overall": "The `build_repository_graph` function constructs a directed graph representing the dependencies between Python files in a Git repository. It iterates over all Python files in the repository, parsing each file's abstract syntax tree (AST) to identify dependencies. The function then builds a global graph by combining the dependency graphs of individual files. The resulting graph is returned as a `networkx.DiGraph` object.",
+        "parameters": [
+          {
+            "name": "repository",
+            "type": "GitRepository",
+            "description": "A `GitRepository` object representing the repository to analyze."
+          }
+        ],
+        "returns": [
+          {
+            "name": "global_graph",
+            "type": "nx.DiGraph",
+            "description": "A directed graph representing the dependencies between Python files in the repository."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls `backend.File_Dependency.build_file_dependency_graph`.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.File_Dependency.get_all_temp_files": {
+      "identifier": "backend.File_Dependency.get_all_temp_files",
+      "description": {
+        "overall": "The `get_all_temp_files` function retrieves a list of all Python files within a specified directory and its subdirectories. It takes a directory path as input, resolves it to an absolute path, and then uses a recursive glob pattern to find all files with the `.py` extension. The function returns a list of `Path` objects representing the relative paths of these files to the specified directory. This function appears to be part of a larger system for analyzing or processing Python files within a directory structure.",
+        "parameters": [
+          {
+            "name": "directory",
+            "type": "str",
+            "description": "The path to the directory in which to search for Python files."
+          }
+        ],
+        "returns": [
+          {
+            "name": "all_files",
+            "type": "list[Path]",
+            "description": "A list of `Path` objects representing the relative paths of all Python files found within the specified directory and its subdirectories."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.HelperLLM.main_orchestrator": {
+      "identifier": "backend.HelperLLM.main_orchestrator",
+      "description": {
+        "overall": "The main_orchestrator function serves as the primary entry point for generating documentation. It defines pre-computed analyses for various methods, including add_item, check_stock, and generate_report, and utilizes these analyses to generate documentation for classes. The function orchestrates the entire process, from input validation to the final display of generated documentation.",
+        "parameters": [],
+        "returns": [],
+        "usage_context": {
+          "calls": "backend.HelperLLM.LLMHelper, schemas.types.ClassAnalysisInput, and schemas.types.ClassContextInput",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.callgraph.make_safe_dot": {
+      "identifier": "backend.callgraph.make_safe_dot",
+      "description": {
+        "overall": "The `make_safe_dot` function generates a safe representation of a directed graph and writes it to a file in DOT format. It takes a `networkx` directed graph and an output file path as input. The function creates a copy of the input graph, renames its nodes to safe names, and then writes the modified graph to the specified output file. This process ensures that the node names in the output graph are safe for use in DOT files. The function utilizes the `networkx` library for graph manipulation and the `nx_pydot` module for writing the graph to a DOT file.",
+        "parameters": [
+          {
+            "name": "graph",
+            "type": "nx.DiGraph",
+            "description": "The input directed graph to be converted to a safe representation."
+          },
+          {
+            "name": "out_path",
+            "type": "str",
+            "description": "The file path where the safe graph representation will be written in DOT format."
+          }
+        ],
+        "returns": [],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.callgraph.build_filtered_callgraph": {
+      "identifier": "backend.callgraph.build_filtered_callgraph",
+      "description": {
+        "overall": "The `build_filtered_callgraph` function constructs a global call graph and filters it to include only self-written functions. It takes a `GitRepository` object as input and returns a directed graph (`nx.DiGraph`) representing the call relationships between the functions. The function iterates over all Python files in the repository, parses their abstract syntax trees, and identifies the functions defined in each file. It then constructs the global call graph by adding edges between functions that call each other. The function filters the graph to only include functions that are part of the repository, ensuring that only self-written functions are included.",
+        "parameters": [
+          {
+            "name": "repo",
+            "type": "GitRepository",
+            "description": "A `GitRepository` object representing the repository to analyze."
+          }
+        ],
+        "returns": [
+          {
+            "name": "global_graph",
+            "type": "nx.DiGraph",
+            "description": "A directed graph representing the call relationships between self-written functions in the repository."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls `backend.callgraph.CallGraph`. ",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.converter.wrap_cdata": {
+      "identifier": "backend.converter.wrap_cdata",
+      "description": {
+        "overall": "The `wrap_cdata` function is designed to wrap a given content in CDATA tags. This is typically used in XML to prevent the content from being parsed as XML. The function takes a single parameter, `content`, which is the string to be wrapped. It returns a string with the content enclosed in CDATA tags. The function does not perform any error checking on the input content. The purpose of this function is to ensure that the content is treated as literal characters within an XML document.",
+        "parameters": [
+          {
+            "name": "content",
+            "type": "str",
+            "description": "The string content to be wrapped in CDATA tags."
+          }
+        ],
+        "returns": [
+          {
+            "name": "wrapped_content",
+            "type": "str",
+            "description": "The input content wrapped in CDATA tags."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.converter.extract_output_content": {
+      "identifier": "backend.converter.extract_output_content",
+      "description": {
+        "overall": "The `extract_output_content` function is designed to extract text and handle images from a list of outputs. It iterates over each output, checks its type, and processes the data accordingly. For display data and execution results, it extracts text or images encoded in Base64 and appends them to a list. The function also handles stream and error outputs by appending the corresponding text to the list. The extracted content is then returned as a list of text strings or placeholders.",
+        "parameters": [
+          {
+            "name": "outputs",
+            "type": "list",
+            "description": "A list of output objects containing data to be extracted."
+          },
+          {
+            "name": "image_list",
+            "type": "list",
+            "description": "A list to store image data, where each image is represented as a dictionary with 'mime_type' and 'data' keys."
+          }
+        ],
+        "returns": [
+          {
+            "name": "extracted_xml_snippets",
+            "type": "list",
+            "description": "A list of extracted text strings or placeholders for images."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls backend.converter.process_image.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.converter.process_image": {
+      "identifier": "backend.converter.process_image",
+      "description": {
+        "overall": "The `process_image` function takes a `mime_type` as input and attempts to process an image based on this type. It checks if the `mime_type` exists in the `data` dictionary and tries to decode the corresponding base64 string. If successful, it appends the image data to the `image_list` and returns a placeholder string. If an error occurs during decoding, it returns an error message. If the `mime_type` is not found in the `data` dictionary, the function returns `None`.",
+        "parameters": [
+          {
+            "name": "mime_type",
+            "type": "str",
+            "description": "The MIME type of the image to be processed."
+          }
+        ],
+        "returns": [
+          {
+            "name": "success",
+            "type": "str",
+            "description": "A placeholder string indicating the image has been processed successfully."
+          },
+          {
+            "name": "error",
+            "type": "str",
+            "description": "An error message if the image decoding fails."
+          },
+          {
+            "name": "none",
+            "type": "NoneType",
+            "description": "If the `mime_type` is not found in the `data` dictionary."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.converter.convert_notebook_to_xml": {
+      "identifier": "backend.converter.convert_notebook_to_xml",
+      "description": {
+        "overall": "The `convert_notebook_to_xml` function takes a notebook file content as input, attempts to parse it as a JSON/Notebook, and then converts its cells into XML format. If the parsing fails, it returns an error message. The function handles two types of cells: markdown and code. For markdown cells, it directly converts the content into XML. For code cells, it wraps the source code in a CDATA section and converts it into XML. If a code cell has outputs, it extracts the output content, wraps it in a CDATA section, and appends it as an output cell in the XML. The function returns the XML representation of the notebook and a list of extracted images.",
+        "parameters": [
+          {
+            "name": "file_content",
+            "type": "str",
+            "description": "The content of the notebook file to be converted."
+          }
+        ],
+        "returns": [
+          {
+            "name": "xml_content",
+            "type": "str",
+            "description": "The XML representation of the notebook."
+          },
+          {
+            "name": "extracted_images",
+            "type": "list",
+            "description": "A list of extracted images from the notebook."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls backend.converter.extract_output_content and backend.converter.wrap_cdata.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.converter.process_repo_notebooks": {
+      "identifier": "backend.converter.process_repo_notebooks",
+      "description": {
+        "overall": "The `process_repo_notebooks` function processes a list of repository files, filters out non-notebook files, and converts the notebook files to XML format. It logs the number of notebooks found and the processing of each notebook. The function returns a dictionary containing the XML output and images for each processed notebook. The conversion of notebooks to XML is handled by the `convert_notebook_to_xml` function. This function appears to be part of a larger system for processing and converting notebooks, likely for the purpose of analysis, storage, or further processing.",
+        "parameters": [
+          {
+            "name": "repo_files",
+            "type": "list",
+            "description": "A list of repository files to be processed."
+          }
+        ],
+        "returns": [
+          {
+            "name": "results",
+            "type": "dict",
+            "description": "A dictionary containing the XML output and images for each processed notebook."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls backend.converter.convert_notebook_to_xml.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.main.create_savings_chart": {
+      "identifier": "backend.main.create_savings_chart",
+      "description": {
+        "overall": "The `create_savings_chart` function generates a bar chart comparing the number of JSON and TOON tokens, displaying the savings percentage. It utilizes matplotlib for chart creation and saves the chart to a specified output path. The function takes four parameters: `json_tokens`, `toon_tokens`, `savings_percent`, and `output_path`. It calculates the chart's title, labels, and values based on the input parameters. The chart includes a title, labels, and grid lines, with the token counts displayed above each bar. Finally, the function saves the chart to the specified output path and closes the plot.",
+        "parameters": [
+          {
+            "name": "json_tokens",
+            "type": "int",
+            "description": "The number of JSON tokens."
+          },
+          {
+            "name": "toon_tokens",
+            "type": "int",
+            "description": "The number of TOON tokens."
+          },
+          {
+            "name": "savings_percent",
+            "type": "float",
+            "description": "The percentage of savings."
+          },
+          {
+            "name": "output_path",
+            "type": "str",
+            "description": "The path where the chart will be saved."
+          }
+        ],
+        "returns": [],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.main.calculate_net_time": {
+      "identifier": "backend.main.calculate_net_time",
+      "description": {
+        "overall": "The `calculate_net_time` function calculates the net time taken for a process, excluding sleep times due to rate limits. It takes into account the start and end times, total items, batch size, and model name. If the model name starts with 'gemini-', it calculates the number of batches, sleep count, and total sleep time, then subtracts this from the total duration to get the net time. If the model name does not start with 'gemini-', it simply returns the total duration.",
+        "parameters": [
+          {
+            "name": "start_time",
+            "type": "float",
+            "description": "The start time of the process."
+          },
+          {
+            "name": "end_time",
+            "type": "float",
+            "description": "The end time of the process."
+          },
+          {
+            "name": "total_items",
+            "type": "int",
+            "description": "The total number of items being processed."
+          },
+          {
+            "name": "batch_size",
+            "type": "int",
+            "description": "The size of each batch."
+          },
+          {
+            "name": "model_name",
+            "type": "str",
+            "description": "The name of the model being used."
+          }
+        ],
+        "returns": [
+          {
+            "name": "net_time",
+            "type": "float",
+            "description": "The net time taken for the process, excluding sleep times due to rate limits."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.main.main_workflow": {
+      "identifier": "backend.main.main_workflow",
+      "description": {
+        "overall": "The main_workflow function is responsible for analyzing a given input, extracting relevant information, and generating a final report using Helper LLM and Main LLM models. It clones a repository, extracts basic project information, constructs a repository file tree, analyzes relationships, and creates an abstract syntax tree (AST) schema. The function then prepares inputs for Helper LLM, initializes the model, and calls it to generate documentation for functions and classes. Finally, it calls Main LLM to generate a final report and saves the results.",
+        "parameters": [
+          {
+            "name": "input",
+            "type": "str",
+            "description": "The input to be analyzed."
+          },
+          {
+            "name": "api_keys",
+            "type": "dict",
+            "description": "A dictionary containing API keys for various models."
+          },
+          {
+            "name": "model_names",
+            "type": "dict",
+            "description": "A dictionary containing model names for Helper LLM and Main LLM."
+          },
+          {
+            "name": "status_callback",
+            "type": "callable",
+            "description": "An optional callback function to update the status."
+          }
+        ],
+        "returns": [
+          {
+            "name": "report",
+            "type": "str",
+            "description": "The final report generated by Main LLM."
+          },
+          {
+            "name": "metrics",
+            "type": "dict",
+            "description": "A dictionary containing metrics such as helper time, main time, and token savings."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls backend.AST_Schema.ASTAnalyzer, backend.AST_Schema.ASTAnalyzer.analyze_repository, backend.AST_Schema.ASTAnalyzer.merge_relationship_data, backend.HelperLLM.LLMHelper, backend.HelperLLM.LLMHelper.generate_for_classes, backend.HelperLLM.LLMHelper.generate_for_functions, backend.MainLLM.MainLLM, backend.MainLLM.MainLLM.call_llm, backend.basic_info.ProjektInfoExtractor, backend.basic_info.ProjektInfoExtractor.extrahiere_info, backend.getRepo.GitRepository, backend.main.calculate_net_time, backend.main.create_savings_chart, backend.main.update_status, backend.relationship_analyzer.ProjectAnalyzer, backend.relationship_analyzer.ProjectAnalyzer.analyze, backend.relationship_analyzer.ProjectAnalyzer.get_raw_relationships, schemas.types.ClassAnalysisInput, schemas.types.ClassContextInput, schemas.types.FunctionAnalysisInput, schemas.types.FunctionContextInput, and schemas.types.MethodContextInput.",
+          "called_by": "This function is not called by any other function."
+        }
+      },
+      "error": null
+    },
+    "backend.main.update_status": {
+      "identifier": "backend.main.update_status",
+      "description": {
+        "overall": "The update_status function updates the status by calling the status_callback function if it exists and logs the provided message using the logging.info function. This function appears to be part of a larger system that utilizes various imports, including logging and potentially other external libraries. The function takes a single parameter, msg, which is used as the argument for both the status_callback and logging.info functions. The purpose of this function is to provide a centralized way to update and log the status of the system. The function does not return any value.",
+        "parameters": [
+          {
+            "name": "msg",
+            "type": "str",
+            "description": "The message to be used for updating the status and logging."
+          }
+        ],
+        "returns": [],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.main.notebook_workflow": {
+      "identifier": "backend.main.notebook_workflow",
+      "description": {
+        "overall": "The `notebook_workflow` function is a complex workflow that processes notebooks from a given repository. It extracts basic project information, clones the repository, processes the notebooks, and generates a report using a large language model (LLM). The function takes in several parameters, including `input`, `api_keys`, `model`, and an optional `status_callback`. It returns a dictionary containing the final report and metrics.",
+        "parameters": [
+          {
+            "name": "input",
+            "type": "str",
+            "description": "The input string containing the repository URL."
+          },
+          {
+            "name": "api_keys",
+            "type": "dict",
+            "description": "A dictionary containing API keys for different models."
+          },
+          {
+            "name": "model",
+            "type": "str",
+            "description": "The name of the model to use for the LLM."
+          },
+          {
+            "name": "status_callback",
+            "type": "callable",
+            "description": "An optional callback function to update the status."
+          }
+        ],
+        "returns": [
+          {
+            "name": "report",
+            "type": "str",
+            "description": "The final report generated by the LLM."
+          },
+          {
+            "name": "metrics",
+            "type": "dict",
+            "description": "A dictionary containing metrics, such as the total time taken and the model used."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls backend.MainLLM.MainLLM, backend.MainLLM.MainLLM.call_llm, backend.basic_info.ProjektInfoExtractor, backend.basic_info.ProjektInfoExtractor.extrahiere_info, backend.converter.process_repo_notebooks, backend.getRepo.GitRepository, backend.main.gemini_payload, and backend.main.update_status.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.main.gemini_payload": {
+      "identifier": "backend.main.gemini_payload",
+      "description": {
+        "overall": "The gemini_payload function generates a payload content list by processing the provided basic information, notebook path, XML content, and images. It first creates an intro JSON object containing the basic information and notebook path, then iterates through the XML content to extract text segments and image placeholders. For each image placeholder, it appends a text segment and an image URL to the payload content list. Finally, it returns the payload content list.",
+        "parameters": [
+          {
+            "name": "basic_info",
+            "type": "dict",
+            "description": "A dictionary containing basic information about the notebook."
+          },
+          {
+            "name": "nb_path",
+            "type": "str",
+            "description": "The path to the current notebook."
+          },
+          {
+            "name": "xml_content",
+            "type": "str",
+            "description": "The XML content of the notebook."
+          },
+          {
+            "name": "images",
+            "type": "list",
+            "description": "A list of image data, where each image is a dictionary containing the image data and other metadata."
+          }
+        ],
+        "returns": [
+          {
+            "name": "payload_content",
+            "type": "list",
+            "description": "A list of payload content items, where each item is a dictionary containing the type and content of the item."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.relationship_analyzer.path_to_module": {
+      "identifier": "backend.relationship_analyzer.path_to_module",
+      "description": {
+        "overall": "The `path_to_module` function converts a file path into a Python module path. It takes two parameters: `filepath` and `project_root`. The function attempts to calculate the relative path of the file with respect to the project root. If this fails, it falls back to using the file's basename. The function then removes any '.py' extension from the path and replaces path separators with dots to form the module path. If the resulting module path ends with '.__init__', this suffix is removed before returning the module path.",
+        "parameters": [
+          {
+            "name": "filepath",
+            "type": "str",
+            "description": "The path to the file to be converted into a module path."
+          },
+          {
+            "name": "project_root",
+            "type": "str",
+            "description": "The root directory of the project."
+          }
+        ],
+        "returns": [
+          {
+            "name": "module_path",
+            "type": "str",
+            "description": "The converted module path."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.encrypt_text": {
+      "identifier": "database.db.encrypt_text",
+      "description": {
+        "overall": "The `encrypt_text` function is designed to encrypt a given text using a cipher suite. It first checks if the input text is empty or if the cipher suite is not available. If either condition is true, it returns the original text. Otherwise, it strips any leading or trailing whitespace from the text, encodes it, encrypts it using the cipher suite, and then decodes the result back into a string. The function is intended to secure sensitive text data. It relies on the `cryptography.fernet.Fernet` module for encryption, which suggests that the cipher suite is an instance of `Fernet`. The function's purpose is to provide a simple, high-level interface for encrypting text, making it easier to protect data at rest or in transit.",
+        "parameters": [
+          {
+            "name": "text",
+            "type": "str",
+            "description": "The text to be encrypted. It is expected to be a string and is checked for emptiness before encryption."
+          }
+        ],
+        "returns": [
+          {
+            "name": "encrypted_text",
+            "type": "str",
+            "description": "The encrypted text. If the input text is empty or the cipher suite is not available, the original text is returned."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.decrypt_text": {
+      "identifier": "database.db.decrypt_text",
+      "description": {
+        "overall": "The `decrypt_text` function is designed to decrypt a given text using a cipher suite. It first checks if the input text is empty or if the cipher suite is not available. If either condition is true, it returns the original text. Otherwise, it attempts to decrypt the text using the cipher suite and returns the decrypted text. If an exception occurs during decryption, it catches the exception and returns the original text. The function is intended to handle text decryption securely, utilizing the cryptography library.",
+        "parameters": [
+          {
+            "name": "text",
+            "type": "str",
+            "description": "The text to be decrypted."
+          }
+        ],
+        "returns": [
+          {
+            "name": "decrypted_text",
+            "type": "str",
+            "description": "The decrypted text if decryption is successful, otherwise the original text."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.insert_user": {
+      "identifier": "database.db.insert_user",
+      "description": {
+        "overall": "The `insert_user` function creates a new user document in the database. It takes in three parameters: `username`, `name`, and `password`. The function hashes the provided password using `stauth.Hasher.hash` and constructs a user dictionary with the provided information, along with some default values for API keys and base URLs. The function then inserts this user document into the database using `dbusers.insert_one` and returns the inserted ID.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The unique identifier for the user."
+          },
+          {
+            "name": "name",
+            "type": "str",
+            "description": "The full name of the user."
+          },
+          {
+            "name": "password",
+            "type": "str",
+            "description": "The password for the user, which will be hashed before storage."
+          }
+        ],
+        "returns": [
+          {
+            "name": "inserted_id",
+            "type": "ObjectId",
+            "description": "The ID of the newly inserted user document in the database."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.fetch_all_users": {
+      "identifier": "database.db.fetch_all_users",
+      "description": {
+        "overall": "The `fetch_all_users` function retrieves all user documents from a MongoDB database. It utilizes the `pymongo` library to interact with the database. The function returns a list of all user documents found in the database. The database connection is not explicitly established within this function, suggesting it relies on an external setup. The function does not perform any data validation or error handling on the retrieved data.",
+        "parameters": [],
+        "returns": [
+          {
+            "name": "users",
+            "type": "list",
+            "description": "A list of all user documents retrieved from the database."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.fetch_user": {
+      "identifier": "database.db.fetch_user",
+      "description": {
+        "overall": "The `fetch_user` function retrieves a user document from a database based on the provided `username`. It uses the `find_one` method of the `dbusers` collection to query the database. The function returns the user document if found, or `None` if no matching document exists. The database interaction is facilitated by the `pymongo` library, which is imported but not explicitly used within this function. The function's purpose is to provide a simple interface for fetching user data by username.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username of the user to be fetched from the database."
+          }
+        ],
+        "returns": [
+          {
+            "name": "user_document",
+            "type": "dict or None",
+            "description": "The user document retrieved from the database, or `None` if no matching document exists."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.update_user_name": {
+      "identifier": "database.db.update_user_name",
+      "description": {
+        "overall": "The `update_user_name` function updates the name of a user in the database. It takes two parameters, `username` and `new_name`, and uses the `pymongo` library to interact with the database. The function updates the `name` field of the user document with the specified `username` and returns the number of documents modified. Note that this function does not update the `_id` field, which is not directly modifiable in MongoDB.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username of the user to update."
+          },
+          {
+            "name": "new_name",
+            "type": "str",
+            "description": "The new name to assign to the user."
+          }
+        ],
+        "returns": [
+          {
+            "name": "modified_count",
+            "type": "int",
+            "description": "The number of documents modified by the update operation."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.update_gemini_key": {
+      "identifier": "database.db.update_gemini_key",
+      "description": {
+        "overall": "The `update_gemini_key` function updates a user's Gemini API key in the database. It takes two parameters: `username` and `gemini_api_key`. The function first encrypts the provided API key using the `encrypt_text` function and then updates the corresponding user document in the database with the encrypted key. The function returns the number of documents modified as a result of the update operation.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username of the user whose Gemini API key is to be updated."
+          },
+          {
+            "name": "gemini_api_key",
+            "type": "str",
+            "description": "The new Gemini API key to be updated for the user."
+          }
+        ],
+        "returns": [
+          {
+            "name": "modified_count",
+            "type": "int",
+            "description": "The number of documents modified as a result of the update operation."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls database.db.encrypt_text.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.update_gpt_key": {
+      "identifier": "database.db.update_gpt_key",
+      "description": {
+        "overall": "The `update_gpt_key` function updates the GPT API key for a given user in the database. It takes two parameters: `username` and `gpt_api_key`. The function first encrypts the provided GPT API key using the `encrypt_text` function. Then, it uses the `update_one` method from the `dbusers` collection to update the user's document with the encrypted key. The function returns the number of documents modified by the update operation.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username of the user whose GPT API key is to be updated."
+          },
+          {
+            "name": "gpt_api_key",
+            "type": "str",
+            "description": "The new GPT API key to be updated for the given user."
+          }
+        ],
+        "returns": [
+          {
+            "name": "modified_count",
+            "type": "int",
+            "description": "The number of documents modified by the update operation."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls database.db.encrypt_text.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.update_ollama_url": {
+      "identifier": "database.db.update_ollama_url",
+      "description": {
+        "overall": "The `update_ollama_url` function updates the `ollama_base_url` field for a given `username` in the database. It uses the `dbusers.update_one` method to perform the update operation. The function takes two parameters: `username` and `ollama_base_url`, both of which are strings. The `ollama_base_url` is stripped of any leading or trailing whitespace before being updated in the database. The function returns the number of documents modified by the update operation.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username for which the `ollama_base_url` needs to be updated."
+          },
+          {
+            "name": "ollama_base_url",
+            "type": "str",
+            "description": "The new `ollama_base_url` value to be updated for the given `username`."
+          }
+        ],
+        "returns": [
+          {
+            "name": "modified_count",
+            "type": "int",
+            "description": "The number of documents modified by the update operation."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.update_opensrc_key": {
+      "identifier": "database.db.update_opensrc_key",
+      "description": {
+        "overall": "The `update_opensrc_key` function updates the Open Source API key for a given user in the database. It takes two parameters: `username` and `opensrc_api_key`. The function first encrypts the provided API key using the `encrypt_text` function, then updates the user's document in the database with the encrypted key. The function returns the number of documents modified by the update operation.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username of the user whose Open Source API key is to be updated."
+          },
+          {
+            "name": "opensrc_api_key",
+            "type": "str",
+            "description": "The new Open Source API key to be updated for the given user."
+          }
+        ],
+        "returns": [
+          {
+            "name": "modified_count",
+            "type": "int",
+            "description": "The number of documents modified by the update operation."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls database.db.encrypt_text.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.update_opensrc_url": {
+      "identifier": "database.db.update_opensrc_url",
+      "description": {
+        "overall": "The `update_opensrc_url` function updates the `opensrc_base_url` field for a user in the database. It takes two parameters: `username` and `opensrc_base_url`. The function uses the `dbusers.update_one` method to update the user's document in the database. The `opensrc_base_url` parameter is stripped of leading and trailing whitespace before being updated. The function returns the number of documents modified by the update operation.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username of the user to update."
+          },
+          {
+            "name": "opensrc_base_url",
+            "type": "str",
+            "description": "The new `opensrc_base_url` value to update for the user."
+          }
+        ],
+        "returns": [
+          {
+            "name": "modified_count",
+            "type": "int",
+            "description": "The number of documents modified by the update operation."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.fetch_gemini_key": {
+      "identifier": "database.db.fetch_gemini_key",
+      "description": {
+        "overall": "The `fetch_gemini_key` function retrieves a Gemini API key associated with a given username from a MongoDB database. It uses the `pymongo` library to interact with the database. The function takes a `username` as input, queries the database for a document with the matching `_id` field, and returns the `gemini_api_key` value if found. If no document is found, the function returns `None`. This function appears to be part of a larger system that manages user data and API keys.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username to retrieve the Gemini API key for."
+          }
+        ],
+        "returns": [
+          {
+            "name": "gemini_api_key",
+            "type": "str or None",
+            "description": "The Gemini API key associated with the given username, or `None` if no key is found."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.fetch_ollama_url": {
+      "identifier": "database.db.fetch_ollama_url",
+      "description": {
+        "overall": "The `fetch_ollama_url` function retrieves the Ollama base URL associated with a given username from a MongoDB database. It uses the `dbusers` collection and filters the results by the `_id` field, which is set to the provided `username`. If a matching document is found, the function returns the `ollama_base_url` value; otherwise, it returns `None`. This function appears to be part of a larger system that utilizes MongoDB for data storage and retrieval. The function's implementation is straightforward, relying on the `find_one` method of the `dbusers` collection to retrieve the desired data.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username for which to retrieve the Ollama base URL."
+          }
+        ],
+        "returns": [
+          {
+            "name": "ollama_base_url",
+            "type": "str or None",
+            "description": "The Ollama base URL associated with the provided username, or `None` if no matching document is found."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.fetch_gpt_key": {
+      "identifier": "database.db.fetch_gpt_key",
+      "description": {
+        "overall": "The `fetch_gpt_key` function retrieves the GPT API key associated with a given username from a MongoDB database. It uses the `dbusers` collection and filters the result to only include the `gpt_api_key` field. If a user with the specified username is found, the function returns their GPT API key; otherwise, it returns `None`. This function appears to be part of a larger system that utilizes MongoDB for user data storage and Streamlit for authentication. The function's implementation is straightforward, relying on the `find_one` method of the `dbusers` collection to retrieve the user data.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username of the user whose GPT API key is to be retrieved."
+          }
+        ],
+        "returns": [
+          {
+            "name": "gpt_api_key",
+            "type": "str or None",
+            "description": "The GPT API key associated with the given username, or `None` if no user with that username is found."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.fetch_opensrc_key": {
+      "identifier": "database.db.fetch_opensrc_key",
+      "description": {
+        "overall": "The `fetch_opensrc_key` function retrieves the Open Source API key associated with a given username from the database. It uses the `dbusers` collection and filters the result to only include the `opensrc_api_key` field. If a user with the specified username is found, the function returns their Open Source API key; otherwise, it returns `None`. The function takes a single parameter, `username`, which is expected to be a string. This function appears to be part of a larger system that manages user data and API keys. It does not perform any error checking on the input username beyond what is implicitly done by the database query.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username of the user whose Open Source API key is to be retrieved."
+          }
+        ],
+        "returns": [
+          {
+            "name": "opensrc_api_key",
+            "type": "str or None",
+            "description": "The Open Source API key associated with the given username, or `None` if no such user exists."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.fetch_opensrc_url": {
+      "identifier": "database.db.fetch_opensrc_url",
+      "description": {
+        "overall": "The `fetch_opensrc_url` function retrieves the opensrc base URL associated with a given username from a database. It uses the `dbusers` collection to find a document with the matching `_id` (username) and returns the `opensrc_base_url` field if found, or `None` if no document is found. The function takes a single parameter, `username`, which is expected to be a string. This function appears to be part of a larger system that manages user data and opensrc URLs. It does not perform any error checking on the input username beyond what is implicitly done by the database query.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username to look up in the database."
+          }
+        ],
+        "returns": [
+          {
+            "name": "opensrc_base_url",
+            "type": "str or None",
+            "description": "The opensrc base URL associated with the given username, or `None` if no matching document is found."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.delete_user": {
+      "identifier": "database.db.delete_user",
+      "description": {
+        "overall": "The `delete_user` function is designed to delete a user from the database based on their username. It utilizes the `dbusers.delete_one` method to remove the user document from the database. The function takes a single parameter, `username`, which is expected to be a string. The function returns the number of documents deleted, which should be 1 if the user exists and 0 if the user does not exist. This function appears to be part of a larger database management system, likely using MongoDB as the database backend.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username of the user to be deleted from the database."
+          }
+        ],
+        "returns": [
+          {
+            "name": "deleted_count",
+            "type": "int",
+            "description": "The number of documents deleted from the database, which should be 1 if the user exists and 0 if the user does not exist."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.get_decrypted_api_keys": {
+      "identifier": "database.db.get_decrypted_api_keys",
+      "description": {
+        "overall": "The `get_decrypted_api_keys` function retrieves and decrypts API keys for a given user. It takes a `username` as input and queries the database to find the corresponding user document. If the user is found, it decrypts the Gemini, GPT, and OpenSrc API keys, and retrieves the Ollama base URL and OpenSrc base URL. The function returns the decrypted API keys and base URLs. If the user is not found, it returns `None` for all values.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username of the user for whom to retrieve the API keys."
+          }
+        ],
+        "returns": [
+          {
+            "name": "gemini_plain",
+            "type": "str",
+            "description": "The decrypted Gemini API key."
+          },
+          {
+            "name": "ollama_plain",
+            "type": "str",
+            "description": "The Ollama base URL."
+          },
+          {
+            "name": "gpt_plain",
+            "type": "str",
+            "description": "The decrypted GPT API key."
+          },
+          {
+            "name": "opensrc_plain",
+            "type": "str",
+            "description": "The decrypted OpenSrc API key."
+          },
+          {
+            "name": "opensrc_url",
+            "type": "str",
+            "description": "The OpenSrc base URL."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls database.db.decrypt_text.",
+          "called_by": "This function is called by no other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.insert_chat": {
+      "identifier": "database.db.insert_chat",
+      "description": {
+        "overall": "The `insert_chat` function creates a new chat entry in the database. It takes two parameters, `username` and `chat_name`, and generates a unique identifier for the chat. The function then inserts the chat data into the database and returns the inserted ID. The chat data includes the username, chat name, and creation timestamp. This function appears to be part of a larger system for managing chat data.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username associated with the chat."
+          },
+          {
+            "name": "chat_name",
+            "type": "str",
+            "description": "The name of the chat."
+          }
+        ],
+        "returns": [
+          {
+            "name": "inserted_id",
+            "type": "str",
+            "description": "The ID of the newly inserted chat document."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.fetch_chats_by_user": {
+      "identifier": "database.db.fetch_chats_by_user",
+      "description": {
+        "overall": "The `fetch_chats_by_user` function retrieves all chats defined for a given user. It queries a database using the `username` as a filter, sorts the results by creation time in ascending order, and returns the list of chats. The function relies on a MongoDB database connection, which is not explicitly defined within the provided source code. The purpose of this function is to fetch and organize chat data for a specific user, likely for display or further processing within an application. The function does not handle potential database connection errors or cases where the user has no associated chats.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username of the user for whom to fetch chats."
+          }
+        ],
+        "returns": [
+          {
+            "name": "chats",
+            "type": "list",
+            "description": "A list of chats associated with the given username, sorted by creation time in ascending order."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.check_chat_exists": {
+      "identifier": "database.db.check_chat_exists",
+      "description": {
+        "overall": "The `check_chat_exists` function checks if a chat exists in the database for a given username and chat name. It uses the `dbchats.find_one` method to query the database. If a document matching the username and chat name is found, the function returns `True`; otherwise, it returns `False`. This function is used to verify the existence of a chat before performing any operations on it. The function takes two parameters, `username` and `chat_name`, both of which are strings.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username of the user who owns the chat."
+          },
+          {
+            "name": "chat_name",
+            "type": "str",
+            "description": "The name of the chat to check for existence."
+          }
+        ],
+        "returns": [
+          {
+            "name": "existence",
+            "type": "bool",
+            "description": "A boolean indicating whether the chat exists in the database."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.rename_chat_fully": {
+      "identifier": "database.db.rename_chat_fully",
+      "description": {
+        "overall": "The `rename_chat_fully` function renames a chat and all associated exchanges for a given user. It first updates the chat entry in the database, then updates all messages (exchanges) related to the chat. The function takes three parameters: `username`, `old_name`, and `new_name`, and returns the number of modified documents.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username of the user whose chat is being renamed."
+          },
+          {
+            "name": "old_name",
+            "type": "str",
+            "description": "The current name of the chat."
+          },
+          {
+            "name": "new_name",
+            "type": "str",
+            "description": "The new name for the chat."
+          }
+        ],
+        "returns": [
+          {
+            "name": "modified_count",
+            "type": "int",
+            "description": "The number of documents modified by the update operation."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.insert_exchange": {
+      "identifier": "database.db.insert_exchange",
+      "description": {
+        "overall": "The `insert_exchange` function is designed to insert a new exchange record into a database. It takes in various parameters such as question, answer, feedback, username, and chat name, among others. The function generates a unique identifier for the new record and constructs a dictionary representing the exchange. It then attempts to insert this dictionary into the database using `dbexchanges.insert_one`. If successful, the function returns the new identifier; otherwise, it catches any exceptions, prints an error message, and returns `None`. The function utilizes the `uuid` library to generate unique identifiers and the `datetime` library to record the creation time of the exchange.",
+        "parameters": [
+          {
+            "name": "question",
+            "type": "str",
+            "description": "The question being asked in the exchange."
+          },
+          {
+            "name": "answer",
+            "type": "str",
+            "description": "The answer provided in the exchange."
+          },
+          {
+            "name": "feedback",
+            "type": "str",
+            "description": "The feedback given in the exchange."
+          },
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username of the user involved in the exchange."
+          },
+          {
+            "name": "chat_name",
+            "type": "str",
+            "description": "The name of the chat where the exchange occurred."
+          },
+          {
+            "name": "helper_used",
+            "type": "str",
+            "description": "The helper used in the exchange, defaults to an empty string."
+          },
+          {
+            "name": "main_used",
+            "type": "str",
+            "description": "The main component used in the exchange, defaults to an empty string."
+          },
+          {
+            "name": "total_time",
+            "type": "str",
+            "description": "The total time taken for the exchange, defaults to an empty string."
+          },
+          {
+            "name": "helper_time",
+            "type": "str",
+            "description": "The time taken by the helper in the exchange, defaults to an empty string."
+          },
+          {
+            "name": "main_time",
+            "type": "str",
+            "description": "The time taken by the main component in the exchange, defaults to an empty string."
+          },
+          {
+            "name": "json_tokens",
+            "type": "int",
+            "description": "The number of JSON tokens, defaults to 0."
+          },
+          {
+            "name": "toon_tokens",
+            "type": "int",
+            "description": "The number of Toon tokens, defaults to 0."
+          },
+          {
+            "name": "savings_percent",
+            "type": "float",
+            "description": "The percentage of savings, defaults to 0.0."
+          }
+        ],
+        "returns": [
+          {
+            "name": "new_id",
+            "type": "str",
+            "description": "The unique identifier of the newly inserted exchange record, or `None` if the insertion fails."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.fetch_exchanges_by_user": {
+      "identifier": "database.db.fetch_exchanges_by_user",
+      "description": {
+        "overall": "The `fetch_exchanges_by_user` function retrieves a list of exchanges associated with a given username from the database. It uses the `dbexchanges` collection and filters the results by the provided `username`. The function sorts the exchanges by their `created_at` timestamp in ascending order. The sorted list of exchanges is then returned by the function. This function appears to be part of a larger system that utilizes a MongoDB database, as indicated by the use of `pymongo`. The function's purpose is to fetch specific data from the database based on user input.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username for which to retrieve exchanges."
+          }
+        ],
+        "returns": [
+          {
+            "name": "exchanges",
+            "type": "list",
+            "description": "A list of exchanges associated with the given username, sorted by their creation timestamp."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.fetch_exchanges_by_chat": {
+      "identifier": "database.db.fetch_exchanges_by_chat",
+      "description": {
+        "overall": "The `fetch_exchanges_by_chat` function retrieves a list of exchanges from the database that are associated with a specific username and chat name. It uses the `dbexchanges` collection and filters the results based on the provided `username` and `chat_name`. The results are sorted in ascending order by the `created_at` field. The function returns a list of exchanges that match the specified criteria.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username to filter exchanges by."
+          },
+          {
+            "name": "chat_name",
+            "type": "str",
+            "description": "The chat name to filter exchanges by."
+          }
+        ],
+        "returns": [
+          {
+            "name": "exchanges",
+            "type": "list",
+            "description": "A list of exchanges that match the specified username and chat name, sorted by creation time."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.update_exchange_feedback": {
+      "identifier": "database.db.update_exchange_feedback",
+      "description": {
+        "overall": "The update_exchange_feedback function updates the feedback for a specific exchange in the database. It takes two parameters: exchange_id and feedback. The function uses the dbexchanges collection to update the feedback field of the document with the matching _id. The function returns the number of documents modified by the update operation.",
+        "parameters": [
+          {
+            "name": "exchange_id",
+            "type": "unknown",
+            "description": "The ID of the exchange to be updated."
+          },
+          {
+            "name": "feedback",
+            "type": "int",
+            "description": "The new feedback value for the exchange."
+          }
+        ],
+        "returns": [
+          {
+            "name": "modified_count",
+            "type": "int",
+            "description": "The number of documents modified by the update operation."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.update_exchange_feedback_message": {
+      "identifier": "database.db.update_exchange_feedback_message",
+      "description": {
+        "overall": "The update_exchange_feedback_message function updates the feedback message for a specified exchange in the database. It takes two parameters: exchange_id and feedback_message. The function uses the dbexchanges collection to update the document with the matching _id. The update operation sets the feedback_message field to the provided value. The function returns the number of documents modified by the update operation.",
+        "parameters": [
+          {
+            "name": "exchange_id",
+            "type": "unknown",
+            "description": "The ID of the exchange to update"
+          },
+          {
+            "name": "feedback_message",
+            "type": "str",
+            "description": "The new feedback message to set for the exchange"
+          }
+        ],
+        "returns": [
+          {
+            "name": "modified_count",
+            "type": "int",
+            "description": "The number of documents modified by the update operation"
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.delete_exchange_by_id": {
+      "identifier": "database.db.delete_exchange_by_id",
+      "description": {
+        "overall": "The `delete_exchange_by_id` function deletes a document from a MongoDB database based on the provided `exchange_id`. It utilizes the `dbexchanges.delete_one` method to remove the document and returns the number of documents deleted. The function takes a single parameter, `exchange_id`, which is expected to be a string. The deletion operation is performed on a MongoDB collection, and the result of the deletion is returned as an integer. This function appears to be part of a larger database management system, likely used to manage exchanges or similar data entities.",
+        "parameters": [
+          {
+            "name": "exchange_id",
+            "type": "str",
+            "description": "The ID of the exchange to be deleted from the database."
+          }
+        ],
+        "returns": [
+          {
+            "name": "deleted_count",
+            "type": "int",
+            "description": "The number of documents deleted from the database."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.delete_full_chat": {
+      "identifier": "database.db.delete_full_chat",
+      "description": {
+        "overall": "The `delete_full_chat` function deletes a specified chat and all associated exchanges from the database. It ensures consistency between the frontend and backend by removing all related data in two steps: first, it deletes all messages in the chat, and then it removes the chat itself from the chat list. The function takes two parameters, `username` and `chat_name`, and returns the number of chats deleted.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username associated with the chat to be deleted."
+          },
+          {
+            "name": "chat_name",
+            "type": "str",
+            "description": "The name of the chat to be deleted."
+          }
+        ],
+        "returns": [
+          {
+            "name": "deleted_count",
+            "type": "int",
+            "description": "The number of chats deleted."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "frontend.frontend.clean_names": {
+      "identifier": "frontend.frontend.clean_names",
+      "description": {
+        "overall": "The clean_names function takes a list of model names as input and returns a new list with each name cleaned by splitting the string at the '/' character and keeping only the last part. This is useful for extracting the actual model name from a path or identifier that includes a directory or namespace. The function uses a list comprehension to efficiently process the input list. It does not perform any error checking or handling, so it assumes that the input list is well-formed and that each string can be split at the '/' character. The function returns the cleaned list of model names.",
+        "parameters": [
+          {
+            "name": "model_list",
+            "type": "list",
+            "description": "A list of model names to be cleaned."
+          }
+        ],
+        "returns": [
+          {
+            "name": "cleaned_model_list",
+            "type": "list",
+            "description": "A list of cleaned model names."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "frontend.frontend.get_filtered_models": {
+      "identifier": "frontend.frontend.get_filtered_models",
+      "description": {
+        "overall": "The `get_filtered_models` function filters a list of models based on a selected category. It uses a dictionary `CATEGORY_KEYWORDS` to map category names to keywords. If the category is 'STANDARD', it returns only models that are in the `STANDARD_MODELS` list. Otherwise, it checks each model in the source list to see if any of the keywords for the selected category are present in the model's name. If no models match the keywords, it returns the original source list.",
+        "parameters": [
+          {
+            "name": "source_list",
+            "type": "list",
+            "description": "The list of models to be filtered."
+          },
+          {
+            "name": "category_name",
+            "type": "str",
+            "description": "The name of the category to filter by."
+          }
+        ],
+        "returns": [
+          {
+            "name": "filtered_list",
+            "type": "list",
+            "description": "The filtered list of models."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "frontend.frontend.save_gemini_cb": {
+      "identifier": "frontend.frontend.save_gemini_cb",
+      "description": {
+        "overall": "The `save_gemini_cb` function is designed to save a Gemini key to the database. It retrieves the new key from the session state, checks if it exists, and if so, updates the Gemini key in the database for the current user. After updating the database, it clears the session state variable holding the new key and displays a success message to the user. The function appears to be part of a Streamlit application, utilizing session state and toasts for user interaction. It does not handle any exceptions that might occur during the database update process.",
+        "parameters": [],
+        "returns": [],
+        "usage_context": {
+          "calls": "This function calls database.db.update_gemini_key.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "frontend.frontend.save_ollama_cb": {
+      "identifier": "frontend.frontend.save_ollama_cb",
+      "description": {
+        "overall": "The `save_ollama_cb` function is designed to save a new Ollama URL to the database. It retrieves the new URL from the session state and checks if it is not empty. If the URL is valid, it updates the Ollama URL in the database for the current user and displays a toast message indicating that the URL has been saved successfully. The function appears to be part of a Streamlit application, utilizing session state and database interactions. It does not take any parameters and does not return any values. The function's purpose is to persist user-specific data in the database.",
+        "parameters": [],
+        "returns": [],
+        "usage_context": {
+          "calls": "This function calls database.db.update_ollama_url.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "frontend.frontend.load_data_from_db": {
+      "identifier": "frontend.frontend.load_data_from_db",
+      "description": {
+        "overall": "The `load_data_from_db` function loads chat and exchange data from the database for a given username. It checks if the data has already been loaded for the current user and only loads it if necessary. The function first loads the defined chats, then the exchanges, and finally creates a default chat if no chats exist. It also sets the active chat if necessary.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username for which to load the data"
+          }
+        ],
+        "returns": [],
+        "usage_context": {
+          "calls": "This function calls database.db.fetch_chats_by_user, database.db.fetch_exchanges_by_user, and database.db.insert_chat.",
+          "called_by": "This function is called by no other functions."
+        }
+      },
+      "error": null
+    },
+    "frontend.frontend.handle_feedback_change": {
+      "identifier": "frontend.frontend.handle_feedback_change",
+      "description": {
+        "overall": "The `handle_feedback_change` function updates the feedback value for a given exchange in the database and triggers a re-run of the Streamlit application. It takes two parameters, `ex` and `val`, where `ex` is expected to be a dictionary containing an `_id` key and a `feedback` key, and `val` is the new feedback value. The function first updates the `feedback` value in the `ex` dictionary and then calls the `update_exchange_feedback` function from the `database.db` module to persist this change in the database. Finally, it calls `st.rerun()` to refresh the application's state.",
+        "parameters": [
+          {
+            "name": "ex",
+            "type": "dict",
+            "description": "A dictionary containing exchange information, including an `_id` key and a `feedback` key."
+          },
+          {
+            "name": "val",
+            "type": "str",
+            "description": "The new feedback value to be updated for the exchange."
+          }
+        ],
+        "returns": [],
+        "usage_context": {
+          "calls": "This function calls database.db.update_exchange_feedback.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "frontend.frontend.handle_delete_exchange": {
+      "identifier": "frontend.frontend.handle_delete_exchange",
+      "description": {
+        "overall": "The `handle_delete_exchange` function is responsible for deleting an exchange from the database and updating the session state accordingly. It takes two parameters: `chat_name` and `ex`, where `ex` is expected to be a dictionary containing an `_id` key. The function first deletes the exchange from the database using the `delete_exchange_by_id` function from the `database.db` module. Then, it checks if the `chat_name` exists in the session state and if the exchange is present in the list of exchanges for that chat. If both conditions are met, it removes the exchange from the list. Finally, the function triggers a rerun of the Streamlit application using `st.rerun()`.",
+        "parameters": [
+          {
+            "name": "chat_name",
+            "type": "str",
+            "description": "The name of the chat from which the exchange is being deleted."
+          },
+          {
+            "name": "ex",
+            "type": "dict",
+            "description": "A dictionary containing information about the exchange to be deleted, including its `_id`."
+          }
+        ],
+        "returns": [],
+        "usage_context": {
+          "calls": "This function calls database.db.delete_exchange_by_id.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "frontend.frontend.handle_delete_chat": {
+      "identifier": "frontend.frontend.handle_delete_chat",
+      "description": {
+        "overall": "The `handle_delete_chat` function is responsible for deleting a specified chat from the database and updating the session state accordingly. It takes two parameters, `username` and `chat_name`, and uses them to delete the full chat from the database. After deletion, it cleans up the session state by removing the deleted chat and updates the active chat if necessary. If all chats are deleted, it creates a new empty chat and sets it as the active chat. Finally, it triggers a rerun of the Streamlit application.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username of the user deleting the chat."
+          },
+          {
+            "name": "chat_name",
+            "type": "str",
+            "description": "The name of the chat to be deleted."
+          }
+        ],
+        "returns": [],
+        "usage_context": {
+          "calls": "This function calls database.db.delete_full_chat and database.db.insert_chat.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "frontend.frontend.extract_repo_name": {
+      "identifier": "frontend.frontend.extract_repo_name",
+      "description": {
+        "overall": "The extract_repo_name function takes a text input and attempts to extract a repository name from it. It uses regular expressions to find a URL in the text, then parses the URL to extract the path. The repository name is assumed to be the last part of the path. If the repository name ends with '.git', this suffix is removed. The function returns the extracted repository name or None if no URL is found in the text.",
+        "parameters": [
+          {
+            "name": "text",
+            "type": "str",
+            "description": "The input text to search for a repository name."
+          }
+        ],
+        "returns": [
+          {
+            "name": "repo_name",
+            "type": "str",
+            "description": "The extracted repository name, or None if no URL is found in the text."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "frontend.frontend.stream_text_generator": {
+      "identifier": "frontend.frontend.stream_text_generator",
+      "description": {
+        "overall": "The `stream_text_generator` function is a generator that splits a given text into words and yields each word with a trailing space. It introduces a delay of 0.01 seconds between each word yield, effectively streaming the text word by word. This function can be used in applications where text needs to be displayed or processed in a streaming fashion, such as in real-time text updates or simulations. The function's implementation is straightforward, relying on a simple loop and the `time.sleep` function to control the streaming pace. The use of a generator allows for memory-efficient handling of large texts.",
+        "parameters": [
+          {
+            "name": "text",
+            "type": "str",
+            "description": "The input text to be streamed word by word."
+          }
+        ],
+        "returns": [
+          {
+            "name": "word",
+            "type": "str",
+            "description": "Each word from the input text, followed by a space, yielded one at a time."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "frontend.frontend.render_text_with_mermaid": {
+      "identifier": "frontend.frontend.render_text_with_mermaid",
+      "description": {
+        "overall": "The `render_text_with_mermaid` function is designed to render markdown text that may contain mermaid diagrams. It splits the input text into parts based on mermaid code blocks and then renders each part accordingly. If the `should_stream` parameter is `True`, it uses the `stream_text_generator` function to stream the text; otherwise, it uses the `st.markdown` function to render the text. For mermaid code blocks, it attempts to render them using the `st_mermaid` function; if this fails, it falls back to rendering the code as plain text with a mermaid language tag.",
+        "parameters": [
+          {
+            "name": "markdown_text",
+            "type": "str",
+            "description": "The markdown text to be rendered, which may contain mermaid diagrams."
+          },
+          {
+            "name": "should_stream",
+            "type": "bool",
+            "description": "A flag indicating whether to stream the text or render it directly. Defaults to `False`."
+          }
+        ],
+        "returns": [],
+        "usage_context": {
+          "calls": "This function calls frontend.frontend.stream_text_generator.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "frontend.frontend.render_exchange": {
+      "identifier": "frontend.frontend.render_exchange",
+      "description": {
+        "overall": "The `render_exchange` function is responsible for rendering an exchange in a chat interface. It takes two parameters: `ex` and `current_chat_name`. The function displays the question and answer in the chat, along with various buttons for feedback, commenting, downloading, and deleting the exchange. If the answer contains an error, it displays an error message instead. The function uses Streamlit to create the UI components and interacts with the database to update feedback messages and delete exchanges.",
+        "parameters": [
+          {
+            "name": "ex",
+            "type": "dict",
+            "description": "A dictionary containing the exchange data, including the question, answer, and feedback information."
+          },
+          {
+            "name": "current_chat_name",
+            "type": "str",
+            "description": "The name of the current chat."
+          }
+        ],
+        "returns": [],
+        "usage_context": {
+          "calls": "This function calls database.db.update_exchange_feedback_message, frontend.frontend.handle_delete_exchange, frontend.frontend.handle_feedback_change, and frontend.frontend.render_text_with_mermaid.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    }
+  },
+  "classes": {
+    "backend.AST_Schema.ASTVisitor": {
+      "identifier": "backend.AST_Schema.ASTVisitor",
+      "description": {
+        "overall": "The ASTVisitor class is a subclass of ast.NodeVisitor, designed to traverse and analyze the Abstract Syntax Tree (AST) of Python source code. It initializes with source code, file path, and project root, and constructs a schema to store information about imports, functions, and classes found in the code. The class provides methods to visit and analyze different types of AST nodes, including imports, class definitions, function definitions, and asynchronous function definitions.",
+        "init_method": {
+          "description": "The __init__ method initializes the ASTVisitor instance with source code, file path, and project root. It sets up the schema to store information about imports, functions, and classes, and determines the module path based on the file path and project root.",
+          "parameters": [
+            {
+              "name": "source_code",
+              "type": "str",
+              "description": "The source code to be analyzed."
+            },
+            {
+              "name": "file_path",
+              "type": "str",
+              "description": "The path to the file containing the source code."
+            },
+            {
+              "name": "project_root",
+              "type": "str",
+              "description": "The root directory of the project."
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "visit_Import",
+            "description": {
+              "overall": "The visit_Import method is called when an import statement is encountered in the AST. It extracts the names of the imported modules and adds them to the schema's imports list.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.Import",
+                  "description": "The import statement node in the AST."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not call any other methods.",
+                "called_by": "This method is called by the ast.NodeVisitor's generic_visit method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_ImportFrom",
+            "description": {
+              "overall": "The visit_ImportFrom method is called when an import from statement is encountered in the AST. It extracts the names of the imported modules and adds them to the schema's imports list.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.ImportFrom",
+                  "description": "The import from statement node in the AST."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not call any other methods.",
+                "called_by": "This method is called by the ast.NodeVisitor's generic_visit method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_ClassDef",
+            "description": {
+              "overall": "The visit_ClassDef method is called when a class definition is encountered in the AST. It extracts information about the class, including its name, docstring, and source code, and adds it to the schema's classes list.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.ClassDef",
+                  "description": "The class definition node in the AST."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not call any other methods.",
+                "called_by": "This method is called by the ast.NodeVisitor's generic_visit method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_FunctionDef",
+            "description": {
+              "overall": "The visit_FunctionDef method is called when a function definition is encountered in the AST. It extracts information about the function, including its name, arguments, and docstring, and adds it to the schema's functions list or the current class's methods list.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.FunctionDef",
+                  "description": "The function definition node in the AST."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not call any other methods.",
+                "called_by": "This method is called by the ast.NodeVisitor's generic_visit method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_AsyncFunctionDef",
+            "description": {
+              "overall": "The visit_AsyncFunctionDef method is called when an asynchronous function definition is encountered in the AST. It delegates the analysis to the visit_FunctionDef method.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.AsyncFunctionDef",
+                  "description": "The asynchronous function definition node in the AST."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method calls the visit_FunctionDef method.",
+                "called_by": "This method is called by the ast.NodeVisitor's generic_visit method."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "The ASTVisitor class depends on the backend.AST_Schema.path_to_module function.",
+          "instantiated_by": "The ASTVisitor class is not instantiated by any other classes or functions in the provided context."
+        }
+      },
+      "error": null
+    },
+    "backend.AST_Schema.ASTAnalyzer": {
+      "identifier": "backend.AST_Schema.ASTAnalyzer",
+      "description": {
+        "overall": "The ASTAnalyzer class is responsible for analyzing the abstract syntax tree (AST) of a repository and merging relationship data. It provides two primary methods: merge_relationship_data and analyze_repository. The class is designed to work with Python files and utilizes the ASTVisitor class to parse the AST of each file. The merge_relationship_data method takes in a full schema and raw relationships, and returns the updated schema with merged relationship data. The analyze_repository method analyzes a list of files in a repository and returns a dictionary representing the schema of the repository.",
+        "init_method": {
+          "description": "The __init__ method is the constructor of the ASTAnalyzer class. It does not take any parameters and does not perform any initialization.",
+          "parameters": []
+        },
+        "methods": [
+          {
+            "identifier": "merge_relationship_data",
+            "description": {
+              "overall": "The merge_relationship_data method merges relationship data into the full schema. It takes in a full schema and raw relationships, and returns the updated schema. The method iterates over each file in the schema, and for each file, it iterates over each function and class. For each function and class, it updates the context with the merged relationship data.",
+              "parameters": [
+                {
+                  "name": "full_schema",
+                  "type": "dict",
+                  "description": "The full schema of the repository."
+                },
+                {
+                  "name": "raw_relationships",
+                  "type": "dict",
+                  "description": "The raw relationships data."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "full_schema",
+                  "type": "dict",
+                  "description": "The updated full schema with merged relationship data."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other methods.",
+                "called_by": "This method is not called by any other methods."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "analyze_repository",
+            "description": {
+              "overall": "The analyze_repository method analyzes a list of files in a repository and returns a dictionary representing the schema of the repository. The method iterates over each file, and for each file, it checks if the file is a Python file. If it is, it attempts to parse the AST of the file using the ASTVisitor class. If the parsing is successful, it adds the file schema to the full schema.",
+              "parameters": [
+                {
+                  "name": "files",
+                  "type": "list",
+                  "description": "A list of file objects."
+                },
+                {
+                  "name": "repo",
+                  "type": "GitRepository",
+                  "description": "A GitRepository object."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "full_schema",
+                  "type": "dict",
+                  "description": "A dictionary representing the schema of the repository."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method calls the ASTVisitor class to parse the AST of each file.",
+                "called_by": "This method is not called by any other methods."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "The ASTAnalyzer class depends on the ASTVisitor class.",
+          "instantiated_by": "The ASTAnalyzer class is not instantiated by any other classes."
+        }
+      },
+      "error": null
+    },
+    "backend.File_Dependency.FileDependencyGraph": {
+      "identifier": "backend.File_Dependency.FileDependencyGraph",
+      "description": {
+        "overall": "The FileDependencyGraph class is designed to analyze and resolve file dependencies within a repository. It utilizes the NodeVisitor class from the ast module to traverse the abstract syntax tree of Python files and identify import statements. The class provides methods to resolve relative imports and track dependencies between files.",
+        "init_method": {
+          "description": "The __init__ method initializes the FileDependencyGraph object with a filename and a repository root. It sets the filename and repo_root attributes of the object.",
+          "parameters": [
+            {
+              "name": "filename",
+              "type": "str",
+              "description": "The name of the file to analyze."
+            },
+            {
+              "name": "repo_root",
+              "type": "str",
+              "description": "The root directory of the repository."
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "_resolve_module_name",
+            "description": {
+              "overall": "The _resolve_module_name method resolves relative imports of the form 'from .. import name1, name2'. It returns a list of existing module or symbol names. If no resolution is possible, it raises an ImportError.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ImportFrom",
+                  "description": "The import node to resolve."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "resolved",
+                  "type": "list[str]",
+                  "description": "A list of resolved module or symbol names."
+                }
+              ],
+              "usage_context": {
+                "calls": "The method calls get_all_temp_files, init_exports_symbol, and module_file_exists to resolve the import.",
+                "called_by": "The method is called by visit_ImportFrom to resolve relative imports."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_Import",
+            "description": {
+              "overall": "The visit_Import method visits an import node and adds the imported module to the import dependencies of the current file.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "Import | ImportFrom",
+                  "description": "The import node to visit."
+                },
+                {
+                  "name": "base_name",
+                  "type": "str | None",
+                  "description": "The base name of the imported module."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "The method does not call any other methods.",
+                "called_by": "The method is called by visit_ImportFrom to visit import nodes."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_ImportFrom",
+            "description": {
+              "overall": "The visit_ImportFrom method visits an import from node and resolves the relative import using the _resolve_module_name method.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ImportFrom",
+                  "description": "The import from node to visit."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "The method calls _resolve_module_name to resolve relative imports.",
+                "called_by": "The method is not called by any other method."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "The class depends on get_all_temp_files, init_exports_symbol, and module_file_exists to resolve imports.",
+          "instantiated_by": "The class is not instantiated by any other class or method."
+        }
+      },
+      "error": null
+    },
+    "backend.HelperLLM.LLMHelper": {
+      "identifier": "backend.HelperLLM.LLMHelper",
+      "description": {
+        "overall": "The LLMHelper class is designed to interact with Google Gemini for generating code snippet documentation. It centralizes API interaction, error handling, and validates I/O using Pydantic. The class provides methods to generate and validate documentation for batches of functions and classes.",
+        "init_method": {
+          "description": "The constructor initializes the LLMHelper instance with an API key, function prompt path, class prompt path, and model name. It sets up the API interaction, loads system prompts, and configures batch settings based on the model name.",
+          "parameters": [
+            {
+              "name": "api_key",
+              "type": "str",
+              "description": "The API key for Google Gemini."
+            },
+            {
+              "name": "function_prompt_path",
+              "type": "str",
+              "description": "The path to the function system prompt file."
+            },
+            {
+              "name": "class_prompt_path",
+              "type": "str",
+              "description": "The path to the class system prompt file."
+            },
+            {
+              "name": "model_name",
+              "type": "str",
+              "description": "The name of the model to use (default: 'gemini-2.0-flash-lite')."
+            },
+            {
+              "name": "base_url",
+              "type": "str",
+              "description": "The base URL for the API (default: None)."
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "_configure_batch_settings",
+            "description": {
+              "overall": "This method configures the batch settings based on the model name. It sets the batch size according to the model name and logs a warning if the model is unknown.",
+              "parameters": [
+                {
+                  "name": "model_name",
+                  "type": "str",
+                  "description": "The name of the model to configure batch settings for."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "No other methods are called by this method.",
+                "called_by": "This method is called by the constructor (__init__)."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "generate_for_functions",
+            "description": {
+              "overall": "This method generates and validates documentation for a batch of functions. It creates a list of JSON payloads from the input models, sends batch conversations to the LLM API, and returns a list of validated function analyses.",
+              "parameters": [
+                {
+                  "name": "function_inputs",
+                  "type": "List[FunctionAnalysisInput]",
+                  "description": "A list of function analysis inputs."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "validated_functions",
+                  "type": "List[Optional[FunctionAnalysis]]",
+                  "description": "A list of validated function analyses."
+                }
+              ],
+              "usage_context": {
+                "calls": "No other methods are called by this method.",
+                "called_by": "This method is not called by any other method in the provided context."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "generate_for_classes",
+            "description": {
+              "overall": "This method generates and validates documentation for a batch of classes. It creates a list of JSON payloads from the input models, sends batch conversations to the LLM API, and returns a list of validated class analyses.",
+              "parameters": [
+                {
+                  "name": "class_inputs",
+                  "type": "List[ClassAnalysisInput]",
+                  "description": "A list of class analysis inputs."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "validated_classes",
+                  "type": "List[Optional[ClassAnalysis]]",
+                  "description": "A list of validated class analyses."
+                }
+              ],
+              "usage_context": {
+                "calls": "No other methods are called by this method.",
+                "called_by": "This method is not called by any other method in the provided context."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "No external dependencies are specified in the provided context.",
+          "instantiated_by": "No instantiations of this class are specified in the provided context."
+        }
+      },
+      "error": null
+    },
+    "backend.MainLLM.MainLLM": {
+      "identifier": "backend.MainLLM.MainLLM",
+      "description": {
+        "overall": "The MainLLM class is the primary interface for interacting with a Large Language Model (LLM). It initializes the LLM with a given model name, API key, and system prompt, and provides methods for calling the LLM with user input. The class supports various LLM models, including Gemini, GPT, and custom models via the SCADSLLM_URL environment variable.",
+        "init_method": {
+          "description": "The __init__ method initializes the MainLLM instance with the provided API key, prompt file path, model name, and base URL. It checks if the API key is set, reads the system prompt from the file, and initializes the LLM instance based on the model name.",
+          "parameters": [
+            {
+              "name": "api_key",
+              "type": "str",
+              "description": "The API key for the LLM model."
+            },
+            {
+              "name": "prompt_file_path",
+              "type": "str",
+              "description": "The file path to the system prompt."
+            },
+            {
+              "name": "model_name",
+              "type": "str",
+              "description": "The name of the LLM model (default: 'gemini-2.5-pro')."
+            },
+            {
+              "name": "base_url",
+              "type": "str",
+              "description": "The base URL for the LLM model (default: None)."
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "call_llm",
+            "description": {
+              "overall": "The call_llm method calls the LLM with the provided user input and returns the response content. It constructs a list of messages, including the system prompt and user input, and invokes the LLM instance with these messages.",
+              "parameters": [
+                {
+                  "name": "user_input",
+                  "type": "str",
+                  "description": "The user input to pass to the LLM."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "response_content",
+                  "type": "str",
+                  "description": "The content of the LLM response."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method calls the invoke method of the LLM instance.",
+                "called_by": "This method is not called by any other method in the provided context."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "stream_llm",
+            "description": {
+              "overall": "The stream_llm method calls the LLM with the provided user input and yields the response content in chunks. It constructs a list of messages, including the system prompt and user input, and invokes the LLM instance with these messages.",
+              "parameters": [
+                {
+                  "name": "user_input",
+                  "type": "str",
+                  "description": "The user input to pass to the LLM."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "chunk_content",
+                  "type": "str",
+                  "description": "The content of each chunk of the LLM response."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method calls the stream method of the LLM instance.",
+                "called_by": "This method is not called by any other method in the provided context."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "This class does not have any external dependencies listed in the provided context.",
+          "instantiated_by": "This class is not instantiated by any other class or method in the provided context."
+        }
+      },
+      "error": null
+    },
+    "backend.basic_info.ProjektInfoExtractor": {
+      "identifier": "backend.basic_info.ProjektInfoExtractor",
+      "description": {
+        "overall": "The ProjektInfoExtractor class is designed to extract basic project information from common project files such as README, pyproject.toml, and requirements.txt. It initializes a structure with placeholders for project information and provides methods to parse and extract relevant data from these files. The class orchestrates the extraction of information and returns a dictionary containing the extracted project information.",
+        "init_method": {
+          "description": "The constructor initializes the class with a dictionary containing placeholders for project information. It sets up the structure with default values for project overview and installation information.",
+          "parameters": [
+            {
+              "name": "self",
+              "type": "object",
+              "description": "A reference to the current instance of the class"
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "_clean_content",
+            "description": {
+              "overall": "This method removes null bytes from a given string that may have been introduced by encoding errors when reading UTF-16 as UTF-8.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "object",
+                  "description": "A reference to the current instance of the class"
+                },
+                {
+                  "name": "content",
+                  "type": "str",
+                  "description": "The string to be cleaned"
+                }
+              ],
+              "returns": [
+                {
+                  "name": "cleaned_content",
+                  "type": "str",
+                  "description": "The cleaned string"
+                }
+              ],
+              "usage_context": {
+                "calls": "This method is called by other methods within the class to clean the content of files before parsing.",
+                "called_by": "This method is called by the _parse_readme, _parse_toml, and _parse_requirements methods."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_finde_datei",
+            "description": {
+              "overall": "This method searches for a file that matches one of the given patterns in a list of files. The search is case-insensitive.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "object",
+                  "description": "A reference to the current instance of the class"
+                },
+                {
+                  "name": "patterns",
+                  "type": "List[str]",
+                  "description": "A list of file patterns to search for"
+                },
+                {
+                  "name": "dateien",
+                  "type": "List[Any]",
+                  "description": "A list of files to search in"
+                }
+              ],
+              "returns": [
+                {
+                  "name": "found_file",
+                  "type": "Optional[Any]",
+                  "description": "The found file or None if no match is found"
+                }
+              ],
+              "usage_context": {
+                "calls": "This method is called by the extrahiere_info method to find relevant files.",
+                "called_by": "This method is called by the extrahiere_info method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_extrahiere_sektion_aus_markdown",
+            "description": {
+              "overall": "This method extracts a section from a markdown file based on a list of keywords. It searches for the keywords in the markdown headers and returns the text under the matching header.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "object",
+                  "description": "A reference to the current instance of the class"
+                },
+                {
+                  "name": "inhalt",
+                  "type": "str",
+                  "description": "The markdown content to extract from"
+                },
+                {
+                  "name": "keywords",
+                  "type": "List[str]",
+                  "description": "A list of keywords to search for in the markdown headers"
+                }
+              ],
+              "returns": [
+                {
+                  "name": "extracted_section",
+                  "type": "Optional[str]",
+                  "description": "The extracted section or None if no match is found"
+                }
+              ],
+              "usage_context": {
+                "calls": "This method is called by the _parse_readme method to extract specific sections from the README file.",
+                "called_by": "This method is called by the _parse_readme method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_parse_readme",
+            "description": {
+              "overall": "This method parses the content of a README file and extracts relevant project information such as title, description, key features, tech stack, and status.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "object",
+                  "description": "A reference to the current instance of the class"
+                },
+                {
+                  "name": "inhalt",
+                  "type": "str",
+                  "description": "The content of the README file"
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method calls the _clean_content and _extrahiere_sektion_aus_markdown methods to clean and extract specific sections from the README content.",
+                "called_by": "This method is called by the extrahiere_info method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_parse_toml",
+            "description": {
+              "overall": "This method parses the content of a pyproject.toml file and extracts relevant project information such as title, description, and dependencies.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "object",
+                  "description": "A reference to the current instance of the class"
+                },
+                {
+                  "name": "inhalt",
+                  "type": "str",
+                  "description": "The content of the pyproject.toml file"
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method calls the _clean_content method to clean the content of the pyproject.toml file.",
+                "called_by": "This method is called by the extrahiere_info method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_parse_requirements",
+            "description": {
+              "overall": "This method parses the content of a requirements.txt file and extracts the dependencies.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "object",
+                  "description": "A reference to the current instance of the class"
+                },
+                {
+                  "name": "inhalt",
+                  "type": "str",
+                  "description": "The content of the requirements.txt file"
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method calls the _clean_content method to clean the content of the requirements.txt file.",
+                "called_by": "This method is called by the extrahiere_info method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "extrahiere_info",
+            "description": {
+              "overall": "This method orchestrates the extraction of project information from the given files and repository URL. It finds relevant files, parses their content, and returns a dictionary containing the extracted project information.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "object",
+                  "description": "A reference to the current instance of the class"
+                },
+                {
+                  "name": "dateien",
+                  "type": "List[Any]",
+                  "description": "A list of files to extract information from"
+                },
+                {
+                  "name": "repo_url",
+                  "type": "str",
+                  "description": "The URL of the repository"
+                }
+              ],
+              "returns": [
+                {
+                  "name": "extracted_info",
+                  "type": "Dict[str, Any]",
+                  "description": "A dictionary containing the extracted project information"
+                }
+              ],
+              "usage_context": {
+                "calls": "This method calls the _finde_datei, _parse_readme, _parse_toml, and _parse_requirements methods to extract information from the given files.",
+                "called_by": "This method is the main entry point for extracting project information."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "This class does not have any external dependencies.",
+          "instantiated_by": "This class is not instantiated by any other class in the provided context."
+        }
+      },
+      "error": null
+    },
+    "backend.callgraph.CallGraph": {
+      "identifier": "backend.callgraph.CallGraph",
+      "description": {
+        "overall": "The CallGraph class is designed to analyze and construct a call graph from a given Python source code. It utilizes the ast module to parse the source code and create a directed graph representing the call relationships between functions and classes. The class provides methods to visit and process different types of nodes in the abstract syntax tree, including imports, class definitions, function definitions, and calls.",
+        "init_method": {
+          "description": "The __init__ method initializes the CallGraph object with a filename and sets up the necessary data structures, including a dictionary to store local definitions, a graph to represent the call relationships, and a set to keep track of visited functions.",
+          "parameters": [
+            {
+              "name": "filename",
+              "type": "str",
+              "description": "The name of the file being analyzed."
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "_recursive_call",
+            "description": {
+              "overall": "The _recursive_call method is a helper function that recursively traverses the abstract syntax tree to extract the name components of a call. It returns a list of name components as a dotted string.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.Node",
+                  "description": "The node being visited in the abstract syntax tree."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method is called by the visit_Call method to resolve the callee names.",
+                "called_by": "This method is called by the visit_Call method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_resolve_all_callee_names",
+            "description": {
+              "overall": "The _resolve_all_callee_names method takes a list of callee nodes and resolves their names by checking local definitions and import mappings. It returns a list of resolved callee names.",
+              "parameters": [
+                {
+                  "name": "callee_nodes",
+                  "type": "list[list[str]]",
+                  "description": "A list of callee nodes to be resolved."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "resolved_callees",
+                  "type": "list[str]",
+                  "description": "A list of resolved callee names."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method is called by the visit_Call method to resolve the callee names.",
+                "called_by": "This method is called by the visit_Call method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_make_full_name",
+            "description": {
+              "overall": "The _make_full_name method constructs a full name for a given basename and class name. It returns the full name as a string.",
+              "parameters": [
+                {
+                  "name": "basename",
+                  "type": "str",
+                  "description": "The basename to be used in the full name."
+                },
+                {
+                  "name": "class_name",
+                  "type": "str | None",
+                  "description": "The class name to be used in the full name, or None if not applicable."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "full_name",
+                  "type": "str",
+                  "description": "The full name constructed from the basename and class name."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method is called by the visit_FunctionDef method to construct the full name of a function.",
+                "called_by": "This method is called by the visit_FunctionDef method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_current_caller",
+            "description": {
+              "overall": "The _current_caller method returns the current caller, which is either the current function or the filename if no function is being visited.",
+              "parameters": [],
+              "returns": [
+                {
+                  "name": "caller",
+                  "type": "str",
+                  "description": "The current caller."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method is called by the visit_Call method to get the current caller.",
+                "called_by": "This method is called by the visit_Call method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_Import",
+            "description": {
+              "overall": "The visit_Import method visits an import node in the abstract syntax tree and updates the import mapping.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.Import",
+                  "description": "The import node being visited."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method is called by the generic_visit method to visit import nodes.",
+                "called_by": "This method is called by the generic_visit method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_ImportFrom",
+            "description": {
+              "overall": "The visit_ImportFrom method visits an import from node in the abstract syntax tree and updates the import mapping.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.ImportFrom",
+                  "description": "The import from node being visited."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method is called by the generic_visit method to visit import from nodes.",
+                "called_by": "This method is called by the generic_visit method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_ClassDef",
+            "description": {
+              "overall": "The visit_ClassDef method visits a class definition node in the abstract syntax tree and updates the current class.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.ClassDef",
+                  "description": "The class definition node being visited."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method is called by the generic_visit method to visit class definition nodes.",
+                "called_by": "This method is called by the generic_visit method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_FunctionDef",
+            "description": {
+              "overall": "The visit_FunctionDef method visits a function definition node in the abstract syntax tree and updates the local definitions and the graph.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.FunctionDef",
+                  "description": "The function definition node being visited."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method is called by the generic_visit method to visit function definition nodes.",
+                "called_by": "This method is called by the generic_visit method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_AsyncFunctionDef",
+            "description": {
+              "overall": "The visit_AsyncFunctionDef method visits an asynchronous function definition node in the abstract syntax tree and updates the local definitions and the graph.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.AsyncFunctionDef",
+                  "description": "The asynchronous function definition node being visited."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method is called by the generic_visit method to visit asynchronous function definition nodes.",
+                "called_by": "This method is called by the generic_visit method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_Call",
+            "description": {
+              "overall": "The visit_Call method visits a call node in the abstract syntax tree and updates the edges in the graph.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.Call",
+                  "description": "The call node being visited."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method is called by the generic_visit method to visit call nodes.",
+                "called_by": "This method is called by the generic_visit method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_If",
+            "description": {
+              "overall": "The visit_If method visits an if node in the abstract syntax tree and updates the current function.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.If",
+                  "description": "The if node being visited."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method is called by the generic_visit method to visit if nodes.",
+                "called_by": "This method is called by the generic_visit method."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "The CallGraph class has no external dependencies.",
+          "instantiated_by": "The CallGraph class is not instantiated by any other class or function in the provided context."
+        }
+      },
+      "error": null
+    },
+    "backend.getRepo.RepoFile": {
+      "identifier": "backend.getRepo.RepoFile",
+      "description": {
+        "overall": "The RepoFile class represents a single file in a Git repository. It provides lazy loading of the file's content, size, and Git blob object. The class has methods to analyze the file's content, such as counting the number of words, and to convert the file's metadata to a dictionary.",
+        "init_method": {
+          "description": "The __init__ method initializes the RepoFile object with a file path and a commit tree. It sets the object's path, commit tree, and initializes the blob, content, and size attributes to None.",
+          "parameters": [
+            {
+              "name": "file_path",
+              "type": "str",
+              "description": "The path to the file within the repository."
+            },
+            {
+              "name": "commit_tree",
+              "type": "git.Tree",
+              "description": "The Tree object of the commit from which the file originates."
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "blob",
+            "description": {
+              "overall": "The blob property lazy loads the Git blob object. If the blob is not already loaded, it tries to retrieve it from the commit tree. If the file is not found in the commit tree, it raises a FileNotFoundError.",
+              "parameters": [],
+              "returns": [
+                {
+                  "name": "blob",
+                  "type": "git.Blob",
+                  "description": "The Git blob object."
+                }
+              ],
+              "usage_context": {
+                "calls": "The blob property calls the commit tree's __getitem__ method to retrieve the blob.",
+                "called_by": "The blob property is called by the content and size properties."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "content",
+            "description": {
+              "overall": "The content property lazy loads and returns the decoded content of the file. If the content is not already loaded, it reads the content from the blob object.",
+              "parameters": [],
+              "returns": [
+                {
+                  "name": "content",
+                  "type": "str",
+                  "description": "The decoded content of the file."
+                }
+              ],
+              "usage_context": {
+                "calls": "The content property calls the blob property to retrieve the blob object.",
+                "called_by": "The content property is called by the analyze_word_count method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "size",
+            "description": {
+              "overall": "The size property lazy loads and returns the size of the file in bytes. If the size is not already loaded, it retrieves the size from the blob object.",
+              "parameters": [],
+              "returns": [
+                {
+                  "name": "size",
+                  "type": "int",
+                  "description": "The size of the file in bytes."
+                }
+              ],
+              "usage_context": {
+                "calls": "The size property calls the blob property to retrieve the blob object.",
+                "called_by": "The size property is called by the to_dict method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "analyze_word_count",
+            "description": {
+              "overall": "The analyze_word_count method counts the number of words in the file's content.",
+              "parameters": [],
+              "returns": [
+                {
+                  "name": "word_count",
+                  "type": "int",
+                  "description": "The number of words in the file's content."
+                }
+              ],
+              "usage_context": {
+                "calls": "The analyze_word_count method calls the content property to retrieve the file's content.",
+                "called_by": "The analyze_word_count method is not called by any other method in the class."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "__repr__",
+            "description": {
+              "overall": "The __repr__ method returns a string representation of the RepoFile object.",
+              "parameters": [],
+              "returns": [
+                {
+                  "name": "repr",
+                  "type": "str",
+                  "description": "A string representation of the RepoFile object."
+                }
+              ],
+              "usage_context": {
+                "calls": "The __repr__ method does not call any other methods.",
+                "called_by": "The __repr__ method is called when the RepoFile object is printed or converted to a string."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "to_dict",
+            "description": {
+              "overall": "The to_dict method converts the RepoFile object's metadata to a dictionary. It includes the file's path, name, size, and type. If the include_content parameter is True, it also includes the file's content.",
+              "parameters": [
+                {
+                  "name": "include_content",
+                  "type": "bool",
+                  "description": "Whether to include the file's content in the dictionary."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "dict",
+                  "type": "dict",
+                  "description": "A dictionary containing the RepoFile object's metadata."
+                }
+              ],
+              "usage_context": {
+                "calls": "The to_dict method calls the size property to retrieve the file's size.",
+                "called_by": "The to_dict method is not called by any other method in the class."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "The RepoFile class does not have any external dependencies.",
+          "instantiated_by": "The RepoFile class is not instantiated by any other class or method in the provided context."
+        }
+      },
+      "error": null
+    },
+    "backend.getRepo.GitRepository": {
+      "identifier": "backend.getRepo.GitRepository",
+      "description": {
+        "overall": "The GitRepository class manages a Git repository, including cloning it into a temporary directory and providing RepoFile objects. It handles the cloning process, retrieves all files in the repository, and constructs a file tree. The class also ensures proper cleanup by deleting the temporary directory upon exit.",
+        "init_method": {
+          "description": "The class is initialized with a repository URL, which is used to clone the repository into a temporary directory. The constructor also sets up the repository object and retrieves the latest commit.",
+          "parameters": [
+            {
+              "name": "repo_url",
+              "type": "string",
+              "description": "The URL of the Git repository to be cloned."
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "get_all_files",
+            "description": {
+              "overall": "This method retrieves a list of all files in the repository as RepoFile objects. It uses the repository's git ls-files command to get the file paths and then constructs RepoFile objects for each path.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "GitRepository",
+                  "description": "The instance of the GitRepository class."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "files",
+                  "type": "list[RepoFile]",
+                  "description": "A list of RepoFile objects representing all files in the repository."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method calls the backend.getRepo.RepoFile class to construct RepoFile objects.",
+                "called_by": "This method is not explicitly called by any other method in the provided context."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "close",
+            "description": {
+              "overall": "This method deletes the temporary directory and its contents. It is called when the GitRepository object is exited.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "GitRepository",
+                  "description": "The instance of the GitRepository class."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not call any other methods or classes.",
+                "called_by": "This method is called by the __exit__ method when the GitRepository object is exited."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "__enter__",
+            "description": {
+              "overall": "This method returns the GitRepository object itself, allowing it to be used as a context manager.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "GitRepository",
+                  "description": "The instance of the GitRepository class."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "self",
+                  "type": "GitRepository",
+                  "description": "The instance of the GitRepository class."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other methods or classes.",
+                "called_by": "This method is not explicitly called by any other method in the provided context."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "__exit__",
+            "description": {
+              "overall": "This method is called when the GitRepository object is exited. It calls the close method to delete the temporary directory and its contents.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "GitRepository",
+                  "description": "The instance of the GitRepository class."
+                },
+                {
+                  "name": "exc_type",
+                  "type": "type",
+                  "description": "The type of exception that occurred, or None if no exception occurred."
+                },
+                {
+                  "name": "exc_val",
+                  "type": "object",
+                  "description": "The value of the exception that occurred, or None if no exception occurred."
+                },
+                {
+                  "name": "exc_tb",
+                  "type": "traceback",
+                  "description": "The traceback of the exception that occurred, or None if no exception occurred."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method calls the close method to delete the temporary directory and its contents.",
+                "called_by": "This method is called when the GitRepository object is exited."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "get_file_tree",
+            "description": {
+              "overall": "This method constructs a file tree representing the repository's file structure. It uses the get_all_files method to retrieve the list of files and then constructs the tree by iterating through the file paths.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "GitRepository",
+                  "description": "The instance of the GitRepository class."
+                },
+                {
+                  "name": "include_content",
+                  "type": "bool",
+                  "description": "A flag indicating whether to include the file content in the tree."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "tree",
+                  "type": "dict",
+                  "description": "A dictionary representing the file tree."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method calls the get_all_files method to retrieve the list of files.",
+                "called_by": "This method is not explicitly called by any other method in the provided context."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "The GitRepository class depends on the backend.getRepo.RepoFile class.",
+          "instantiated_by": "The GitRepository class is not explicitly instantiated by any other class or method in the provided context."
+        }
+      },
+      "error": null
+    },
+    "backend.relationship_analyzer.ProjectAnalyzer": {
+      "identifier": "backend.relationship_analyzer.ProjectAnalyzer",
+      "description": {
+        "overall": "The ProjectAnalyzer class is designed to analyze the relationships between different parts of a project. It initializes with a project root directory and provides methods to analyze the project, collect definitions, and resolve calls. The class uses various data structures such as dictionaries and sets to store information about the project's structure and relationships.",
+        "init_method": {
+          "description": "The __init__ method initializes the ProjectAnalyzer object with a project root directory. It sets up the project root, definitions, call graph, file ASTs, and ignore directories.",
+          "parameters": [
+            {
+              "name": "project_root",
+              "type": "string",
+              "description": "The root directory of the project to be analyzed."
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "analyze",
+            "description": {
+              "overall": "The analyze method analyzes the project by finding Python files, collecting definitions, and resolving calls. It returns the call graph of the project.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "ProjectAnalyzer",
+                  "description": "The ProjectAnalyzer object itself."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "call_graph",
+                  "type": "dict",
+                  "description": "The call graph of the project."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method calls the _find_py_files, _collect_definitions, and _resolve_calls methods.",
+                "called_by": "This method is not called by any other method in the provided context."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "get_raw_relationships",
+            "description": {
+              "overall": "The get_raw_relationships method returns the raw relationships between different parts of the project. It constructs outgoing and incoming relationships from the call graph.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "ProjectAnalyzer",
+                  "description": "The ProjectAnalyzer object itself."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "relationships",
+                  "type": "dict",
+                  "description": "The raw relationships between different parts of the project."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other methods.",
+                "called_by": "This method is not called by any other method in the provided context."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_find_py_files",
+            "description": {
+              "overall": "The _find_py_files method finds all Python files in the project directory and its subdirectories, excluding certain directories.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "ProjectAnalyzer",
+                  "description": "The ProjectAnalyzer object itself."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "py_files",
+                  "type": "list",
+                  "description": "A list of Python files found in the project directory."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other methods.",
+                "called_by": "This method is called by the analyze method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_collect_definitions",
+            "description": {
+              "overall": "The _collect_definitions method collects definitions from a Python file. It parses the file's AST and extracts function and class definitions.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "ProjectAnalyzer",
+                  "description": "The ProjectAnalyzer object itself."
+                },
+                {
+                  "name": "filepath",
+                  "type": "string",
+                  "description": "The path to the Python file to collect definitions from."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method calls the path_to_module function.",
+                "called_by": "This method is called by the analyze method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_get_parent",
+            "description": {
+              "overall": "The _get_parent method finds the parent node of a given node in an AST.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "ProjectAnalyzer",
+                  "description": "The ProjectAnalyzer object itself."
+                },
+                {
+                  "name": "tree",
+                  "type": "AST",
+                  "description": "The AST to search for the parent node."
+                },
+                {
+                  "name": "node",
+                  "type": "AST Node",
+                  "description": "The node to find the parent of."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "parent",
+                  "type": "AST Node",
+                  "description": "The parent node of the given node, or None if not found."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method does not call any other methods.",
+                "called_by": "This method is called by the _collect_definitions method."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_resolve_calls",
+            "description": {
+              "overall": "The _resolve_calls method resolves calls in a Python file. It uses a CallResolverVisitor to visit the file's AST and resolve calls.",
+              "parameters": [
+                {
+                  "name": "self",
+                  "type": "ProjectAnalyzer",
+                  "description": "The ProjectAnalyzer object itself."
+                },
+                {
+                  "name": "filepath",
+                  "type": "string",
+                  "description": "The path to the Python file to resolve calls in."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method calls the CallResolverVisitor class.",
+                "called_by": "This method is called by the analyze method."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "The ProjectAnalyzer class depends on the CallResolverVisitor and path_to_module functions.",
+          "instantiated_by": "The ProjectAnalyzer class is not instantiated by any other class in the provided context."
+        }
+      },
+      "error": null
+    },
+    "backend.relationship_analyzer.CallResolverVisitor": {
+      "identifier": "backend.relationship_analyzer.CallResolverVisitor",
+      "description": {
+        "overall": "The CallResolverVisitor class is a subclass of ast.NodeVisitor, designed to analyze and resolve function calls within a given Python module. It maintains a scope of imported modules and definitions, and tracks the caller information for each function call. The class is responsible for visiting different types of nodes in the abstract syntax tree (AST) of the module, including class definitions, function definitions, import statements, and assignment statements.",
+        "init_method": {
+          "description": "The __init__ method initializes the CallResolverVisitor instance with the filepath, project root, and definitions. It sets up the module path, scope, instance types, and current caller name.",
+          "parameters": [
+            {
+              "name": "filepath",
+              "type": "str",
+              "description": "The path to the Python file being analyzed."
+            },
+            {
+              "name": "project_root",
+              "type": "str",
+              "description": "The root directory of the project."
+            },
+            {
+              "name": "definitions",
+              "type": "dict",
+              "description": "A dictionary of definitions for the module."
+            }
+          ]
+        },
+        "methods": [
+          {
+            "identifier": "visit_ClassDef",
+            "description": {
+              "overall": "The visit_ClassDef method is called when a class definition node is encountered in the AST. It updates the current class name and visits the child nodes of the class definition.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.ClassDef",
+                  "description": "The class definition node being visited."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not make any explicit calls to other methods or functions.",
+                "called_by": "This method is called by the ast.NodeVisitor when a class definition node is encountered in the AST."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_FunctionDef",
+            "description": {
+              "overall": "The visit_FunctionDef method is called when a function definition node is encountered in the AST. It updates the current caller name and visits the child nodes of the function definition.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.FunctionDef",
+                  "description": "The function definition node being visited."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not make any explicit calls to other methods or functions.",
+                "called_by": "This method is called by the ast.NodeVisitor when a function definition node is encountered in the AST."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_Call",
+            "description": {
+              "overall": "The visit_Call method is called when a call node is encountered in the AST. It resolves the callee pathname and updates the caller information for the call.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.Call",
+                  "description": "The call node being visited."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method calls the _resolve_call_qname method to resolve the callee pathname.",
+                "called_by": "This method is called by the ast.NodeVisitor when a call node is encountered in the AST."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_Import",
+            "description": {
+              "overall": "The visit_Import method is called when an import node is encountered in the AST. It updates the scope with the imported modules.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.Import",
+                  "description": "The import node being visited."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not make any explicit calls to other methods or functions.",
+                "called_by": "This method is called by the ast.NodeVisitor when an import node is encountered in the AST."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_ImportFrom",
+            "description": {
+              "overall": "The visit_ImportFrom method is called when an import from node is encountered in the AST. It updates the scope with the imported modules.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.ImportFrom",
+                  "description": "The import from node being visited."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not make any explicit calls to other methods or functions.",
+                "called_by": "This method is called by the ast.NodeVisitor when an import from node is encountered in the AST."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "visit_Assign",
+            "description": {
+              "overall": "The visit_Assign method is called when an assignment node is encountered in the AST. It updates the instance types with the assigned class instances.",
+              "parameters": [
+                {
+                  "name": "node",
+                  "type": "ast.Assign",
+                  "description": "The assignment node being visited."
+                }
+              ],
+              "returns": [],
+              "usage_context": {
+                "calls": "This method does not make any explicit calls to other methods or functions.",
+                "called_by": "This method is called by the ast.NodeVisitor when an assignment node is encountered in the AST."
+              }
+            },
+            "error": null
+          },
+          {
+            "identifier": "_resolve_call_qname",
+            "description": {
+              "overall": "The _resolve_call_qname method resolves the callee pathname for a given function call node.",
+              "parameters": [
+                {
+                  "name": "func_node",
+                  "type": "ast.Node",
+                  "description": "The function call node being resolved."
+                }
+              ],
+              "returns": [
+                {
+                  "name": "callee_pathname",
+                  "type": "str",
+                  "description": "The resolved callee pathname."
+                }
+              ],
+              "usage_context": {
+                "calls": "This method is called by the visit_Call method to resolve the callee pathname.",
+                "called_by": "This method is called by the visit_Call method."
+              }
+            },
+            "error": null
+          }
+        ],
+        "usage_context": {
+          "dependencies": "The CallResolverVisitor class depends on the backend.relationship_analyzer.path_to_module function.",
+          "instantiated_by": "The CallResolverVisitor class is not instantiated by any other classes or functions in the provided context."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.ParameterDescription": {
+      "identifier": "schemas.types.ParameterDescription",
+      "description": {
+        "overall": "The ParameterDescription class is a Pydantic model that represents a single parameter of a function. It encapsulates the name, type, and description of the parameter, providing a structured way to document and validate function parameters.",
+        "init_method": {
+          "description": "The class is initialized with three parameters: name, type, and description, all of which are strings. These parameters are used to set the corresponding instance attributes, allowing for the creation of a ParameterDescription object that accurately represents a function parameter.",
+          "parameters": [
+            {
+              "name": "name",
+              "type": "str",
+              "description": "The name of the parameter."
+            },
+            {
+              "name": "type",
+              "type": "str",
+              "description": "The type of the parameter."
+            },
+            {
+              "name": "description",
+              "type": "str",
+              "description": "A description of the parameter."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "The ParameterDescription class has no external dependencies.",
+          "instantiated_by": "The class is not instantiated by any other classes or functions in the provided context."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.ReturnDescription": {
+      "identifier": "schemas.types.ReturnDescription",
+      "description": {
+        "overall": "The ReturnDescription class is a Pydantic model that represents the return value of a function. It contains three attributes: name, type, and description, all of which are strings. This class provides a structured way to describe the return value of a function, making it easier to understand and work with the function's output.",
+        "init_method": {
+          "description": "The class is initialized with three parameters: name, type, and description. These parameters are used to set the corresponding attributes of the class.",
+          "parameters": [
+            {
+              "name": "name",
+              "type": "str",
+              "description": "The name of the return value."
+            },
+            {
+              "name": "type",
+              "type": "str",
+              "description": "The type of the return value."
+            },
+            {
+              "name": "description",
+              "type": "str",
+              "description": "A description of the return value."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "The ReturnDescription class has no external dependencies.",
+          "instantiated_by": "The ReturnDescription class is not instantiated by any other classes or functions in the provided context."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.UsageContext": {
+      "identifier": "schemas.types.UsageContext",
+      "description": {
+        "overall": "The UsageContext class is a Pydantic model that describes the calling context of a function. It encapsulates information about the functions a method calls and where it is called, providing a structured way to represent this context. The class has two attributes: calls and called_by, which are both strings. This class is likely used in a larger system to track and analyze function calls, enabling better understanding and management of the system's behavior.",
+        "init_method": {
+          "description": "The UsageContext class is initialized with two parameters: calls and called_by, which are both strings. These parameters set the initial state of the object, allowing for the representation of the calling context of a function.",
+          "parameters": [
+            {
+              "name": "calls",
+              "type": "str",
+              "description": "A string representing the functions a method calls."
+            },
+            {
+              "name": "called_by",
+              "type": "str",
+              "description": "A string representing where a method is called."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "The UsageContext class does not have any external dependencies.",
+          "instantiated_by": "There is no information available on where the UsageContext class is instantiated."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.FunctionDescription": {
+      "identifier": "schemas.types.FunctionDescription",
+      "description": {
+        "overall": "The FunctionDescription class represents a detailed analysis of a function's purpose and signature. It contains attributes for the overall description, parameters, return values, and usage context. This class is designed to provide a structured way of documenting and analyzing functions.",
+        "init_method": {
+          "description": "The class is initialized with attributes for overall description, parameters, return values, and usage context. The constructor does not have any explicit parameters, but the class attributes are expected to be populated.",
+          "parameters": []
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "The FunctionDescription class does not have any external dependencies.",
+          "instantiated_by": "The FunctionDescription class is not instantiated by any other classes or functions in the provided context."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.FunctionAnalysis": {
+      "identifier": "schemas.types.FunctionAnalysis",
+      "description": {
+        "overall": "The FunctionAnalysis class represents a model for analyzing functions, encapsulating their identifier, description, and potential errors. It inherits from pydantic's BaseModel, ensuring data validation and parsing capabilities. The class is designed to provide a structured representation of function analysis results, facilitating further processing and documentation generation.",
+        "init_method": {
+          "description": "The FunctionAnalysis class is initialized with an identifier, a description of type FunctionDescription, and an optional error message. The identifier uniquely represents the function being analyzed, while the description provides detailed information about the function's purpose and behavior. The error field is used to store any error messages encountered during the analysis process.",
+          "parameters": [
+            {
+              "name": "identifier",
+              "type": "str",
+              "description": "A unique string identifier for the function being analyzed."
+            },
+            {
+              "name": "description",
+              "type": "FunctionDescription",
+              "description": "A detailed description of the function's purpose and behavior."
+            },
+            {
+              "name": "error",
+              "type": "Optional[str]",
+              "description": "An optional error message encountered during the analysis process."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "The FunctionAnalysis class has no external dependencies.",
+          "instantiated_by": "The class is not instantiated by any other components, as it is a base model for function analysis."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.ConstructorDescription": {
+      "identifier": "schemas.types.ConstructorDescription",
+      "description": {
+        "overall": "The ConstructorDescription class is a Pydantic model that describes the __init__ method of a class. It contains two main attributes: description and parameters. The description attribute is a string that provides a summary of the class's constructor, while the parameters attribute is a list of ParameterDescription objects that detail the parameters of the constructor.",
+        "init_method": {
+          "description": "The ConstructorDescription class is initialized with a description and a list of parameters. The description is a string that summarizes the class's constructor, and the parameters are a list of ParameterDescription objects.",
+          "parameters": [
+            {
+              "name": "description",
+              "type": "str",
+              "description": "A string that summarizes the class's constructor."
+            },
+            {
+              "name": "parameters",
+              "type": "List[ParameterDescription]",
+              "description": "A list of ParameterDescription objects that detail the parameters of the constructor."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "The ConstructorDescription class has no external dependencies.",
+          "instantiated_by": "The ConstructorDescription class is not instantiated by any other class or function in the provided context."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.ClassContext": {
+      "identifier": "schemas.types.ClassContext",
+      "description": {
+        "overall": "The ClassContext class represents the external dependencies and primary points of instantiation for a given class. It has two attributes: dependencies and instantiated_by, which are used to describe the class's dependencies and where it is instantiated, respectively.",
+        "init_method": {
+          "description": "The ClassContext class is initialized with two parameters: dependencies and instantiated_by. These parameters are used to set the corresponding attributes of the class.",
+          "parameters": [
+            {
+              "name": "dependencies",
+              "type": "str",
+              "description": "A string describing the class's external dependencies."
+            },
+            {
+              "name": "instantiated_by",
+              "type": "str",
+              "description": "A string describing where the class is instantiated."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "The ClassContext class has no external dependencies.",
+          "instantiated_by": "The ClassContext class is not instantiated by any other classes or functions."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.ClassDescription": {
+      "identifier": "schemas.types.ClassDescription",
+      "description": {
+        "overall": "The ClassDescription class is designed to contain a detailed analysis of another class's purpose, constructor, and methods. It serves as a structured data model for storing and representing class-level information. The class inherits from pydantic's BaseModel, indicating its use in data validation and serialization. The overall purpose of this class is to provide a comprehensive description of a class's structure and behavior.",
+        "init_method": {
+          "description": "The ClassDescription class is initialized with four key attributes: overall, init_method, methods, and usage_context. The overall attribute is a string that provides a high-level description of the class. The init_method attribute is an instance of ConstructorDescription, which contains details about the class's constructor. The methods attribute is a list of FunctionAnalysis objects, each representing a method within the class. The usage_context attribute is an instance of ClassContext, which provides information about the class's dependencies and instantiation.",
+          "parameters": [
+            {
+              "name": "overall",
+              "type": "str",
+              "description": "A string describing the class's overall purpose."
+            },
+            {
+              "name": "init_method",
+              "type": "ConstructorDescription",
+              "description": "An instance of ConstructorDescription containing details about the class's constructor."
+            },
+            {
+              "name": "methods",
+              "type": "List[FunctionAnalysis]",
+              "description": "A list of FunctionAnalysis objects, each representing a method within the class."
+            },
+            {
+              "name": "usage_context",
+              "type": "ClassContext",
+              "description": "An instance of ClassContext providing information about the class's dependencies and instantiation."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "The ClassDescription class has no external dependencies.",
+          "instantiated_by": "The ClassDescription class is not instantiated by any other classes or functions in the provided context."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.ClassAnalysis": {
+      "identifier": "schemas.types.ClassAnalysis",
+      "description": {
+        "overall": "The ClassAnalysis class represents the main model for the entire JSON schema for a class. It contains an identifier, a description of the class, and an optional error message. The class is designed to provide a structured representation of a class's analysis, including its methods, attributes, and usage context.",
+        "init_method": {
+          "description": "The ClassAnalysis class is initialized with an identifier, a description, and an optional error message. The identifier is a string that uniquely identifies the class, the description is an instance of ClassDescription, and the error message is an optional string.",
+          "parameters": [
+            {
+              "name": "identifier",
+              "type": "str",
+              "description": "A unique identifier for the class."
+            },
+            {
+              "name": "description",
+              "type": "ClassDescription",
+              "description": "A description of the class."
+            },
+            {
+              "name": "error",
+              "type": "Optional[str]",
+              "description": "An optional error message."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "The ClassAnalysis class has no external dependencies.",
+          "instantiated_by": "The ClassAnalysis class is not instantiated by any other classes."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.CallInfo": {
+      "identifier": "schemas.types.CallInfo",
+      "description": {
+        "overall": "The CallInfo class represents a specific call event from the relationship analyzer, capturing details such as the file, function, mode, and line number of the call. It is designed to be used in 'called_by' and 'instantiated_by' lists, providing a structured way to track call events. This class inherits from pydantic's BaseModel, leveraging its validation capabilities. The class's primary responsibility is to encapsulate call event data, making it easily accessible and manipulable. By providing a standardized representation of call events, the CallInfo class facilitates the analysis and understanding of complex relationships between different parts of the system.",
+        "init_method": {
+          "description": "The CallInfo class is initialized with four parameters: file, function, mode, and line. These parameters are used to set up the instance attributes of the class, which are then used to store the call event data. The class does not have a traditional __init__ method, instead relying on pydantic's BaseModel to handle initialization and validation.",
+          "parameters": [
+            {
+              "name": "file",
+              "type": "str",
+              "description": "The file associated with the call event."
+            },
+            {
+              "name": "function",
+              "type": "str",
+              "description": "The name of the function that made the call."
+            },
+            {
+              "name": "mode",
+              "type": "str",
+              "description": "The mode of the call, such as 'method', 'function', or 'module'."
+            },
+            {
+              "name": "line",
+              "type": "int",
+              "description": "The line number where the call was made."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "The CallInfo class has no external dependencies.",
+          "instantiated_by": "The CallInfo class is not instantiated by any other classes or functions, as per the provided context."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.FunctionContextInput": {
+      "identifier": "schemas.types.FunctionContextInput",
+      "description": {
+        "overall": "The FunctionContextInput class is a Pydantic model designed to hold structured context information for analyzing a function. It encapsulates details about the functions a given method calls and the methods that call it, providing a foundational structure for understanding function interactions within a larger system.",
+        "init_method": {
+          "description": "The class is initialized with two primary attributes: calls and called_by. The calls attribute is a list of strings representing the functions or methods called by the analyzed function. The called_by attribute is a list of CallInfo objects, detailing the methods or functions that invoke the analyzed function.",
+          "parameters": [
+            {
+              "name": "calls",
+              "type": "List[str]",
+              "description": "A list of function or method names that the analyzed function calls."
+            },
+            {
+              "name": "called_by",
+              "type": "List[CallInfo]",
+              "description": "A list of CallInfo objects representing the methods or functions that call the analyzed function."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "This class does not have any external dependencies.",
+          "instantiated_by": "There is no information provided about where this class is instantiated."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.FunctionAnalysisInput": {
+      "identifier": "schemas.types.FunctionAnalysisInput",
+      "description": {
+        "overall": "The FunctionAnalysisInput class is a Pydantic model that represents the required input to generate a FunctionAnalysis object. It encapsulates the necessary information to analyze a function, including the mode, identifier, source code, imports, and context. The class inherits from BaseModel, which provides the foundation for building robust and scalable data models.",
+        "init_method": {
+          "description": "The class is initialized with the mode, identifier, source code, imports, and context. The mode is restricted to 'function_analysis', and the identifier is a string. The source code and imports are also strings, while the context is an instance of FunctionContextInput.",
+          "parameters": [
+            {
+              "name": "mode",
+              "type": "Literal['function_analysis']",
+              "description": "The mode of analysis, which is restricted to 'function_analysis'."
+            },
+            {
+              "name": "identifier",
+              "type": "str",
+              "description": "A unique identifier for the function being analyzed."
+            },
+            {
+              "name": "source_code",
+              "type": "str",
+              "description": "The source code of the function being analyzed."
+            },
+            {
+              "name": "imports",
+              "type": "List[str]",
+              "description": "A list of import statements relevant to the function being analyzed."
+            },
+            {
+              "name": "context",
+              "type": "FunctionContextInput",
+              "description": "An instance of FunctionContextInput that provides additional context for the analysis."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "The FunctionAnalysisInput class has no external dependencies.",
+          "instantiated_by": "The FunctionAnalysisInput class is not instantiated by any other classes or functions in the provided context."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.MethodContextInput": {
+      "identifier": "schemas.types.MethodContextInput",
+      "description": {
+        "overall": "The MethodContextInput class is a Pydantic model designed to hold structured context information for a class's methods. It encapsulates details such as the method's identifier, the functions it calls, the functions that call it, its arguments, and an optional docstring. This class plays a crucial role in documenting and analyzing the behavior of methods within a larger system.",
+        "init_method": {
+          "description": "The MethodContextInput class is initialized with several parameters that provide context about a method. These include the method's identifier, calls, called_by, args, and an optional docstring. The constructor sets up the instance attributes based on these parameters.",
+          "parameters": [
+            {
+              "name": "identifier",
+              "type": "str",
+              "description": "The name or identifier of the method."
+            },
+            {
+              "name": "calls",
+              "type": "List[str]",
+              "description": "A list of functions or methods called by this method."
+            },
+            {
+              "name": "called_by",
+              "type": "List[CallInfo]",
+              "description": "A list of functions or methods that call this method, with additional call information."
+            },
+            {
+              "name": "args",
+              "type": "List[str]",
+              "description": "A list of argument names for the method."
+            },
+            {
+              "name": "docstring",
+              "type": "Optional[str]",
+              "description": "An optional docstring that provides a description of the method's purpose and behavior."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "The MethodContextInput class does not have any external dependencies listed.",
+          "instantiated_by": "There are no listed instances where the MethodContextInput class is instantiated."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.ClassContextInput": {
+      "identifier": "schemas.types.ClassContextInput",
+      "description": {
+        "overall": "The ClassContextInput class represents a structured context for analyzing a class, encapsulating information about its dependencies, instantiation, and method contexts. It inherits from pydantic's BaseModel, ensuring data validation and serialization capabilities. The class has three primary attributes: dependencies, instantiated_by, and method_context, which are lists of strings, CallInfo objects, and MethodContextInput objects, respectively.",
+        "init_method": {
+          "description": "The class is initialized with no explicit constructor, relying on the default initialization provided by pydantic's BaseModel. This means that the class attributes are set directly on the instance, and their types are inferred from the type hints.",
+          "parameters": [
+            {
+              "name": "dependencies",
+              "type": "List[str]",
+              "description": "A list of strings representing the dependencies of the class."
+            },
+            {
+              "name": "instantiated_by",
+              "type": "List[CallInfo]",
+              "description": "A list of CallInfo objects representing where the class is instantiated."
+            },
+            {
+              "name": "method_context",
+              "type": "List[MethodContextInput]",
+              "description": "A list of MethodContextInput objects representing the method contexts of the class."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "The class has no external dependencies.",
+          "instantiated_by": "The class is not instantiated by any other classes or functions."
+        }
+      },
+      "error": null
+    },
+    "schemas.types.ClassAnalysisInput": {
+      "identifier": "schemas.types.ClassAnalysisInput",
+      "description": {
+        "overall": "The ClassAnalysisInput class is a Pydantic model that represents the required input to generate a ClassAnalysis object. It encapsulates the necessary information for class analysis, including the mode, identifier, source code, imports, and context. The class plays a crucial role in the system by providing a structured input for class analysis, enabling the generation of accurate and comprehensive class descriptions.",
+        "init_method": {
+          "description": "The ClassAnalysisInput class is initialized with the mode, identifier, source code, imports, and context. The mode is set to 'class_analysis', indicating the type of analysis to be performed. The identifier, source code, and imports provide essential information about the class being analyzed, while the context offers additional details about the class's dependencies and instantiation.",
+          "parameters": [
+            {
+              "name": "mode",
+              "type": "Literal['class_analysis']",
+              "description": "The mode of analysis, which is set to 'class_analysis'."
+            },
+            {
+              "name": "identifier",
+              "type": "str",
+              "description": "The identifier of the class being analyzed."
+            },
+            {
+              "name": "source_code",
+              "type": "str",
+              "description": "The source code of the class being analyzed."
+            },
+            {
+              "name": "imports",
+              "type": "List[str]",
+              "description": "A list of import statements relevant to the class being analyzed."
+            },
+            {
+              "name": "context",
+              "type": "ClassContextInput",
+              "description": "The context in which the class is being analyzed, including dependencies and instantiation information."
+            }
+          ]
+        },
+        "methods": [],
+        "usage_context": {
+          "dependencies": "The ClassAnalysisInput class has no external dependencies.",
+          "instantiated_by": "The ClassAnalysisInput class is not instantiated by any other classes or functions in the provided context."
+        }
+      },
+      "error": null
+    }
+  }
+}
