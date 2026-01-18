@@ -19,6 +19,296 @@ import database.db as db
 import streamlit as st
 import streamlit_authenticator as stauth
 
+# ========================================
+# RESPONSIVE CSS & VIEWPORT CONFIGURATION
+# ========================================
+
+# Viewport Meta Tag für Mobile
+st.set_page_config(
+    page_title="Repo Agent", 
+    layout="wide", 
+    page_icon="🤖",
+    initial_sidebar_state="auto"
+)
+
+# Comprehensive CSS für responsive Design
+responsive_css = """
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+<style>
+    /* === GRUNDLEGENDE RESPONSIVE EINSTELLUNGEN === */
+    * {
+        box-sizing: border-box;
+    }
+    
+    html, body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+    }
+    
+    /* === SIDEBAR STYLING === */
+    [data-testid="stSidebar"] {
+        height: 100vh;
+        overflow-y: auto;
+        min-width: 250px;
+        max-width: 400px;
+    }
+    
+    /* === MAIN CONTENT AREA === */
+    [data-testid="stMainBlockContainer"] {
+        padding: 1rem;
+        max-width: 100%;
+        overflow-x: hidden;
+        width: 100%;
+        flex: 1;
+    }
+    
+    /* === HAUPTLAYOUT WENN SIDEBAR GESCHLOSSEN === */
+    [data-testid="stAppViewContainer"] {
+        display: flex;
+        width: 100%;
+    }
+    
+    /* Bei geschlossener Sidebar nimmt Content volle Breite ein */
+    [data-testid="stSidebar"][aria-expanded="false"] ~ [data-testid="stMainBlockContainer"] {
+        width: 100%;
+        margin-left: 0;
+    }
+    
+    /* === RESPONSIVE BREAKPOINTS === */
+    
+    /* MOBILE (< 640px) */
+    @media (max-width: 639px) {
+        [data-testid="stSidebar"] {
+            min-width: 100%;
+            max-width: 100%;
+            position: fixed;
+            left: 0;
+            z-index: 999;
+        }
+        
+        [data-testid="stMainBlockContainer"] {
+            padding: 0.75rem;
+            margin-top: 0;
+        }
+        
+        .stChatMessage {
+            margin: 0.5rem 0 !important;
+        }
+        
+        .stContainer {
+            padding: 0.5rem !important;
+        }
+        
+        /* Buttons auf Mobile verkleinern */
+        .stButton > button {
+            font-size: 0.85rem;
+            padding: 0.4rem 0.6rem !important;
+        }
+        
+        /* Chat Input verbreitert */
+        .stChatInputContainer {
+            width: 100%;
+        }
+    }
+    
+    /* TABLET (640px - 1024px) */
+    @media (min-width: 640px) and (max-width: 1024px) {
+        [data-testid="stSidebar"] {
+            min-width: 280px;
+            max-width: 350px;
+        }
+        
+        [data-testid="stMainBlockContainer"] {
+            padding: 1rem;
+        }
+        
+        .stChatMessage {
+            margin: 0.75rem 0 !important;
+        }
+        
+        .stButton > button {
+            font-size: 0.9rem;
+            padding: 0.45rem 0.75rem !important;
+        }
+    }
+    
+    /* DESKTOP (> 1024px) */
+    @media (min-width: 1025px) {
+        [data-testid="stSidebar"] {
+            min-width: 300px;
+            max-width: 400px;
+        }
+        
+        [data-testid="stMainBlockContainer"] {
+            padding: 1.5rem;
+            max-width: 100%;
+        }
+        
+        .stChatMessage {
+            margin: 1rem 0 !important;
+        }
+        
+        .stButton > button {
+            font-size: 1rem;
+            padding: 0.5rem 1rem !important;
+        }
+    }
+    
+    /* === CHAT MESSAGE STYLING === */
+    .stChatMessage {
+        width: 100%;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+    
+    .stChatMessage > div {
+        width: 100% !important;
+    }
+    
+    /* === CONTAINER STYLING === */
+    .stContainer {
+        width: 100%;
+        padding: 1rem;
+    }
+    
+    .stContainer[height="500"] {
+        max-height: 500px;
+        overflow-y: auto;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+    
+    /* === FORMS & INPUTS === */
+    .stTextInput > div > div > input,
+    .stTextArea > div > div > textarea,
+    .stSelectbox > div > div > select {
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    /* === COLUMN RESPONSIVE === */
+    .stColumns {
+        gap: 1rem;
+    }
+    
+    @media (max-width: 639px) {
+        .stColumns > div {
+            width: 100% !important;
+        }
+    }
+    
+    /* === BUTTON STYLING === */
+    .stButton {
+        width: 100%;
+        margin: 0.25rem 0;
+    }
+    
+    .stButton > button {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    /* Buttons in Sidebars nebeneinander */
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] .stButton {
+        width: auto;
+        flex: 1;
+        margin: 0.25rem 0.25rem;
+    }
+    
+    [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] .stButton > button {
+        width: 100%;
+    }
+    
+    /* === EXPANDER STYLING === */
+    .streamlit-expanderContent {
+        padding: 1rem;
+    }
+    
+    /* === POPOVER STYLING === */
+    [data-testid="stPopover"] {
+        min-width: 250px;
+    }
+    
+    @media (max-width: 639px) {
+        [data-testid="stPopover"] {
+            max-width: 90vw;
+        }
+    }
+    
+    /* === STATUS & MESSAGES === */
+    .stStatus {
+        width: 100%;
+    }
+    
+    .stAlert {
+        width: 100%;
+        word-wrap: break-word;
+    }
+    
+    /* === CODE BLOCKS === */
+    .stCodeBlock {
+        width: 100%;
+        overflow-x: auto;
+    }
+    
+    /* === MERMAID DIAGRAMME === */
+    [class*="mermaid"] {
+        max-width: 100%;
+        overflow-x: auto;
+    }
+    
+    svg[class*="mermaid"] {
+        max-width: 100%;
+        height: auto !important;
+    }
+    
+    /* === HORIZONTAL CONTAINER === */
+    [data-testid="stHorizontalBlock"] {
+        flex-wrap: wrap;
+    }
+    
+    @media (max-width: 639px) {
+        [data-testid="stHorizontalBlock"] {
+            flex-direction: column;
+        }
+        
+        [data-testid="stHorizontalBlock"] > div {
+            width: 100% !important;
+        }
+    }
+    
+    /* === CAPTION & TEXT === */
+    .stCaption {
+        font-size: clamp(0.75rem, 2vw, 0.9rem);
+    }
+    
+    .stMarkdown {
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+    }
+    
+    /* === TOGGLE STYLING === */
+    .stToggle {
+        width: 100%;
+    }
+</style>
+"""
+
+st.markdown(responsive_css, unsafe_allow_html=True)
+
+# Inject custom CSS to fix the sidebar height to full viewport height
+sidebar_full_height_css = """
+<style>
+    [data-testid="stSidebar"] {
+        height: 100vh; /* Full viewport height */
+        overflow-y: auto; /* Enable scrolling if content overflows */
+    }
+</style>
+"""
+st.markdown(sidebar_full_height_css, unsafe_allow_html=True)
+
 # ----------------------------------------
 # MODEL CONFIGURATION
 # ----------------------------------------
@@ -65,9 +355,7 @@ STANDARD_MODELS = [
     "gemini-3-flash",
     "gpt-5.1",
     "gpt-5-mini",
-
 ]
-
 
 # Alle Modelle kombiniert
 ALL_HELPER_MODELS = sorted(list(set(STANDARD_MODELS + HELPER_MODELS)))
@@ -75,13 +363,13 @@ ALL_MAIN_MODELS = sorted(list(set(STANDARD_MODELS + MAIN_MODELS)))
 ALL_MODELS = sorted(list(set(ALL_HELPER_MODELS + ALL_MAIN_MODELS)))
 
 CATEGORY_KEYWORDS = {
-    "Standard": ["STANDARD"], # Zeigt nur STANDARD_MODELS
+    "Standard": ["STANDARD"],
     "Google Gemini": ["gemini"],
     "Meta Llama": ["llama"],
     "Alias Tools": ["alias"],
     "DeepSeek/Qwen": ["deepseek", "qwen"],
     "GPT & Andere": ["gpt", "teuken", "openai"],
-    "Alle anzeigen": [""] # Zeigt alles
+    "Alle anzeigen": [""]
 }
 
 def get_filtered_models(source_list, category_name):
@@ -89,16 +377,14 @@ def get_filtered_models(source_list, category_name):
     keywords = CATEGORY_KEYWORDS.get(category_name, [""])
     
     if "STANDARD" in keywords:
-        # Nur Modelle zurückgeben, die auch in der Standard-Liste sind
         return [m for m in source_list if m in STANDARD_MODELS]
     
     filtered = []
     for model in source_list:
-        # Prüfen ob ein Keyword im Namen steckt
         if any(k in model.lower() for k in keywords):
             filtered.append(model)
             
-    return filtered if filtered else source_list # Fallback falls leer
+    return filtered if filtered else source_list
 
 # --- NEU: INITIALISIERUNG FÜR ABBRUCH-LOGIK ---
 if "is_running" not in st.session_state:
@@ -113,12 +399,10 @@ def handle_abort():
 # ----------------------------------------
 # 1. Page Config
 # ----------------------------------------
-st.set_page_config(page_title="Repo Agent", layout="wide", page_icon="🤖")
 
 load_dotenv()
 SCADSLLM_KEY=os.getenv("SCADSLLM_KEY")
 SCADSLLM_HOST=os.getenv("SCADSLLM_HOST")
-
 
 # ----------------------------------------
 # CALLBACKS
@@ -137,8 +421,6 @@ def save_ollama_cb():
         db.update_ollama_url(st.session_state["username"], new_url)
         st.toast("Ollama URL gespeichert! ✅")
 
-
-
 # ----------------------------------------
 # DATA LOADING (CONSISTENT)
 # ----------------------------------------
@@ -152,12 +434,13 @@ def get_last_activity(chat_name):
 
     if not exchanges:
         return creation_dt
-    # Wir nehmen das Feld 'datetime' aus dem exchange (stelle sicher, dass es ein datetime-objekt ist)
     last_ex = exchanges[-1]
     dt = last_ex.get("datetime", datetime.min)
-    if isinstance(dt, str): # Falls es als String aus der DB kommt
-        try: dt = datetime.fromisoformat(dt)
-        except: dt = datetime.min
+    if isinstance(dt, str):
+        try: 
+            dt = datetime.fromisoformat(dt)
+        except: 
+            dt = datetime.min
     return dt
 
 def load_data_from_db(username: str):
@@ -187,7 +470,6 @@ def load_data_from_db(username: str):
             st.session_state.chats[initial_name] = {"exchanges": []}
             st.session_state.active_chat = initial_name
         else:
-            # Sortiere Chats nach letzter Aktivität beim ersten Laden
             sorted_names = sorted(st.session_state.chats.keys(), key=get_last_activity, reverse=True)
             if "active_chat" not in st.session_state or st.session_state.active_chat not in st.session_state.chats:
                 st.session_state.active_chat = sorted_names[0]
@@ -211,18 +493,14 @@ def handle_delete_exchange(chat_name, ex):
     st.rerun()
 
 def handle_delete_chat(username, chat_name):
-    # KONSISTENZ: Ruft jetzt delete_full_chat in DB auf
     db.delete_full_chat(username, chat_name)
     
-    # State bereinigen
     if chat_name in st.session_state.chats:
         del st.session_state.chats[chat_name]
     
-    # Active Chat neu setzen
     if len(st.session_state.chats) > 0:
         st.session_state.active_chat = list(st.session_state.chats.keys())[0]
     else:
-        # Wenn alles weg ist, neuen leeren Chat anlegen
         new_name = "Chat 1"
         db.insert_chat(username, new_name)
         st.session_state.chats[new_name] = {"exchanges": []}
@@ -282,14 +560,11 @@ def render_exchange(ex, current_chat_name):
     is_error = answer_text.startswith("Fehler") or answer_text.startswith("Error")
 
     if is_error:
-        # Fehlermeldungen werden ohne Assistant-Bubble und ohne 500px-Container angezeigt
         st.error(answer_text)
         if st.button("🗑️ Fehler-Nachricht löschen", key=f"del_err_hist_{ex['_id']}", type="secondary"):
             handle_delete_exchange(current_chat_name, ex)
     else:
-        # Normale Antworten
         with st.chat_message("assistant"):
-            # --- 1. TOOLBAR ---
             with st.container(horizontal=True, horizontal_alignment="right"):
                 st.write("hier die Antwort:")
                 if ex.get("feedback") == 1:
@@ -297,7 +572,6 @@ def render_exchange(ex, current_chat_name):
                 elif ex.get("feedback") == 0:
                     st.caption("❌ Nicht hilfreich")
                 
-                # Buttons
                 if st.button("👍", key=f"up_{ex['_id']}", type="primary" if ex.get("feedback") == 1 else "secondary"):
                     handle_feedback_change(ex, 1)
                 if st.button("👎", key=f"down_{ex['_id']}", type="primary" if ex.get("feedback") == 0 else "secondary"):
@@ -313,7 +587,6 @@ def render_exchange(ex, current_chat_name):
                 if st.button("🗑️", key=f"del_{ex['_id']}"):
                     handle_delete_exchange(current_chat_name, ex)
 
-            # --- 2. CONTENT CONTAINER (Nur für echte Antworten) ---
             with st.container(height=500, border=True):
                  render_text_with_mermaid(ex["answer"], should_stream=False)
 
@@ -393,42 +666,34 @@ if st.session_state["authentication_status"]:
     # SIDEBAR
     # ----------------------------------------
     with st.sidebar:
-        # Sicherstellen, dass Active Chat gültig ist
         chat_names = list(st.session_state.chats.keys())
         if st.session_state.active_chat not in chat_names:
              if chat_names:
                  st.session_state.active_chat = chat_names[0]
              else:
-                 # Fallback (sollte durch load_data abgefangen sein)
                  st.session_state.active_chat = "Chat 1" 
 
         with st.container(border=None, gap=None):
-            if st.button("➕ Neuer Chat", width="content", type="tertiary"):
-                    # Namen generieren
-                    base_name = "Chat"
-                    i = 1
-                    while True:
-                        candidate = f"{base_name} {i}"
-                        if candidate not in st.session_state.chats:
-                            new_name = candidate
-                            break
-                        i += 1
-                    # KONSISTENZ: Sofort in DB schreiben
-                    db.insert_chat(current_user, new_name)
-                    # In Session State
-                    st.session_state.chats[new_name] = {
-                        "exchanges": [],
-                        "created_at": datetime.now()
-                    }
-                    st.session_state.active_chat = new_name
-                    st.rerun()
+            if st.button("➕ Neuer Chat", use_container_width=True, type="tertiary", key="btn_new_chat"):
+                base_name = "Chat"
+                i = 1
+                while True:
+                    candidate = f"{base_name} {i}"
+                    if candidate not in st.session_state.chats:
+                        new_name = candidate
+                        break
+                    i += 1
+                db.insert_chat(current_user, new_name)
+                st.session_state.chats[new_name] = {
+                    "exchanges": [],
+                    "created_at": datetime.now()
+                }
+                st.session_state.active_chat = new_name
+                st.rerun()
 
-            if st.button("🗑️ aktuellen Chat löschen", width="content", type="tertiary"):
-                    handle_delete_chat(current_user, st.session_state.active_chat)   
-                         
-
+            if st.button("🗑️ Löschen", use_container_width=True, type="tertiary", key="btn_delete_chat"):
+                handle_delete_chat(current_user, st.session_state.active_chat)   
         with st.container(border=None, gap=None,height=400):
-            # --- CHAT MANAGEMENT ---
             sorted_chat_names = sorted(
                 st.session_state.chats.keys(), 
                 key=get_last_activity, 
@@ -436,30 +701,37 @@ if st.session_state["authentication_status"]:
             )
 
             for chat_name in sorted_chat_names:
-                # Markiere den aktiven Chat optisch (optional)
                 is_active = (chat_name == st.session_state.active_chat)
                 label = f" {chat_name}" if not is_active else f" {chat_name}"
-                if st.button(label, key=f"btn_{chat_name}", width="content", 
+                if st.button(label, key=f"btn_{chat_name}", width="stretch", 
                             type="secondary" if is_active else "tertiary"):
                     st.session_state.active_chat = chat_name
                     st.rerun()
 
-        
-
-        with st.container(border=None, gap=None):
-            st.toggle("Notebook Modus", key="notebook_mode", help="Aktiviert können Jupyter Notebooks (.ipynb) ausgewertet werden, deaktiviert werden Python (.py) files ausgewertet", value=False)  
-            with st.popover("⚙️ Einstellungen", type="tertiary"):
-                # 1. API Keys & Status vorab laden
+        with st.container(border=None, gap=None, horizontal_alignment="left"):
+            st.toggle(
+                "Notebook Modus", key="notebook_mode", 
+                help=(
+                    "Aktiviert können Jupyter Notebooks (.ipynb) ausgewertet werden, "
+                    "deaktiviert werden Python (.py) files ausgewertet"
+                ), 
+                value=False,
+                width="stretch"
+            )  
+            with st.popover("⚙️ Einstellungen", type="tertiary", ):
                 gemini_key, ollama_url, gpt_key, opensrc_key, opensrc_url = db.get_decrypted_api_keys(current_user)
                 has_gemini, has_ollama, has_gpt = bool(gemini_key), bool(ollama_url), bool(gpt_key)
                 has_opensrc_url, has_opensrc_key = bool(opensrc_url), bool(opensrc_key)
 
-                # 2. Hilfsfunktionen definieren
                 def get_provider(model_name):
-                    if not model_name or model_name == "None": return None
-                    if model_name.startswith("gemini"): return "Google Gemini"
-                    if model_name == "llama3": return "ollama"
-                    if model_name.startswith("gpt-5"): return "gpt"
+                    if not model_name or model_name == "None": 
+                        return None
+                    if model_name.startswith("gemini"): 
+                        return "Google Gemini"
+                    if model_name == "llama3": 
+                        return "ollama"
+                    if model_name.startswith("gpt-5"): 
+                        return "gpt"
                     return "Open Source LLM"
 
                 def render_config_form(model_name):
@@ -472,7 +744,8 @@ if st.session_state["authentication_status"]:
                             if st.form_submit_button("Speichern") and new_gemini:
                                 db.update_gemini_key(current_user, new_gemini)
                                 st.success("Gespeichert!")
-                                time.sleep(0.5); st.rerun()
+                                time.sleep(0.5)
+                                st.rerun()
                             if st.form_submit_button("Löschen"):
                                 db.update_gemini_key(current_user, "")
                                 st.rerun()
@@ -484,7 +757,9 @@ if st.session_state["authentication_status"]:
                             new_ollama = st.text_input("Llama Base URL ändern", value=ollama_url if ollama_url else "")
                             if st.form_submit_button("Speichern"):
                                 db.update_ollama_url(current_user, new_ollama)
-                                st.success("Gespeichert!"); time.sleep(0.5); st.rerun()
+                                st.success("Gespeichert!")
+                                time.sleep(0.5)
+                                st.rerun()
                             if st.form_submit_button("Löschen"):
                                 db.update_ollama_url(current_user, "")
                                 st.rerun()
@@ -497,7 +772,9 @@ if st.session_state["authentication_status"]:
                             
                             if st.form_submit_button("Speichern") and new_gpt:
                                 db.update_gpt_key(current_user, new_gpt)
-                                st.success("Gespeichert!"); time.sleep(0.5); st.rerun()
+                                st.success("Gespeichert!")
+                                time.sleep(0.5)
+                                st.rerun()
                             if st.form_submit_button("Löschen"):
                                 db.update_gpt_key(current_user, "")
                                 st.rerun()
@@ -509,11 +786,15 @@ if st.session_state["authentication_status"]:
                             n_key = st.text_input("Open Source Key", type="password")
                             n_url = st.text_input("Open Source URL", value=opensrc_url if opensrc_url else "")
                             if st.form_submit_button("Speichern"):
-                                if n_key: db.update_opensrc_key(current_user, n_key)
+                                if n_key: 
+                                    db.update_opensrc_key(current_user, n_key)
                                 db.update_opensrc_url(current_user, n_url)
-                                st.success("Gespeichert!"); time.sleep(0.5); st.rerun()
+                                st.success("Gespeichert!")
+                                time.sleep(0.5)
+                                st.rerun()
                             if st.form_submit_button("Löschen"):
-                                db.update_opensrc_key(current_user, ""); db.update_opensrc_url(current_user, "")
+                                db.update_opensrc_key(current_user, "")
+                                db.update_opensrc_url(current_user, "")
                                 st.rerun()
 
                 # 3. Layout: Basis-Spalten (Links: Modelle, Rechts: Platz für Keys)
@@ -558,10 +839,6 @@ if st.session_state["authentication_status"]:
                         else:
                             st.caption(f"Gemeinsamer Provider: {p_main}")
                         render_config_form(sbmain)
-
-                       
-            
-
             
             with st.container():
                 st.write(f"👤 **{current_name}**")
@@ -744,7 +1021,4 @@ if st.session_state["authentication_status"]:
                 }
             if working_chat_name in st.session_state.chats:
                     st.session_state.chats[working_chat_name]["exchanges"].append(new_ex)
-        st.rerun()       
-
-       
-        
+        st.rerun()
