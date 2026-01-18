@@ -2,7 +2,6 @@ import uuid
 import numpy as np
 from datetime import datetime
 import time
-from pymongo import MongoClient
 from dotenv import load_dotenv
 import os
 import sys
@@ -163,7 +162,7 @@ def get_last_activity(chat_name):
     if isinstance(dt, str):
         try: 
             dt = datetime.fromisoformat(dt)
-        except: 
+        except ValueError: 
             dt = datetime.min
     return dt
 
@@ -522,7 +521,7 @@ if st.session_state["authentication_status"]:
                                 st.rerun()
 
                 # 3. Layout: Basis-Spalten (Links: Modelle, Rechts: Platz für Keys)
-                base_col_left, base_col_right = st.columns([1, 2])
+                base_col_left, base_col_right = st.columns([1, 1])
 
                 with base_col_left:
                     st.caption("🤖 Modellauswahl")
