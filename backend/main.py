@@ -323,7 +323,7 @@ def main_workflow(user_input, api_keys: dict, model_names: dict, status_callback
         tokens_llm = estimate_total_tokens(llm_input_estimate)
         time_llm = math.ceil(tokens_llm / 600 / 60)
         update_status(
-            f"Die voraussichtliche verbleibende Analyse-Zeit beträgt: {time_llm} Minuten ({datetime.time(datetime.now().strftime("%H:%M:%S"))})"
+            f"Die voraussichtliche verbleibende Analyse-Zeit beträgt: {time_llm} Minuten ({datetime.now().strftime('%H:%M:%S')})"
         )
     if user_opensrc_key:
         logging.info("Time estimation for documentation generation...")
