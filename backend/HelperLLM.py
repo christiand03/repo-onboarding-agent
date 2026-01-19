@@ -68,15 +68,15 @@ class LLMHelper:
             )
 
         elif "/" in model_name or model_name.startswith("alias-") or any(x in model_name for x in ["DeepSeek", "Teuken", "Llama", "Qwen", "gpt-oss", "openGPT"]):
-            if not SCADSLLM_URL:
+            if not base_url:
                 raise ValueError(f"SCADSLLM_URL environment variable is required for model {model_name}")
             
-            logging.info(f"Connecting to Custom API at {SCADSLLM_URL} for model {model_name}")
+            logging.info(f"Connecting to Custom API at {base_url} for model {model_name}")
             
             base_llm = ChatOpenAI(
                 model=model_name,
                 api_key=api_key,
-                base_url=SCADSLLM_URL,
+                base_url=base_url,
                 temperature=0.3,
             )
 

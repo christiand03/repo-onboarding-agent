@@ -124,7 +124,7 @@ def handle_abort():
 
 load_dotenv()
 SCADSLLM_KEY=os.getenv("SCADSLLM_KEY")
-SCADSLLM_HOST=os.getenv("SCADSLLM_HOST")
+SCADSLLM_URL=os.getenv("SCADSLLM_URL")
 
 # ----------------------------------------
 # CALLBACKS
@@ -686,8 +686,8 @@ if st.session_state["authentication_status"]:
             "gpt": dec_gpt, 
             "opensrc_key": user_opensrc_key,
             "opensrc_url": user_opensrc_url,
-            "scadsllm": SCADSLLM_KEY, 
-            "scadsllm_base_url": SCADSLLM_HOST
+            "scadsllm": user_opensrc_key, 
+            "scadsllm_base_url": user_opensrc_url
         }
         model_config = {"helper": sbhelp, "main": sbmain}
 
