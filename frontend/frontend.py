@@ -74,7 +74,6 @@ MAIN_MODELS = clean_names(RAW_MAIN_MODELS)
 
 STANDARD_MODELS = [
     "gemini-2.5-flash-lite",
-    "gemini-2.5-pro",
     "gemini-2.5-flash",
     "gemini-3-flash",
     "gpt-5.1",
@@ -529,10 +528,12 @@ if st.session_state["authentication_status"]:
                     sbhelp = "None"
                     if not st.session_state.notebook_mode:
                         cat_h = st.selectbox("Kategorie Helper:", list(CATEGORY_KEYWORDS.keys()), index=0, key="cat_h")
-                        sbhelp = st.selectbox("Helper LLM", get_filtered_models(ALL_HELPER_MODELS, cat_h), index=0)
+                        helper_models= get_filtered_models(ALL_HELPER_MODELS, cat_h)
+                        sbhelp = st.selectbox("Helper LLM", helper_models, index=0,key="sb_helper_select")
                     
                     cat_m = st.selectbox("Kategorie Main:", list(CATEGORY_KEYWORDS.keys()), index=0, key="cat_m")
-                    sbmain = st.selectbox("Main LLM", get_filtered_models(ALL_MAIN_MODELS, cat_m), index=2)
+                    main_models= get_filtered_models(ALL_MAIN_MODELS, cat_m)
+                    sbmain = st.selectbox("Main LLM", main_models, index=2, key="sb_main_select")
 
                     if not st.session_state.notebook_mode:
                         st.caption(f"Gewählt: Python Modus mit: \n\n {sbhelp} -> {sbmain}")
