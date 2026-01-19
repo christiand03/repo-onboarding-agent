@@ -9,7 +9,7 @@ load_dotenv()
 # Modelle, die verfügbar sind anzeigen
 client = OpenAI(
     base_url=os.getenv("SCADSLLM_URL"),
-    api_key=os.getenv("SCADS_AI_KEY")
+    api_key=os.getenv("SCADS_API_KEY")
 )
 
 print("""
