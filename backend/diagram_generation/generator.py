@@ -90,7 +90,7 @@ def enrich_report_with_diagrams(final_report: str, diagrams: dict, component_dia
                         enriched_report.append(f"   **Sequence diagram for {filename}**")
                         enriched_report.append(seq_diagram)
         
-        if "## 4. Architecture" in line:
+        if r"## [0-9\.]? Architecture" in line:
             enriched_report.append(component_diagram)
         
         

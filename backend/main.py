@@ -7,6 +7,8 @@ import time
 from datetime import datetime
 import matplotlib.pyplot as plt
 import sys 
+import tiktoken
+from typing import Any
 
 from pathlib import Path
 from dotenv import load_dotenv
@@ -293,7 +295,22 @@ def main_workflow(user_input, api_keys: dict, model_names: dict, status_callback
     # Initialisiere HelperLLM
     function_prompt_file = 'SystemPrompts/SystemPromptFunctionHelperLLM.txt'
     class_prompt_file = 'SystemPrompts/SystemPromptClassHelperLLM.txt'
-    
+    prompt_file_mainllm_toon = "SystemPrompts/SystemPromptMainLLMToon.txt"
+
+    llm_input_estimate = {
+        "functions": helper_llm_function_input,
+        "classes": helper_llm_class_input,
+        "ast_schema": ast_schema,
+        "basic_info": basic_project_info,
+        "file_tree": repo_file_tree,
+        "function_prompt": function_prompt_file,
+        "class_prompt": class_prompt_file,
+        "main_prompt": prompt_file_mainllm_toon
+    }
+
+    if ollama_base_url:
+        os.environ["OLLAMA_BASE_URL"] = ollama_base_url
+
     llm_helper = LLMHelper(
         api_key=helper_api_key, 
         function_prompt_path=function_prompt_file, 
@@ -301,7 +318,20 @@ def main_workflow(user_input, api_keys: dict, model_names: dict, status_callback
         model_name=helper_model,
         base_url=helper_base_url,
     )
-    
+    if gemini_api_key:
+        logging.info("Time estimation for documentation generation...")
+        tokens_llm = estimate_total_tokens(llm_input_estimate)
+        time_llm = math.ceil(tokens_llm / 600 / 60)
+        update_status(
+            f"Die voraussichtliche verbleibende Analyse-Zeit beträgt: {time_llm} Minuten ({datetime.time(datetime.now().strftime("%H:%M:%S"))})"
+        )
+    if user_opensrc_key:
+        logging.info("Time estimation for documentation generation...")
+        update_status(
+            "Die voraussichtliche verbleibende Analyse-Zeit beträgt: < 2 Minuten)"
+        )
+
+
     if ollama_base_url:
         os.environ["OLLAMA_BASE_URL"] = ollama_base_url
 
@@ -392,8 +422,6 @@ def main_workflow(user_input, api_keys: dict, model_names: dict, status_callback
     except Exception as e:
         logging.warning(f"Token evaluation could not be performed: {e}")    
 
-    # prompt_file_mainllm = "SystemPrompts/SystemPromptMainLLM.txt"
-    prompt_file_mainllm_toon = "SystemPrompts/SystemPromptMainLLMToon.txt"
     # MainLLM Ausführung
     main_llm = MainLLM(
         api_key=main_api_key, 
@@ -419,8 +447,9 @@ def main_workflow(user_input, api_keys: dict, model_names: dict, status_callback
     except Exception as e:
         logging.error(f"Error during Main LLM final report generation: {e}")
         raise
-
-    enriched_final_report = enrich_report_with_diagrams(final_report, diagrams, component_diagram, class_diagrams)
+    if final_report:
+        enriched_final_report = enrich_report_with_diagrams(final_report, diagrams, component_diagram, class_diagrams)
+    
     # --- Speichern der Ergebnisse ---
     output_dir = "result"
     stats_dir = "Statistics" # Neuer Ordner
@@ -468,11 +497,16 @@ def main_workflow(user_input, api_keys: dict, model_names: dict, status_callback
         "savings_percent": round(savings_data['savings_percent'], 2) if savings_data else None
     
     }
-
-    return {
-        "report": enriched_final_report,
-        "metrics": metrics
-    }
+    if enriched_final_report:
+        return {
+            "report": enriched_final_report,
+            "metrics": metrics
+        }
+    else:
+        return {
+            "report": final_report,
+            "metrics": metrics
+        }
     
 
 def enrich_report_with_diagrams(final_report: str, diagrams: dict, component_diagram: str, class_diagrams: dict) -> str:
@@ -648,6 +682,84 @@ def notebook_workflow(input, api_keys, model, status_callback=None, check_stop=N
         }
     }
 
+
+def estimate_total_tokens(llm_input_estimate: dict[str, Any]):
+    """
+    Schätzt die Gesamttoken-Kosten für die komplette LLM-Pipeline.
+    
+    Args:
+        llm_input_estimate: Dictionary mit allen Eingaben für die LLM-Analyse
+        
+    Returns:
+        Dictionary mit detaillierten Token-Schätzungen
+    """
+    
+    # Encoding für Token-Zählung
+    encoding = tiktoken.get_encoding("cl100k_base")
+    
+    # Konstanten für Schätzungen
+    HELPER_PROMPT_TOKENS = 3000  # Pro Prompt (Function + Class)
+    MAIN_PROMPT_TOKENS = 3000
+    HELPER_OUTPUT_TOKENS = 20000  # Durchschnittliche Ausgabe pro Batch
+    MAIN_OUTPUT_TOKENS = 32500  # 30k-35k durchschnittlich
+    
+    # ============ HELPER LLM SCHÄTZUNG ============
+    
+    # Funktionen analysieren
+    functions = llm_input_estimate.get("functions", [])
+    num_functions = len(functions)
+    
+    function_input_tokens = 0
+    if num_functions > 0:
+        # Sample die erste Funktion für Token-Zählung
+        sample_func = functions[0]
+        sample_text = json.dumps(sample_func.model_dump() if hasattr(sample_func, 'dict') else sample_func)
+        avg_tokens_per_function = len(encoding.encode(sample_text))
+        function_input_tokens = avg_tokens_per_function * num_functions
+    
+    # Klassen analysieren
+    classes = llm_input_estimate.get("classes", [])
+    num_classes = len(classes)
+    
+    class_input_tokens = 0
+    if num_classes > 0:
+        sample_class = classes[0]
+        sample_text = json.dumps(sample_class.model_dump() if hasattr(sample_class, 'dict') else sample_class)
+        avg_tokens_per_class = len(encoding.encode(sample_text))
+        class_input_tokens = avg_tokens_per_class * num_classes
+
+    ast_schema = llm_input_estimate.get("ast_schema", {})
+    ast_tokens = len(encoding.encode(json.dumps(ast_schema, default=str)))
+
+    basic_info = llm_input_estimate.get("basic_info", "")
+    basic_info_tokens = len(encoding.encode(str(basic_info)))
+
+    file_tree = llm_input_estimate.get("file_tree", "")
+    file_tree_tokens = len(encoding.encode(str(file_tree)))
+    
+    helper_function_input = HELPER_PROMPT_TOKENS + function_input_tokens + ast_tokens + basic_info_tokens
+    helper_class_input = HELPER_PROMPT_TOKENS + class_input_tokens + ast_tokens + basic_info_tokens
+    total_helper_input = helper_function_input + helper_class_input
+    total_helper_output = HELPER_OUTPUT_TOKENS * 2 
+    
+    total_helper_tokens = total_helper_input + total_helper_output
+    
+    main_input_content = (
+        basic_info_tokens + 
+        file_tree_tokens + 
+        ast_tokens + 
+        total_helper_output 
+    )
+    
+
+    total_main_input = MAIN_PROMPT_TOKENS + main_input_content
+    total_main_output = MAIN_OUTPUT_TOKENS
+    
+    total_main_tokens = total_main_input + total_main_output
+
+    return total_helper_tokens + total_main_tokens
+
+
 if __name__ == "__main__":
     user_input = "https://github.com/christiand03/repo-onboarding-agent"
     #main_workflow(user_input, api_keys={"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model_names={"helper": "alias-code", "main": "alias-ha"})
@@ -656,10 +768,10 @@ if __name__ == "__main__":
     #notebook_input = "https://github.com/christiand03/clustering-and-classification-uni"
     # notebook_input= "https://github.com/Schmarc4/Monarchs"
     # notebook_workflow(notebook_input, api_keys= {"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model= "gemini-2.5-flash")
-    main_workflow(input=user_input,
+    main_workflow(user_input=user_input,
                   api_keys={
-                      "scadsllm": os.getenv("SCADS_AI_KEY"), 
-                      "scadsllm_base_url": os.getenv("SCADSLLM_URL")
+                      "opensrc_key": os.getenv("SCADS_API_KEY"), 
+                      "opensrc_url": os.getenv("SCADSLLM_URL")
                   },
                   model_names={
                       "helper": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
@@ -668,5 +780,4 @@ if __name__ == "__main__":
     )
 
     notebook_input= "https://github.com/Schmarc4/Monarchs"
-   # notebook_workflow(notebook_input, api_keys= {"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model= "gemini-2.5-flash")
-
+   # notebook_workflow(notebook_input, api_keys= {"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model= "gemini-2.5-flash")    

@@ -1,8 +1,5 @@
 import ast
 import networkx as nx
-from pathlib import Path
-
-from .getRepo import GitRepository
 
 
 class CallGraph(ast.NodeVisitor):
@@ -148,31 +145,6 @@ def build_callGraph(tree: ast.AST, filename: str) -> nx.DiGraph:
 
     return graph
 
-# def build_global_callgraph(repo: GitRepository, repo_root) -> nx.DiGraph:
-#     all_files = repo.get_all_files()
-#     global_graph = nx.DiGraph()
-
-#     # Zunächst alle Funktionen aller Dateien erfassen
-#     file_function_mapping = {}
-#     for file in all_files:
-#         if not file.path.endswith(".py"):
-#             continue
-#         filename = Path(file.path).stem
-#         tree = ast.parse(file.content)
-#         visitor = CallGraph(filename, repo_root)
-#         visitor.visit(tree)
-#         file_function_mapping[filename] = visitor.function_set
-#         for node in visitor.graph.nodes:
-#             global_graph.add_node(node)
-#         for caller, callees in visitor.edges.items():
-#             if caller not in global_graph:
-#                 global_graph.add_node(caller)
-#             for callee in callees:
-#                 global_graph.add_node(callee)
-#                 global_graph.add_edge(caller, callee)
-
-#     return global_graph
-
 def make_safe_dot(graph: nx.DiGraph, out_path: str):
     mapping = {}
     H = graph.copy()
@@ -183,62 +155,3 @@ def make_safe_dot(graph: nx.DiGraph, out_path: str):
     for orig, safe in mapping.items():
         H.nodes[safe]["label"] = orig
     nx.drawing.nx_pydot.write_dot(H, out_path)
-
-
-def build_filtered_callgraph(repo: GitRepository) -> nx.DiGraph:
-    """
-    Baut den globalen Call-Graphen und filtert ihn auf selbst geschriebene Funktionen.
-    """
-    all_file_objects = repo.get_all_files()
-    own_functions = set()
-    file_trees = {}
-
-    for file in all_file_objects:
-        if not file.path.endswith(".py"):
-            continue
-        filename = Path(file.path).stem
-        tree = ast.parse(file.content)
-        file_trees[filename] = tree
-        visitor = CallGraph(filename)
-        visitor.visit(tree)
-        own_functions.update(visitor.function_set)
-
-    # Globalen Call-Graph bauen
-    global_graph = nx.DiGraph()
-    for filename, tree in file_trees.items():
-        visitor = CallGraph(filename)
-        visitor.visit(tree)
-        for caller, callees in visitor.edges.items():
-            if caller not in own_functions:
-                continue 
-            for callee in callees:
-                if callee in own_functions:
-                    global_graph.add_edge(caller, callee)
-                    global_graph.add_node(caller)
-                    global_graph.add_node(callee)
-    return global_graph
-
-
-if __name__ == "__main__":
-    from getRepo import GitRepository
-    repo_url = Path(__file__).parent.parent.resolve()
-    # repo_url = "https://github.com/christiand03/repo-onboarding-agent"
-    # repo_url = "https://github.com/pallets/flask"    
-
-    with GitRepository(repo_url) as repository:
-        print(f"Repository von {repository.repo_url} erfolgreich geklont. Es liegt im Ornder {repository.temp_dir}")
-
-        all_file_objects = repository.get_all_files()
-  
-        for file in all_file_objects:
-            if not file.path.endswith(".py") or "frontend" in file.path or "database" in file.path:
-                continue
-            
-            tree = ast.parse(file.content)
-            filename: str = file.path
-            filename = filename.split("/")[-1]
-            filename = filename.removesuffix(".py")  
-            file_callgraph = build_callGraph(tree, filename)    
-            make_safe_dot(file_callgraph, f"file_callgraph_{filename}.dot")     
-        # filtered_graph = build_filtered_callgraph(repository)
-

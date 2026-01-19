@@ -102,18 +102,3 @@ class MainLLM:
             error_message = f"\n--- Error during LLM stream call: {e} ---"
             logging.error(error_message)
             yield error_message
-
-# Für main.py:
-
-    # logging.info("Starting Synthesis Phase...")
-    # # final_report = main_llm.call_llm(processed_json)
-    # logging.info("stream LLM for final report...")
-    # full_response = ""
-    # for token in main_llm.stream_llm(processed_json):
-    # # ------ Statt print den Token ans Frontend schicken ------
-    #     print(token, end="", flush=True)
-    #     full_response += token    
-    # final_report = full_response
-    # logging.info("streaming complete.")
-    # logging.info("final report generated.")
-    # logging.info("Synthesis Phase completed.")

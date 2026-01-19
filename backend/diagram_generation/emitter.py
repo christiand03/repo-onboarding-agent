@@ -15,8 +15,9 @@ class MermaidSequenceEmitter:
 
         for call in sorted(calls, key=lambda c: c.lineno):
             lines.append(self._emit_call(call))
-            if call.callee.return_symb:
-                lines.append(self._emit_response(call))
+            if call.callee:
+                if call.callee.return_symb:
+                    lines.append(self._emit_response(call))
         lines.append("```")
         return "\n".join(lines)
 
@@ -118,8 +119,6 @@ class MermaidClassDiagramEmitter:
                 lines.append("```")
                 class_diagrams[name] = "\n".join(lines)
                 lines = []
-
-
         # for module in modules.values():
         #     src = mermaid_id(module.name)
         #     for imported in module.imports.values():

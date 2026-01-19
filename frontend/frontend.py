@@ -587,8 +587,7 @@ if st.session_state["authentication_status"]:
     for ex in chat_data["exchanges"]:
         render_exchange(ex, active_chat_name)
 
-    # Input Handling
-    # Input Handling
+
     # Input Handling
     # ----------------------------------------
     # CHAT AREA - INPUT & ANALYSIS
