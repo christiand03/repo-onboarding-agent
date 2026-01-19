@@ -20,8 +20,7 @@ You must verify if the Documentation accurately reflects the data in the Source 
 2. **Fact Check**: Compare function signatures (args, types) in `ast_schema` against the documentation descriptions.
 3. **Logic Check**: Does the documentation mention the caller/callee relationships found in `analysis_results`?
 4. **Metadata & Synthesis Check**: 
-   - **Crucial Rule**: If `basic_info` fields (Description, Tech Stack, Features) state "Information not found", strictly check if the MainLLM inferred this information correctly from the code.
-   - If the docs fill these gaps based on evidence (e.g., `import streamlit` -> "Tech Stack: Streamlit"), validat it as **Correct Synthesis**, not a hallucination.
+   - **Crucial Rule**: Strictly check if the MainLLM inferred the synthesis of the project description correctly from 'basic_info' and the source code. This is especially important if 'basic_info' states 'Information not found' which guides the MainLLM to a correct synthesis.
    - Only flag it as an error if the synthesized info contradicts the code (e.g., claiming "Django" when only "Flask" is present).
 </EvaluationStrategy>
 
@@ -51,12 +50,6 @@ Produce a Markdown report strictly following this template:
 
 ## 2. 📊 Detailed Scoring & Justification
 
-### 🎯 Technical Accuracy (Weight: 40%)
-**Score: [X]/10**
-**Analysis:**
-- Compare the documented function signatures and return types against the `ast_schema`.
-- **Deductions:** [List specific points lost, e.g., "-2 points for incorrect parameters in `utils.py`"]
-
 ### 📦 Completeness & Coverage (Weight: 30%)
 **Score: [X]/10**
 **Analysis:**
@@ -64,13 +57,25 @@ Produce a Markdown report strictly following this template:
 - Check if project metadata (Installation, Tech Stack) is present (either from `basic_info` or correctly synthesized).
 - **Deductions:** [e.g., "-3 points: `api` folder exists in file_tree but is missing in docs"]
 
-### 🧠 Logic & Relationships (Weight: 20%)
+### 🎯 Technical Accuracy (Weight: 20%)
+**Score: [X]/10**
+**Analysis:**
+- Compare the documented function signatures and return types against the `ast_schema`.
+- **Deductions:** [List specific points lost, e.g., "-2 points for incorrect parameters in `utils.py`"]
+
+### 🎯 Description Accuracy (Weight: 20%)
+**Score: [X]/10**
+**Analysis:**
+- Compare the documented function description against the source code provided in the `ast_schema`
+- **Deductions:** [List specific points lost, e.g., "-2 points for factually incorrect description in <filename>/<Function or Class Name>"]
+
+### 🧠 Logic & Relationships (Weight: 15%)
 **Score: [X]/10**
 **Analysis:**
 - Does the doc explain *how* components interact? Compare against `analysis_results` (Call Graphs).
 - **Deductions:** [e.g., "-1 point: Failed to mention that `MainLLM` calls `HelperLLM`"]
 
-### 📖 Readability & Structure (Weight: 10%)
+### 📖 Readability & Structure (Weight: 15%)
 **Score: [X]/10**
 **Analysis:**
 - Is the Markdown valid? Are headings nested correctly?
@@ -79,9 +84,5 @@ Produce a Markdown report strictly following this template:
 ---
 **TOTAL SCORE: [Weighted Sum]/100**
 ---
-
-## 3. 🛠️ Actionable Fixes
-- [Specific instruction to fix Error 1]
-- [Specific instruction to fix Error 2]
 
 </OutputFormat>
