@@ -25,7 +25,7 @@ from .HelperLLM import LLMHelper
 from .relationship_analyzer import ProjectAnalyzer
 from schemas.types import FunctionContextInput, FunctionAnalysisInput, ClassContextInput, ClassAnalysisInput, MethodContextInput
 
-from ptoon import encode, estimate_savings
+from toon_format import encode, estimate_savings
 
 from .converter import process_repo_notebooks
 
