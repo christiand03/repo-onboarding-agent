@@ -463,12 +463,18 @@ if st.session_state["authentication_status"]:
                         st.markdown(f"**Gemini Key**: {status_icon} {'Gesetzt' if has_gemini else 'Fehlt'}")
                         with st.form(f"form_gemini_{model_name}"):
                             new_gemini = st.text_input("Gemini Key ändern", type="password")
-                            if st.form_submit_button("Speichern") and new_gemini:
+                            c1, c2 = st.columns(2)
+                            with c1:
+                                save_btn = st.form_submit_button("Speichern", width="stretch")
+                            with c2:
+                                delete_btn = st.form_submit_button("Löschen", width="stretch")
+
+                            if save_btn and new_gemini:
                                 db.update_gemini_key(current_user, new_gemini)
                                 st.success("Gespeichert!")
                                 time.sleep(0.5)
                                 st.rerun()
-                            if st.form_submit_button("Löschen"):
+                            if delete_btn:
                                 db.update_gemini_key(current_user, "")
                                 st.rerun()
 
@@ -477,12 +483,18 @@ if st.session_state["authentication_status"]:
                         st.markdown(f"**Llama URL**: {status_icon} {'Gesetzt' if has_ollama else 'Fehlt'}")
                         with st.form(f"form_ollama_{model_name}"):
                             new_ollama = st.text_input("Llama Base URL ändern", value=ollama_url if ollama_url else "")
-                            if st.form_submit_button("Speichern"):
+                            c1, c2 = st.columns(2)
+                            with c1:
+                                save_btn = st.form_submit_button("Speichern", width="stretch")
+                            with c2:
+                                delete_btn = st.form_submit_button("Löschen", width="stretch")    
+
+                            if save_btn:
                                 db.update_ollama_url(current_user, new_ollama)
                                 st.success("Gespeichert!")
                                 time.sleep(0.5)
                                 st.rerun()
-                            if st.form_submit_button("Löschen"):
+                            if delete_btn:
                                 db.update_ollama_url(current_user, "")
                                 st.rerun()
 
@@ -491,13 +503,18 @@ if st.session_state["authentication_status"]:
                         st.markdown(f"**GPT Key**: {status_icon} {'Gesetzt' if has_gpt else 'Fehlt'}")
                         with st.form(f"form_gpt_{model_name}"):
                             new_gpt = st.text_input("GPT Key ändern", type="password")
-                            
-                            if st.form_submit_button("Speichern") and new_gpt:
+                            c1, c2 = st.columns(2)
+                            with c1:
+                                save_btn = st.form_submit_button("Speichern", width="stretch")
+                            with c2:
+                                delete_btn = st.form_submit_button("Löschen", width="stretch")
+
+                            if save_btn and new_gpt:
                                 db.update_gpt_key(current_user, new_gpt)
                                 st.success("Gespeichert!")
                                 time.sleep(0.5)
                                 st.rerun()
-                            if st.form_submit_button("Löschen"):
+                            if delete_btn:
                                 db.update_gpt_key(current_user, "")
                                 st.rerun()
                     
@@ -507,61 +524,87 @@ if st.session_state["authentication_status"]:
                         with st.form(f"form_os_{model_name}"):
                             n_key = st.text_input("Open Source Key", type="password")
                             n_url = st.text_input("Open Source URL", value=opensrc_url if opensrc_url else "")
-                            if st.form_submit_button("Speichern"):
+
+                            c1, c2 = st.columns(2)
+                            with c1:
+                                save_btn = st.form_submit_button("Speichern", width="stretch")
+                            with c2:
+                                delete_btn = st.form_submit_button("Löschen", width="stretch")
+                            if save_btn:
                                 if n_key: 
                                     db.update_opensrc_key(current_user, n_key)
                                 db.update_opensrc_url(current_user, n_url)
                                 st.success("Gespeichert!")
                                 time.sleep(0.5)
                                 st.rerun()
-                            if st.form_submit_button("Löschen"):
+                            if delete_btn:
                                 db.update_opensrc_key(current_user, "")
                                 db.update_opensrc_url(current_user, "")
                                 st.rerun()
+                
+                if not st.session_state.notebook_mode:
+                    temp_cat_h = st.session_state.get("cat_h", list(CATEGORY_KEYWORDS.keys())[0])
+                    temp_cat_m = st.session_state.get("cat_m", list(CATEGORY_KEYWORDS.keys())[0])
+                    pass
 
                 # 3. Layout: Basis-Spalten (Links: Modelle, Rechts: Platz für Keys)
-                base_col_left, base_col_right = st.columns([1, 1])
+                col_left, col_right = st.columns([1, 1.5], gap="large")
 
-                with base_col_left:
+                with col_left:
                     st.caption("🤖 Modellauswahl")
                     sbhelp = "None"
                     if not st.session_state.notebook_mode:
                         cat_h = st.selectbox("Kategorie Helper:", list(CATEGORY_KEYWORDS.keys()), index=0, key="cat_h")
-                        helper_models= get_filtered_models(ALL_HELPER_MODELS, cat_h)
-                        sbhelp = st.selectbox("Helper LLM", helper_models, index=0,key="sb_helper_select")
+                        helper_models = get_filtered_models(ALL_HELPER_MODELS, cat_h)
+                        sbhelp = st.selectbox("Helper LLM", helper_models, index=0, key="sb_helper_select")
                     
                     cat_m = st.selectbox("Kategorie Main:", list(CATEGORY_KEYWORDS.keys()), index=0, key="cat_m")
-                    main_models= get_filtered_models(ALL_MAIN_MODELS, cat_m)
+                    main_models = get_filtered_models(ALL_MAIN_MODELS, cat_m)
                     sbmain = st.selectbox("Main LLM", main_models, index=2, key="sb_main_select")
-
-                    if not st.session_state.notebook_mode:
-                        st.caption(f"Gewählt: Python Modus mit: \n\n {sbhelp} -> {sbmain}")
+                    
+                    if st.session_state.notebook_mode:
+                        st.caption(f"Notebook Modus: {sbmain}")
                     else:
-                        st.caption(f"Gewählt: Notebook Modus mit: \n\n {sbmain}")
+                        st.caption(f"Python Modus: {sbhelp} → {sbmain}")
 
                 # 4. Dynamische Config-Spalten in base_col_right
                 p_help = get_provider(sbhelp)
                 p_main = get_provider(sbmain)
 
-                with base_col_right:
+                is_split_view = (not st.session_state.notebook_mode) and (p_help != p_main)
+
+                popover_width = "1200px" if is_split_view else "700px"
+                
+                css = f"""
+                <style>
+                    /* Ziel: Das Popover Container Element */
+                    div[data-testid="stPopoverBody"] {{
+                        width: {popover_width} !important;
+                        max-width: 95vw !important;
+                    }}
+                    /* Verhindert, dass Inputs zu klein werden */
+                    div[data-testid="stForm"] input {{
+                        min-width: 100px;
+                    }}
+                </style>
+                """
+                st.markdown(css, unsafe_allow_html=True)
+
+                with col_right:
+                    st.caption("🔑 API Konfiguration")
                     # Fall: Zwei verschiedene Provider im Python Modus -> 2 Config Spalten
-                    if not st.session_state.notebook_mode and p_help != p_main:
-                        st.caption("🔑 API Konfiguration")
-                        sub_col1, sub_col2 = st.columns(2)
-                        with sub_col1:
+                    if is_split_view:
+                        c1, c2 = st.columns(2, gap="medium")
+                        with c1:
                             st.caption(f"Helper: {p_help}")
                             render_config_form(sbhelp)
-                        with sub_col2:
+                        with c2:
                             st.caption(f"Main: {p_main}")
                             render_config_form(sbmain)
-                    
                     # Fall: Notebook Modus ODER gleiche Provider -> 1 Config Spalte
                     else:
-                        st.caption("🔑 API Konfiguration")
-                        if st.session_state.notebook_mode:
-                            st.caption(f"Modell: {p_main}")
-                        else:
-                            st.caption(f"Gemeinsamer Provider: {p_main}")
+                        label = f"Modell: {p_main}" if st.session_state.notebook_mode else f"Gemeinsamer Provider: {p_main}"
+                        st.caption(label)
                         render_config_form(sbmain)
             
             with st.container():
