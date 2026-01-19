@@ -318,18 +318,14 @@ def main_workflow(user_input, api_keys: dict, model_names: dict, status_callback
         model_name=helper_model,
         base_url=helper_base_url,
     )
-    if gemini_api_key:
+    if gemini_api_key or openai_api_key:
         logging.info("Time estimation for documentation generation...")
         tokens_llm = estimate_total_tokens(llm_input_estimate)
-        time_llm = math.ceil(tokens_llm / 600 / 60)
-        update_status(
-            f"Die voraussichtliche verbleibende Analyse-Zeit beträgt: {time_llm} Minuten ({datetime.now().strftime('%H:%M:%S')})"
-        )
-    if user_opensrc_key:
+        time_llm = math.ceil(tokens_llm / 550 / 60)
+        update_status(f"Die voraussichtliche verbleibende Analyse-Zeit beträgt: {time_llm} Minuten.")
+    elif user_opensrc_key:
         logging.info("Time estimation for documentation generation...")
-        update_status(
-            "Die voraussichtliche verbleibende Analyse-Zeit beträgt: < 2 Minuten)"
-        )
+        update_status("Die voraussichtliche verbleibende Analyse-Zeit beträgt: < 5 Minuten.")
 
 
     if ollama_base_url:
@@ -497,7 +493,7 @@ def main_workflow(user_input, api_keys: dict, model_names: dict, status_callback
         "savings_percent": round(savings_data['savings_percent'], 2) if savings_data else None
     
     }
-    if enriched_final_report:
+    if enriched_final_report is not None:
         return {
             "report": enriched_final_report,
             "metrics": metrics
@@ -694,30 +690,25 @@ def estimate_total_tokens(llm_input_estimate: dict[str, Any]):
         Dictionary mit detaillierten Token-Schätzungen
     """
     
-    # Encoding für Token-Zählung
+   
     encoding = tiktoken.get_encoding("cl100k_base")
     
-    # Konstanten für Schätzungen
-    HELPER_PROMPT_TOKENS = 3000  # Pro Prompt (Function + Class)
+    
+    HELPER_PROMPT_TOKENS = 3000  
     MAIN_PROMPT_TOKENS = 3000
-    HELPER_OUTPUT_TOKENS = 20000  # Durchschnittliche Ausgabe pro Batch
-    MAIN_OUTPUT_TOKENS = 32500  # 30k-35k durchschnittlich
+    HELPER_OUTPUT_TOKENS = 20000  
+    MAIN_OUTPUT_TOKENS = 32500  
     
-    # ============ HELPER LLM SCHÄTZUNG ============
-    
-    # Funktionen analysieren
     functions = llm_input_estimate.get("functions", [])
     num_functions = len(functions)
     
     function_input_tokens = 0
     if num_functions > 0:
-        # Sample die erste Funktion für Token-Zählung
         sample_func = functions[0]
         sample_text = json.dumps(sample_func.model_dump() if hasattr(sample_func, 'dict') else sample_func)
         avg_tokens_per_function = len(encoding.encode(sample_text))
         function_input_tokens = avg_tokens_per_function * num_functions
     
-    # Klassen analysieren
     classes = llm_input_estimate.get("classes", [])
     num_classes = len(classes)
     
@@ -770,7 +761,7 @@ if __name__ == "__main__":
     # notebook_workflow(notebook_input, api_keys= {"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model= "gemini-2.5-flash")
     main_workflow(user_input=user_input,
                   api_keys={
-                      "opensrc_key": os.getenv("SCADS_API_KEY"), 
+                      "opensrc_key": os.getenv("SCADS_AI_KEY"), 
                       "opensrc_url": os.getenv("SCADSLLM_URL")
                   },
                   model_names={
