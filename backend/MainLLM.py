@@ -71,7 +71,6 @@ class MainLLM:
         logging.info(f"Main LLM initialized with model '{model_name}'.")
     
     def call_llm(self, user_input: str):
-
         messages = [
             SystemMessage(content=self.system_prompt),
             HumanMessage(content=user_input)
@@ -81,24 +80,25 @@ class MainLLM:
         try:
             response = self.llm.invoke(messages)
             logging.info("LLM call successful.")
-            return response.content
+            
+            content = response.content
+            
+            if isinstance(content, list):
+                text_parts = []
+                for part in content:
+                    if isinstance(part, str):
+                        text_parts.append(part)
+                    elif isinstance(part, dict) and "text" in part:
+                        text_parts.append(part["text"])
+                return "".join(text_parts)
+            
+            elif isinstance(content, str):
+                return content
+                
+            else:
+                return str(content)
+
         except Exception as e:
             logging.error(f"Error during LLM call: {e}")
-            return None
+            return None 
 
-    def stream_llm(self, user_input: str):
-        messages = [
-            SystemMessage(content=self.system_prompt),
-            HumanMessage(content=user_input)
-        ]
-        logging.info("Calling LLM with 'stream'...")
-
-        try:
-            stream_iterator = self.llm.stream(messages)
-            
-            for chunk in stream_iterator:
-                yield chunk.content
-        except Exception as e:
-            error_message = f"\n--- Error during LLM stream call: {e} ---"
-            logging.error(error_message)
-            yield error_message
