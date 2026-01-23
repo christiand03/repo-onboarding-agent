@@ -1,0 +1,24 @@
+[
+    {
+        "helper_model": "alias-ha",
+        "evaluator_model": "gemini-3-flash-preview",
+        "status": "failed",
+        "score": 0,
+        "duration_gen_sec": 287.99,
+        "duration_eval_sec": 28.16,
+        "items_processed": 60,
+        "error_message": "Crash: expected string or bytes-like object, got 'list'",
+        "timestamp": "2026-01-23 14:02:05"
+    },
+    {
+        "helper_model": "alias-code",
+        "evaluator_model": "gemini-3-flash-preview",
+        "status": "failed",
+        "score": 0,
+        "duration_gen_sec": 54.1,
+        "duration_eval_sec": 159.5,
+        "items_processed": 86,
+        "error_message": "Crash: expected string or bytes-like object, got 'list'",
+        "timestamp": "2026-01-23 14:08:27"
+    }
+]

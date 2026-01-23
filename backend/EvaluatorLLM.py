@@ -80,7 +80,19 @@ class EvaluatorLLM:
                 COMMAND: 
                 Perform the evaluation based on the System Prompt rules.
                 """
-        return self._invoke_llm(user_input_content)
+        
+        raw_response = self._invoke_llm(user_input_content)
+
+        if isinstance(raw_response, list):
+            text_parts = []
+            for part in raw_response:
+                if isinstance(part, str):
+                    text_parts.append(part)
+                elif isinstance(part, dict) and "text" in part:
+                    text_parts.append(part["text"])
+            return "".join(text_parts)
+
+        return str(raw_response) if raw_response is not None else None
 
     def evaluate_helper_analysis(self, original_source_code_json: str, generated_analysis_json: str):
         """

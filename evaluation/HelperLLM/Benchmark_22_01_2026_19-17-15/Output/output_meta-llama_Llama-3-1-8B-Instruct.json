@@ -1,0 +1,1713 @@
+{
+  "functions": {
+    "backend.AST_Schema.path_to_module": {
+      "identifier": "backend.AST_Schema.path_to_module",
+      "description": {
+        "overall": "This function converts a file path to a Python module path. It takes a file path and a project root as input, and returns the corresponding module path. If the file path is a Python file, it removes the .py extension. If the module path ends with .__init__, it removes the last 9 characters.",
+        "parameters": [
+          {
+            "name": "filepath",
+            "type": "str",
+            "description": "The file path to be converted."
+          },
+          {
+            "name": "project_root",
+            "type": "str",
+            "description": "The project root directory."
+          }
+        ],
+        "returns": [
+          {
+            "name": "module_path",
+            "type": "str",
+            "description": "The converted module path."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.File_Dependency.build_file_dependency_graph": {
+      "identifier": "backend.File_Dependency.build_file_dependency_graph",
+      "description": {
+        "overall": "This function constructs a directed graph representing the file dependencies within a given file. It utilizes the Abstract Syntax Tree (AST) of the file to identify import dependencies. The function takes in a filename, the AST of the file, and the repository root as input. It returns a NetworkX directed graph.",
+        "parameters": [
+          {
+            "name": "filename",
+            "type": "str",
+            "description": "The name of the file for which to build the dependency graph."
+          },
+          {
+            "name": "tree",
+            "type": "AST",
+            "description": "The Abstract Syntax Tree of the file."
+          },
+          {
+            "name": "repo_root",
+            "type": "str",
+            "description": "The root directory of the repository."
+          }
+        ],
+        "returns": [
+          {
+            "name": "graph",
+            "type": "nx.DiGraph",
+            "description": "A directed graph representing the file dependencies within the given file."
+          }
+        ],
+        "usage_context": {
+          "calls": "backend.File_Dependency.FileDependencyGraph",
+          "called_by": "This function is not called by any other functions in the provided context."
+        }
+      },
+      "error": null
+    },
+    "backend.File_Dependency.build_repository_graph": {
+      "identifier": "backend.File_Dependency.build_repository_graph",
+      "description": {
+        "overall": "This function constructs a directed graph representing the dependencies between files in a Git repository. It iterates over all files, excluding non-Python files, and uses the `build_file_dependency_graph` function to create a graph for each Python file. The nodes and edges of these graphs are then added to a global graph, which is returned at the end.",
+        "parameters": [
+          {
+            "name": "repository",
+            "type": "GitRepository",
+            "description": "The Git repository to analyze."
+          }
+        ],
+        "returns": [
+          {
+            "name": "nx.DiGraph",
+            "type": "nx.DiGraph",
+            "description": "The constructed graph representing the file dependencies."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls `backend.File_Dependency.build_file_dependency_graph`.",
+          "called_by": "This function is not called by any other functions in the provided context."
+        }
+      },
+      "error": null
+    },
+    "backend.File_Dependency.get_all_temp_files": {
+      "identifier": "backend.File_Dependency.get_all_temp_files",
+      "description": {
+        "overall": "This function retrieves a list of temporary files within a specified directory. It uses the `rglob` method to recursively search for files with the `.py` extension and returns their relative paths to the specified directory. The function takes a directory path as input and returns a list of `Path` objects representing the temporary files.",
+        "parameters": [
+          {
+            "name": "directory",
+            "type": "str",
+            "description": "The directory path to search for temporary files."
+          }
+        ],
+        "returns": [
+          {
+            "name": "list of temporary files",
+            "type": "list[Path]",
+            "description": "A list of `Path` objects representing the temporary files found in the specified directory."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.HelperLLM.main_orchestrator": {
+      "identifier": "backend.HelperLLM.main_orchestrator",
+      "description": {
+        "overall": "This function orchestrates the analysis of multiple functions within the system.",
+        "parameters": [],
+        "returns": [],
+        "usage_context": {
+          "calls": "LLMHelper, ClassAnalysisInput, ClassContextInput",
+          "called_by": "This function is called by no other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.callgraph.make_safe_dot": {
+      "identifier": "backend.callgraph.make_safe_dot",
+      "description": {
+        "overall": "This function takes a directed graph and an output path, and generates a safe dot file representation of the graph. It achieves this by creating a mapping of original node names to safe names, and then relabeling the nodes in the graph with these safe names. Finally, it writes the graph to the specified output path in dot format.",
+        "parameters": [
+          {
+            "name": "graph",
+            "type": "nx.DiGraph",
+            "description": "A directed graph to be converted into a safe dot file representation."
+          },
+          {
+            "name": "out_path",
+            "type": "str",
+            "description": "The path where the safe dot file representation of the graph will be written."
+          }
+        ],
+        "returns": [],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.callgraph.build_filtered_callgraph": {
+      "identifier": "backend.callgraph.build_filtered_callgraph",
+      "description": {
+        "overall": "This function builds a filtered call graph for a given Git repository. It parses all Python files, extracts function calls, and filters out calls to external functions. The resulting graph represents the call relationships between self-written functions.",
+        "parameters": [
+          {
+            "name": "repo",
+            "type": "GitRepository",
+            "description": "The Git repository to build the call graph for."
+          }
+        ],
+        "returns": [
+          {
+            "name": "nx.DiGraph",
+            "type": "nx.DiGraph",
+            "description": "The filtered call graph as a directed graph."
+          }
+        ],
+        "usage_context": {
+          "calls": "backend.callgraph.CallGraph",
+          "called_by": "This function is not called by any other functions in the provided context."
+        }
+      },
+      "error": null
+    },
+    "backend.converter.wrap_cdata": {
+      "identifier": "backend.converter.wrap_cdata",
+      "description": {
+        "overall": "The `wrap_cdata` function takes a string input and returns a string wrapped in CDATA tags. It uses an f-string to format the content within the tags. The function appears to be designed for use in Jupyter Notebook environments, where CDATA tags are used to prevent XML parsing errors.",
+        "parameters": [
+          {
+            "name": "content",
+            "type": "str",
+            "description": "The input string to be wrapped in CDATA tags."
+          }
+        ],
+        "returns": [
+          {
+            "name": "wrapped_content",
+            "type": "str",
+            "description": "The input content wrapped in CDATA tags."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.converter.extract_output_content": {
+      "identifier": "backend.converter.extract_output_content",
+      "description": {
+        "overall": "This function extracts text and handles images by decoding Base64 to bytes from a list of outputs. It returns a list of text strings or placeholders. The function iterates over each output, checks its type, and processes it accordingly. If the output is of type 'display_data' or 'execute_result', it checks if the output has a 'data' attribute. If it does, it processes the image using the 'process_image' helper function. If the image is not found, it checks if the output has a 'text/plain' attribute and appends its value to the 'extracted_xml_snippets' list. If the output is of type 'stream', it appends the output's text to the list. If the output is of type 'error', it appends the error message to the list. Finally, it returns the 'extracted_xml_snippets' list.",
+        "parameters": [
+          {
+            "name": "outputs",
+            "type": "list",
+            "description": "A list of outputs to extract text and handle images from."
+          },
+          {
+            "name": "image_list",
+            "type": "list",
+            "description": "A list to store image data."
+          }
+        ],
+        "returns": [
+          {
+            "name": "extracted_xml_snippets",
+            "type": "list",
+            "description": "A list of text strings or placeholders."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls the 'process_image' function.",
+          "called_by": "This function is called by no other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.converter.process_image": {
+      "identifier": "backend.converter.process_image",
+      "description": {
+        "overall": "This function processes an image by decoding its base64 string and appending it to a list of images. It returns an HTML string with an image placeholder if successful, or an error message if decoding fails.",
+        "parameters": [
+          {
+            "name": "mime_type",
+            "type": "str",
+            "description": "The MIME type of the image to be processed."
+          }
+        ],
+        "returns": [
+          {
+            "name": "result",
+            "type": "str",
+            "description": "The result of the image processing, either an HTML string with an image placeholder or an error message."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.converter.convert_notebook_to_xml": {
+      "identifier": "backend.converter.convert_notebook_to_xml",
+      "description": {
+        "overall": "This function takes a notebook file content as input, attempts to parse it as a JSON/Notebook, and returns the converted XML content along with any extracted images. If the file cannot be parsed, it returns an error message and an empty list of images.",
+        "parameters": [
+          {
+            "name": "file_content",
+            "type": "str",
+            "description": "The content of the notebook file to be converted to XML."
+          }
+        ],
+        "returns": [
+          {
+            "name": "xml_content",
+            "type": "str",
+            "description": "The converted XML content of the notebook file."
+          },
+          {
+            "name": "extracted_images",
+            "type": "list",
+            "description": "A list of extracted images from the notebook file."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls backend.converter.extract_output_content and backend.converter.wrap_cdata.",
+          "called_by": "This function is called by no other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.converter.process_repo_notebooks": {
+      "identifier": "backend.converter.process_repo_notebooks",
+      "description": {
+        "overall": "This function processes Jupyter notebooks from a repository by converting them to XML format and extracting images. It iterates over the notebook files, logs the processing status, and returns a dictionary with the converted notebooks and their corresponding images.",
+        "parameters": [
+          {
+            "name": "repo_files",
+            "type": "list",
+            "description": "A list of repository files to process."
+          }
+        ],
+        "returns": [
+          {
+            "name": "results",
+            "type": "dict",
+            "description": "A dictionary containing the converted notebooks and their corresponding images."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls convert_notebook_to_xml.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.main.create_savings_chart": {
+      "identifier": "backend.main.create_savings_chart",
+      "description": {
+        "overall": "This function creates a bar chart comparing JSON and TOON tokens and saves it to a specified output path. It takes four parameters: json_tokens, toon_tokens, savings_percent, and output_path. The chart displays the number of tokens for each format, with the title showing the savings percentage. The function uses matplotlib to create the chart and save it to a file.",
+        "parameters": [
+          {
+            "name": "json_tokens",
+            "type": "int",
+            "description": "The number of JSON tokens."
+          },
+          {
+            "name": "toon_tokens",
+            "type": "int",
+            "description": "The number of TOON tokens."
+          },
+          {
+            "name": "savings_percent",
+            "type": "float",
+            "description": "The percentage of savings."
+          },
+          {
+            "name": "output_path",
+            "type": "str",
+            "description": "The path where the chart will be saved."
+          }
+        ],
+        "returns": [],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.main.calculate_net_time": {
+      "identifier": "backend.main.calculate_net_time",
+      "description": {
+        "overall": "This function calculates the net time spent on a task, excluding sleep times for rate limits. It takes into account the total duration, total items, batch size, and model name. If the model name does not start with 'gemini-', it returns the total duration. If there are no items, it returns 0. Otherwise, it calculates the number of batches, sleep count, and total sleep time, then returns the net time after subtracting the total sleep time.",
+        "parameters": [
+          {
+            "name": "start_time",
+            "type": "datetime.datetime",
+            "description": "The start time of the task"
+          },
+          {
+            "name": "end_time",
+            "type": "datetime.datetime",
+            "description": "The end time of the task"
+          },
+          {
+            "name": "total_items",
+            "type": "int",
+            "description": "The total number of items"
+          },
+          {
+            "name": "batch_size",
+            "type": "int",
+            "description": "The batch size"
+          },
+          {
+            "name": "model_name",
+            "type": "str",
+            "description": "The name of the model"
+          }
+        ],
+        "returns": [
+          {
+            "name": "net_time",
+            "type": "int",
+            "description": "The net time spent on the task, excluding sleep times for rate limits"
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.main.main_workflow": {
+      "identifier": "backend.main.main_workflow",
+      "description": {
+        "overall": "The main_workflow function is the entry point of the backend. It orchestrates the entire process, from input analysis to output generation. It uses various helper functions and classes to extract information from the input, analyze the repository, and generate a final report.",
+        "parameters": [
+          {
+            "name": "input",
+            "type": "object",
+            "description": "The input to the main_workflow function, which contains user-provided data."
+          },
+          {
+            "name": "api_keys",
+            "type": "dict",
+            "description": "A dictionary containing API keys for various services."
+          },
+          {
+            "name": "model_names",
+            "type": "dict",
+            "description": "A dictionary containing model names for various services."
+          },
+          {
+            "name": "status_callback",
+            "type": "function",
+            "description": "An optional callback function to update the status of the process."
+          }
+        ],
+        "returns": [
+          {
+            "name": "analysis_results",
+            "type": "dict",
+            "description": "A dictionary containing the results of the analysis, including basic project information, file tree, AST schema, and analysis results."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls backend.AST_Schema.ASTAnalyzer, backend.HelperLLM.LLMHelper, backend.MainLLM.MainLLM, backend.basic_info.ProjektInfoExtractor, backend.getRepo.GitRepository, backend.relationship_analyzer.ProjectAnalyzer, and various other functions and classes.",
+          "called_by": "This function is called by no other functions in the provided context."
+        }
+      },
+      "error": null
+    },
+    "backend.main.update_status": {
+      "identifier": "backend.main.update_status",
+      "description": {
+        "overall": "This function updates the status by calling a callback function if it exists and logs the message. It appears to be a simple status updater.",
+        "parameters": [
+          {
+            "name": "msg",
+            "type": "str",
+            "description": "The message to be logged and passed to the status callback function."
+          }
+        ],
+        "returns": [],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.main.notebook_workflow": {
+      "identifier": "backend.main.notebook_workflow",
+      "description": {
+        "overall": "This function orchestrates the notebook workflow by cloning a repository, extracting basic project information, and generating reports for each notebook using the MainLLM model. It takes in input, API keys, and a model name, and returns a final report and metrics.",
+        "parameters": [
+          {
+            "name": "input",
+            "type": "string",
+            "description": "The input to be processed."
+          },
+          {
+            "name": "api_keys",
+            "type": "dict",
+            "description": "A dictionary of API keys."
+          },
+          {
+            "name": "model",
+            "type": "string",
+            "description": "The name of the model to be used."
+          },
+          {
+            "name": "status_callback",
+            "type": "function",
+            "description": "A callback function for updating the status."
+          }
+        ],
+        "returns": [
+          {
+            "name": "report",
+            "type": "string",
+            "description": "The final report generated by the notebook workflow."
+          },
+          {
+            "name": "metrics",
+            "type": "dict",
+            "description": "A dictionary of metrics, including helper time, main time, total time, helper model, main model, JSON tokens, Toon tokens, and savings percent."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls `backend.MainLLM.MainLLM`, `backend.MainLLM.MainLLM.call_llm`, `backend.basic_info.ProjektInfoExtractor`, `backend.basic_info.ProjektInfoExtractor.extrahiere_info`, `backend.converter.process_repo_notebooks`, `backend.getRepo.GitRepository`, `backend.main.gemini_payload`, and `backend.main.update_status`.",
+          "called_by": "This function is called by no other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.main.gemini_payload": {
+      "identifier": "backend.main.gemini_payload",
+      "description": {
+        "overall": "The `gemini_payload` function constructs a payload for the Gemini protocol by parsing the provided XML content and images. It extracts context information, notebook XML structure, and image URLs, and returns a list of payload content items.",
+        "parameters": [
+          {
+            "name": "basic_info",
+            "type": "object",
+            "description": "Basic information about the project or notebook."
+          },
+          {
+            "name": "nb_path",
+            "type": "string",
+            "description": "The current notebook path."
+          },
+          {
+            "name": "xml_content",
+            "type": "string",
+            "description": "The XML content of the notebook."
+          },
+          {
+            "name": "images",
+            "type": "list",
+            "description": "A list of image data, where each item contains a 'data' key with a base64-encoded image string."
+          }
+        ],
+        "returns": [
+          {
+            "name": "payload_content",
+            "type": "list",
+            "description": "A list of payload content items, each containing a 'type' and 'text' or 'image_url' key."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "backend.relationship_analyzer.path_to_module": {
+      "identifier": "backend.relationship_analyzer.path_to_module",
+      "description": {
+        "overall": "This function converts a file path to a Python module path. It takes a file path and a project root as input, and returns the corresponding module path. If the file path is a Python file, it removes the .py extension. If the module path ends with .__init__, it removes the last 9 characters.",
+        "parameters": [
+          {
+            "name": "filepath",
+            "type": "str",
+            "description": "The file path to be converted to a module path."
+          },
+          {
+            "name": "project_root",
+            "type": "str",
+            "description": "The project root directory."
+          }
+        ],
+        "returns": [
+          {
+            "name": "module_path",
+            "type": "str",
+            "description": "The module path corresponding to the file path."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.encrypt_text": {
+      "identifier": "database.db.encrypt_text",
+      "description": {
+        "overall": "This function encrypts the provided text using a cipher suite. If the input text is empty or the cipher suite is not available, it returns the original text.",
+        "parameters": [
+          {
+            "name": "text",
+            "type": "str",
+            "description": "The text to be encrypted."
+          }
+        ],
+        "returns": [
+          {
+            "name": "encrypted_text",
+            "type": "str",
+            "description": "The encrypted text, or the original text if encryption fails."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.decrypt_text": {
+      "identifier": "database.db.decrypt_text",
+      "description": {
+        "overall": "The `decrypt_text` function decrypts a given text using a cipher suite, returning the decrypted text if successful. If the text is empty or the cipher suite is missing, it returns the original text. If decryption fails, it also returns the original text.",
+        "parameters": [
+          {
+            "name": "text",
+            "type": "str",
+            "description": "The text to be decrypted."
+          }
+        ],
+        "returns": [
+          {
+            "name": "decrypted_text",
+            "type": "str",
+            "description": "The decrypted text if successful, otherwise the original text."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.insert_user": {
+      "identifier": "database.db.insert_user",
+      "description": {
+        "overall": "This function inserts a new user into the database with the provided username, name, and password. The password is hashed using the `stauth.Hasher.hash` function. The function returns the inserted user's ID.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username of the new user."
+          },
+          {
+            "name": "name",
+            "type": "str",
+            "description": "The name of the new user."
+          },
+          {
+            "name": "password",
+            "type": "str",
+            "description": "The password of the new user."
+          }
+        ],
+        "returns": [
+          {
+            "name": "inserted_id",
+            "type": "Any",
+            "description": "The ID of the inserted user."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.fetch_all_users": {
+      "identifier": "database.db.fetch_all_users",
+      "description": {
+        "overall": "This function fetches all users from the database by querying the dbusers collection. It returns a list of users. The function does not take any parameters and does not modify the database. The function uses the pymongo library to interact with the MongoDB database.",
+        "parameters": [],
+        "returns": [
+          {
+            "name": "all_users",
+            "type": "list",
+            "description": "A list of users fetched from the database"
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.fetch_user": {
+      "identifier": "database.db.fetch_user",
+      "description": {
+        "overall": "This function fetches a user from the database based on their username. It uses the `dbusers` collection to find the user document with the matching `_id` field. If the user is found, it returns the user document; otherwise, it returns `None`. The function does not handle any potential errors that may occur during the database query.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username of the user to fetch from the database."
+          }
+        ],
+        "returns": [
+          {
+            "name": "user_document",
+            "type": "dict",
+            "description": "The user document from the database, or `None` if the user is not found."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.update_user_name": {
+      "identifier": "database.db.update_user_name",
+      "description": {
+        "overall": "This function updates the 'name' field of a user in the database with a new name. It uses the MongoDB update_one method to achieve this. The function takes two parameters: the current username and the new name. It returns the number of documents modified.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The current username of the user to be updated."
+          },
+          {
+            "name": "new_name",
+            "type": "str",
+            "description": "The new name to be updated in the database."
+          }
+        ],
+        "returns": [
+          {
+            "name": "modified_count",
+            "type": "int",
+            "description": "The number of documents modified by the update operation."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.update_gemini_key": {
+      "identifier": "database.db.update_gemini_key",
+      "description": {
+        "overall": "Updates the Gemini API key for a given username in the database by encrypting the provided key and storing it in the MongoDB collection 'dbusers'.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username to update the Gemini API key for."
+          },
+          {
+            "name": "gemini_api_key",
+            "type": "str",
+            "description": "The Gemini API key to be encrypted and stored in the database."
+          }
+        ],
+        "returns": [
+          {
+            "name": "modified_count",
+            "type": "int",
+            "description": "The number of documents modified in the database as a result of the update operation."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls the 'database.db.encrypt_text' function.",
+          "called_by": "This function is not called by any other functions in the provided context."
+        }
+      },
+      "error": null
+    },
+    "database.db.update_gpt_key": {
+      "identifier": "database.db.update_gpt_key",
+      "description": {
+        "overall": "This function updates the GPT API key for a specified user in the database by encrypting the key and using the `dbusers.update_one` method. It returns the number of documents modified.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username of the user whose GPT API key is to be updated."
+          },
+          {
+            "name": "gpt_api_key",
+            "type": "str",
+            "description": "The GPT API key to be encrypted and updated in the database."
+          }
+        ],
+        "returns": [
+          {
+            "name": "modified_count",
+            "type": "int",
+            "description": "The number of documents modified in the database."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls `database.db.encrypt_text`.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.update_ollama_url": {
+      "identifier": "database.db.update_ollama_url",
+      "description": {
+        "overall": "Updates the Ollama base URL for a given username in the database. This function uses the `dbusers` collection to update the `ollama_base_url` field of a document matching the provided `username`. The update operation is performed using the `update_one` method of the `dbusers` collection. The function returns the number of modified documents.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username of the user whose Ollama base URL is to be updated."
+          },
+          {
+            "name": "ollama_base_url",
+            "type": "str",
+            "description": "The new Ollama base URL to be updated for the specified username."
+          }
+        ],
+        "returns": [
+          {
+            "name": "modified_count",
+            "type": "int",
+            "description": "The number of documents modified by the update operation."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.update_opensrc_key": {
+      "identifier": "database.db.update_opensrc_key",
+      "description": {
+        "overall": "Updates the opensrc_api_key for a given username in the database by encrypting the provided API key and storing it securely.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username to update the opensrc_api_key for."
+          },
+          {
+            "name": "opensrc_api_key",
+            "type": "str",
+            "description": "The opensrc_api_key to be encrypted and stored."
+          }
+        ],
+        "returns": [
+          {
+            "name": "modified_count",
+            "type": "int",
+            "description": "The number of documents modified in the database."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls database.db.encrypt_text.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.update_opensrc_url": {
+      "identifier": "database.db.update_opensrc_url",
+      "description": {
+        "overall": "This function updates the opensrc_base_url field in a MongoDB document associated with a given username. It uses the pymongo library to interact with the database. The function takes two parameters: username and opensrc_base_url, both of which are strings. The function returns the number of documents modified.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username associated with the MongoDB document to be updated."
+          },
+          {
+            "name": "opensrc_base_url",
+            "type": "str",
+            "description": "The new opensrc_base_url value to be updated in the MongoDB document."
+          }
+        ],
+        "returns": [
+          {
+            "name": "modified_count",
+            "type": "int",
+            "description": "The number of documents modified by the update operation."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.fetch_gemini_key": {
+      "identifier": "database.db.fetch_gemini_key",
+      "description": {
+        "overall": "This function fetches the Gemini API key for a given username from the MongoDB database. It uses the `dbusers` collection to find the user document and returns the `gemini_api_key` field. If the user is not found, it returns `None`. The function is designed to handle the case where the user document does not exist in the database.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username for which to fetch the Gemini API key"
+          }
+        ],
+        "returns": [
+          {
+            "name": "gemini_api_key",
+            "type": "str or None",
+            "description": "The Gemini API key for the given username, or `None` if the user is not found"
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.fetch_ollama_url": {
+      "identifier": "database.db.fetch_ollama_url",
+      "description": {
+        "overall": "This function fetches the Ollama URL associated with a given username from the database. It uses the `dbusers` collection to find the user document and returns the `ollama_base_url` field if the user exists. If the user does not exist, it returns `None`. The function takes a `username` parameter, which is expected to be a string.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username to fetch the Ollama URL for."
+          }
+        ],
+        "returns": [
+          {
+            "name": "ollama_base_url",
+            "type": "str or None",
+            "description": "The Ollama URL associated with the given username, or `None` if the user does not exist."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.fetch_gpt_key": {
+      "identifier": "database.db.fetch_gpt_key",
+      "description": {
+        "overall": "The `fetch_gpt_key` function retrieves the GPT API key associated with a given username from a MongoDB database. It uses the `dbusers` collection to find the user document and returns the `gpt_api_key` field if the user exists. If the user is not found, it returns `None`. The function takes a `username` parameter and relies on the `dbusers` collection to store user data.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username to retrieve the GPT API key for."
+          }
+        ],
+        "returns": [
+          {
+            "name": "gpt_api_key",
+            "type": "str",
+            "description": "The GPT API key associated with the given username, or `None` if the user is not found."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.fetch_opensrc_key": {
+      "identifier": "database.db.fetch_opensrc_key",
+      "description": {
+        "overall": "The `fetch_opensrc_key` function retrieves the Open Source API key for a given username from the database. It uses the `dbusers` collection to find the user document and returns the `opensrc_api_key` field if the user exists. If the user is not found, it returns `None`. The function appears to be part of a larger database management system.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username for which to retrieve the Open Source API key."
+          }
+        ],
+        "returns": [
+          {
+            "name": "opensrc_api_key",
+            "type": "str",
+            "description": "The Open Source API key for the given username, or `None` if the user is not found."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.fetch_opensrc_url": {
+      "identifier": "database.db.fetch_opensrc_url",
+      "description": {
+        "overall": "The `fetch_opensrc_url` function retrieves the opensrc_base_url associated with a given username from the database. It uses the pymongo library to interact with the MongoDB database. If the user is not found, it returns None. The function is designed to handle the case where the user does not exist in the database.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username for which to retrieve the opensrc_base_url."
+          }
+        ],
+        "returns": [
+          {
+            "name": "opensrc_base_url",
+            "type": "str",
+            "description": "The opensrc_base_url associated with the given username, or None if the user is not found."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.delete_user": {
+      "identifier": "database.db.delete_user",
+      "description": {
+        "overall": "Deletes a user from the database by their username. It uses the MongoDB `delete_one` method to remove the user document. The function returns the number of documents deleted.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username of the user to be deleted."
+          }
+        ],
+        "returns": [
+          {
+            "name": "deleted_count",
+            "type": "int",
+            "description": "The number of documents deleted from the database."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.get_decrypted_api_keys": {
+      "identifier": "database.db.get_decrypted_api_keys",
+      "description": {
+        "overall": "This function retrieves decrypted API keys for a given username from a MongoDB database. It uses the `decrypt_text` function to decrypt the stored API keys. The function returns a tuple containing the decrypted API keys and the base URLs for Ollama and OpenSRC. If the user does not exist in the database, the function returns `None` for all values.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username for which to retrieve the decrypted API keys."
+          }
+        ],
+        "returns": [
+          {
+            "name": "gemini_plain",
+            "type": "str",
+            "description": "The decrypted Gemini API key."
+          },
+          {
+            "name": "ollama_plain",
+            "type": "str",
+            "description": "The decrypted Ollama base URL."
+          },
+          {
+            "name": "gpt_plain",
+            "type": "str",
+            "description": "The decrypted GPT API key."
+          },
+          {
+            "name": "opensrc_plain",
+            "type": "str",
+            "description": "The decrypted OpenSRC API key."
+          },
+          {
+            "name": "opensrc_url",
+            "type": "str",
+            "description": "The base URL for OpenSRC."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls `database.db.decrypt_text`.",
+          "called_by": "This function is called by no other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.insert_chat": {
+      "identifier": "database.db.insert_chat",
+      "description": {
+        "overall": "This function creates a new chat entry by generating a unique ID, storing the username, chat name, and creation time, and then inserting this data into the 'chats' collection in the database. The function returns the ID of the newly inserted document.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username associated with the chat entry."
+          },
+          {
+            "name": "chat_name",
+            "type": "str",
+            "description": "The name of the chat."
+          }
+        ],
+        "returns": [
+          {
+            "name": "inserted_id",
+            "type": "str",
+            "description": "The ID of the newly inserted document in the 'chats' collection."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.fetch_chats_by_user": {
+      "identifier": "database.db.fetch_chats_by_user",
+      "description": {
+        "overall": "This function fetches all defined chats for a given user. It retrieves the chats from the database, sorting them by creation date in ascending order.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username for which to fetch chats."
+          }
+        ],
+        "returns": [
+          {
+            "name": "chats",
+            "type": "list",
+            "description": "A list of chat objects sorted by creation date."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.check_chat_exists": {
+      "identifier": "database.db.check_chat_exists",
+      "description": {
+        "overall": "Checks if a chat exists in the database for a given username and chat name. It uses the pymongo library to query the database. If the chat exists, it returns True; otherwise, it returns False.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username to check for the chat."
+          },
+          {
+            "name": "chat_name",
+            "type": "str",
+            "description": "The name of the chat to check for."
+          }
+        ],
+        "returns": [
+          {
+            "name": "result",
+            "type": "bool",
+            "description": "True if the chat exists, False otherwise."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.rename_chat_fully": {
+      "identifier": "database.db.rename_chat_fully",
+      "description": {
+        "overall": "This function renames a chat and all associated exchanges by updating the chat entry and all messages in the database. It takes three parameters: the username, the old chat name, and the new chat name. The function returns the number of modified documents.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username of the chat owner"
+          },
+          {
+            "name": "old_name",
+            "type": "str",
+            "description": "The current name of the chat"
+          },
+          {
+            "name": "new_name",
+            "type": "str",
+            "description": "The new name of the chat"
+          }
+        ],
+        "returns": [
+          {
+            "name": "modified_count",
+            "type": "int",
+            "description": "The number of modified documents"
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.insert_exchange": {
+      "identifier": "database.db.insert_exchange",
+      "description": {
+        "overall": "This function inserts a new exchange into the database. It takes in various parameters such as question, answer, feedback, username, and chat name. The function generates a unique ID for the exchange and inserts it into the database. If the insertion is successful, it returns the new ID.",
+        "parameters": [
+          {
+            "name": "question",
+            "type": "str",
+            "description": "The question being asked."
+          },
+          {
+            "name": "answer",
+            "type": "str",
+            "description": "The answer to the question."
+          },
+          {
+            "name": "feedback",
+            "type": "str",
+            "description": "The feedback provided for the answer."
+          },
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username of the user who asked the question."
+          },
+          {
+            "name": "chat_name",
+            "type": "str",
+            "description": "The name of the chat where the question was asked."
+          },
+          {
+            "name": "helper_used",
+            "type": "str",
+            "description": "The helper used to answer the question (default: empty string)"
+          },
+          {
+            "name": "main_used",
+            "type": "str",
+            "description": "The main used to answer the question (default: empty string)"
+          },
+          {
+            "name": "total_time",
+            "type": "str",
+            "description": "The total time taken to answer the question (default: empty string)"
+          },
+          {
+            "name": "helper_time",
+            "type": "str",
+            "description": "The time taken by the helper to answer the question (default: empty string)"
+          },
+          {
+            "name": "main_time",
+            "type": "str",
+            "description": "The time taken by the main to answer the question (default: empty string)"
+          },
+          {
+            "name": "json_tokens",
+            "type": "int",
+            "description": "The number of JSON tokens used (default: 0)"
+          },
+          {
+            "name": "toon_tokens",
+            "type": "int",
+            "description": "The number of Toon tokens used (default: 0)"
+          },
+          {
+            "name": "savings_percent",
+            "type": "float",
+            "description": "The percentage of savings (default: 0.0)"
+          }
+        ],
+        "returns": [
+          {
+            "name": "new_id",
+            "type": "str",
+            "description": "The unique ID of the newly inserted exchange"
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.fetch_exchanges_by_user": {
+      "identifier": "database.db.fetch_exchanges_by_user",
+      "description": {
+        "overall": "The `fetch_exchanges_by_user` function retrieves a list of exchanges sorted by their creation timestamp for a specified username.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username for which to fetch exchanges."
+          }
+        ],
+        "returns": [
+          {
+            "name": "exchanges",
+            "type": "list",
+            "description": "A list of exchanges sorted by their creation timestamp."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.fetch_exchanges_by_chat": {
+      "identifier": "database.db.fetch_exchanges_by_chat",
+      "description": {
+        "overall": "This function fetches exchanges by chat from a MongoDB database. It takes a username and a chat name as input, and returns a list of exchanges sorted by creation date in ascending order.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username to filter exchanges by."
+          },
+          {
+            "name": "chat_name",
+            "type": "str",
+            "description": "The name of the chat to filter exchanges by."
+          }
+        ],
+        "returns": [
+          {
+            "name": "exchanges",
+            "type": "list",
+            "description": "A list of exchanges sorted by creation date in ascending order."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.update_exchange_feedback": {
+      "identifier": "database.db.update_exchange_feedback",
+      "description": {
+        "overall": "Updates the feedback for a specified exchange in the database. This function uses the MongoDB update_one method to modify the exchange document. The function takes an exchange ID and a feedback value as input, and returns the number of documents modified.",
+        "parameters": [
+          {
+            "name": "exchange_id",
+            "type": "int",
+            "description": "The ID of the exchange to update."
+          },
+          {
+            "name": "feedback",
+            "type": "int",
+            "description": "The new feedback value for the exchange."
+          }
+        ],
+        "returns": [
+          {
+            "name": "modified_count",
+            "type": "int",
+            "description": "The number of documents modified by the update operation."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.update_exchange_feedback_message": {
+      "identifier": "database.db.update_exchange_feedback_message",
+      "description": {
+        "overall": "This function updates the feedback message for a specified exchange in the database. It takes the exchange ID and the new feedback message as input, and returns the number of documents modified. The function uses the `dbexchanges` collection in the MongoDB database.",
+        "parameters": [
+          {
+            "name": "exchange_id",
+            "type": "int",
+            "description": "The ID of the exchange to update."
+          },
+          {
+            "name": "feedback_message",
+            "type": "str",
+            "description": "The new feedback message to update in the exchange."
+          }
+        ],
+        "returns": [
+          {
+            "name": "modified_count",
+            "type": "int",
+            "description": "The number of documents modified in the database."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.delete_exchange_by_id": {
+      "identifier": "database.db.delete_exchange_by_id",
+      "description": {
+        "overall": "Deletes an exchange by its ID from the database. The function uses the MongoDB `delete_one` method to remove the specified document. If the document is found and deleted, the function returns the number of documents deleted. Otherwise, it returns 0.",
+        "parameters": [
+          {
+            "name": "exchange_id",
+            "type": "str",
+            "description": "The ID of the exchange to be deleted."
+          }
+        ],
+        "returns": [
+          {
+            "name": "deleted_count",
+            "type": "int",
+            "description": "The number of documents deleted from the database."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "database.db.delete_full_chat": {
+      "identifier": "database.db.delete_full_chat",
+      "description": {
+        "overall": "This function deletes a full chat and all associated exchanges from the database to maintain consistency between the frontend and backend. It takes a username and a chat name as input, deletes all messages in the chat, and then removes the chat from the chat list. The function returns the number of deleted documents.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username of the chat owner"
+          },
+          {
+            "name": "chat_name",
+            "type": "str",
+            "description": "The name of the chat to be deleted"
+          }
+        ],
+        "returns": [
+          {
+            "name": "del_chat.deleted_count",
+            "type": "int",
+            "description": "The number of deleted documents"
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "frontend.frontend.clean_names": {
+      "identifier": "frontend.frontend.clean_names",
+      "description": {
+        "overall": "The `clean_names` function takes a list of model names as input, splits each name at the '/' character, and returns a new list containing the last part of each split name.",
+        "parameters": [
+          {
+            "name": "model_list",
+            "type": "list",
+            "description": "A list of model names"
+          }
+        ],
+        "returns": [
+          {
+            "name": "cleaned_names",
+            "type": "list",
+            "description": "A list of cleaned model names"
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "frontend.frontend.get_filtered_models": {
+      "identifier": "frontend.frontend.get_filtered_models",
+      "description": {
+        "overall": "This function filters a list of models based on the chosen category. It returns a list of models that match the category's keywords. If the category is 'STANDARD', it only returns models that are also in the STANDARD_MODELS list. Otherwise, it returns all models that contain any of the category's keywords.",
+        "parameters": [
+          {
+            "name": "source_list",
+            "type": "list",
+            "description": "The list of models to be filtered."
+          },
+          {
+            "name": "category_name",
+            "type": "str",
+            "description": "The name of the category to filter by."
+          }
+        ],
+        "returns": [
+          {
+            "name": "filtered_models",
+            "type": "list",
+            "description": "The filtered list of models."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "frontend.frontend.save_gemini_cb": {
+      "identifier": "frontend.frontend.save_gemini_cb",
+      "description": {
+        "overall": "This function saves the Gemini key to the database. It retrieves the new key from the session state, updates the Gemini key in the database, and then clears the session state variable for the new key. Finally, it displays a toast message to the user indicating that the Gemini key has been successfully saved.",
+        "parameters": [],
+        "returns": [],
+        "usage_context": {
+          "calls": "This function calls database.db.update_gemini_key.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "frontend.frontend.save_ollama_cb": {
+      "identifier": "frontend.frontend.save_ollama_cb",
+      "description": {
+        "overall": "This function saves the Ollama URL to the database and displays a toast notification upon successful update.",
+        "parameters": [],
+        "returns": [],
+        "usage_context": {
+          "calls": "The function calls database.db.update_ollama_url.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "frontend.frontend.load_data_from_db": {
+      "identifier": "frontend.frontend.load_data_from_db",
+      "description": {
+        "overall": "This function loads data from the database for a given user. It retrieves chats and exchanges, and initializes a default chat if none exist. The function also sets the active chat and updates the loaded user state.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username for which to load data"
+          }
+        ],
+        "returns": [],
+        "usage_context": {
+          "calls": "This function calls database.db.fetch_chats_by_user, database.db.fetch_exchanges_by_user, and database.db.insert_chat.",
+          "called_by": "This function is called by no other functions."
+        }
+      },
+      "error": null
+    },
+    "frontend.frontend.handle_feedback_change": {
+      "identifier": "frontend.frontend.handle_feedback_change",
+      "description": {
+        "overall": "This function updates the feedback of an exchange in the database and reruns the streamlit application. It takes an exchange object and a new feedback value as input. The function modifies the exchange object's feedback attribute and then calls the database's update_exchange_feedback function to persist the change. Finally, it reruns the streamlit application using the st.rerun() function.",
+        "parameters": [
+          {
+            "name": "ex",
+            "type": "dict",
+            "description": "The exchange object containing the ID of the exchange to update."
+          },
+          {
+            "name": "val",
+            "type": "any",
+            "description": "The new feedback value to assign to the exchange."
+          }
+        ],
+        "returns": [],
+        "usage_context": {
+          "calls": "This function calls database.db.update_exchange_feedback.",
+          "called_by": "This function is called by no other functions."
+        }
+      },
+      "error": null
+    },
+    "frontend.frontend.handle_delete_exchange": {
+      "identifier": "frontend.frontend.handle_delete_exchange",
+      "description": {
+        "overall": "This function handles the deletion of an exchange in a chat by removing it from the database and updating the chat's exchanges list. It then reruns the Streamlit application to reflect the changes.",
+        "parameters": [
+          {
+            "name": "chat_name",
+            "type": "str",
+            "description": "The name of the chat where the exchange is being deleted."
+          },
+          {
+            "name": "ex",
+            "type": "dict",
+            "description": "A dictionary containing the exchange to be deleted, including its ID."
+          }
+        ],
+        "returns": [],
+        "usage_context": {
+          "calls": "This function calls database.db.delete_exchange_by_id.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "frontend.frontend.handle_delete_chat": {
+      "identifier": "frontend.frontend.handle_delete_chat",
+      "description": {
+        "overall": "The `handle_delete_chat` function is responsible for deleting a specified chat from the database and updating the application's state accordingly. It first calls the `delete_full_chat` function from the database module to remove the chat from the database. Then, it removes the chat from the application's state and updates the active chat if necessary. If all chats are deleted, it creates a new empty chat and sets it as the active chat. Finally, it reruns the application to reflect the changes.",
+        "parameters": [
+          {
+            "name": "username",
+            "type": "str",
+            "description": "The username of the user deleting the chat."
+          },
+          {
+            "name": "chat_name",
+            "type": "str",
+            "description": "The name of the chat to be deleted."
+          }
+        ],
+        "returns": [],
+        "usage_context": {
+          "calls": "This function calls database.db.delete_full_chat and database.db.insert_chat.",
+          "called_by": "This function is called by unknown functions."
+        }
+      },
+      "error": null
+    },
+    "frontend.frontend.extract_repo_name": {
+      "identifier": "frontend.frontend.extract_repo_name",
+      "description": {
+        "overall": "This function extracts the repository name from a given text, typically a URL. It uses regular expressions to find the URL, parses it, and then extracts the repository name from the path. If the repository name ends with '.git', it is removed. The function returns the repository name if found, otherwise it returns None.",
+        "parameters": [
+          {
+            "name": "text",
+            "type": "str",
+            "description": "The input text from which the repository name is to be extracted."
+          }
+        ],
+        "returns": [
+          {
+            "name": "repo_name",
+            "type": "str",
+            "description": "The extracted repository name, or None if not found."
+          }
+        ],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "frontend.frontend.stream_text_generator": {
+      "identifier": "frontend.frontend.stream_text_generator",
+      "description": {
+        "overall": "This function generates a stream of text by splitting the input text into individual words and yielding each word with a trailing space. It introduces a 10ms delay between each word. The function is designed to be used in a streaming context, such as in a graphical user interface.",
+        "parameters": [
+          {
+            "name": "text",
+            "type": "str",
+            "description": "The input text to be split into individual words."
+          }
+        ],
+        "returns": [],
+        "usage_context": {
+          "calls": "This function calls no other functions.",
+          "called_by": "This function is used by no other functions."
+        }
+      },
+      "error": null
+    },
+    "frontend.frontend.render_text_with_mermaid": {
+      "identifier": "frontend.frontend.render_text_with_mermaid",
+      "description": {
+        "overall": "This function takes markdown text as input and renders Mermaid diagrams within it. It splits the markdown text into parts, processes each part, and uses Streamlit's st_mermaid function to render Mermaid diagrams. If a part is not a Mermaid diagram, it is rendered as code. The function also allows for streaming the text generator if specified.",
+        "parameters": [
+          {
+            "name": "markdown_text",
+            "type": "str",
+            "description": "The markdown text to be processed and rendered."
+          },
+          {
+            "name": "should_stream",
+            "type": "bool",
+            "description": "A flag indicating whether to stream the text generator or not."
+          }
+        ],
+        "returns": [],
+        "usage_context": {
+          "calls": "This function calls frontend.frontend.stream_text_generator.",
+          "called_by": "This function is not called by any other functions."
+        }
+      },
+      "error": null
+    },
+    "frontend.frontend.render_exchange": {
+      "identifier": "frontend.frontend.render_exchange",
+      "description": {
+        "overall": "The render_exchange function is responsible for rendering a chat message with an exchange's question and answer. It also includes a toolbar with buttons for feedback, comment, download, and delete. If the answer contains an error message, it displays an error message and provides a delete button.",
+        "parameters": [
+          {
+            "name": "ex",
+            "type": "object",
+            "description": "An exchange object containing the question, answer, and other metadata."
+          },
+          {
+            "name": "current_chat_name",
+            "type": "string",
+            "description": "The name of the current chat."
+          }
+        ],
+        "returns": [],
+        "usage_context": {
+          "calls": "This function calls database.db.update_exchange_feedback_message, frontend.frontend.handle_delete_exchange, frontend.frontend.handle_feedback_change, and frontend.frontend.render_text_with_mermaid.",
+          "called_by": "This function is called by process_shipment and restock_api_endpoint."
+        }
+      },
+      "error": null
+    }
+  },
+  "classes": {}
+}

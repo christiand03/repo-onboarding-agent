@@ -1,0 +1,145 @@
+[
+    {
+        "helper_model": "alias-reasoning",
+        "evaluator_model": "gemini-2.5-flash",
+        "status": "failed",
+        "score": 0,
+        "duration_gen_sec": 0,
+        "duration_eval_sec": 0,
+        "items_processed": 0,
+        "error_message": "Leere Antwort vom LLM (keine Funktionen/Klassen generiert)",
+        "timestamp": "2026-01-23 11:55:26"
+    },
+    {
+        "helper_model": "alias-ha",
+        "evaluator_model": "gemini-2.5-flash",
+        "status": "success",
+        "score": 4,
+        "duration_gen_sec": 221.5,
+        "duration_eval_sec": 166.85,
+        "items_processed": 86,
+        "error_message": null,
+        "timestamp": "2026-01-23 11:55:42"
+    },
+    {
+        "helper_model": "alias-code",
+        "evaluator_model": "gemini-2.5-flash",
+        "status": "success",
+        "score": 36,
+        "duration_gen_sec": 49.57,
+        "duration_eval_sec": 126.88,
+        "items_processed": 86,
+        "error_message": null,
+        "timestamp": "2026-01-23 12:03:15"
+    },
+    {
+        "helper_model": "meta-llama/Llama-3.3-70B-Instruct",
+        "evaluator_model": "gemini-2.5-flash",
+        "status": "success",
+        "score": 40,
+        "duration_gen_sec": 159.56,
+        "duration_eval_sec": 149.78,
+        "items_processed": 86,
+        "error_message": null,
+        "timestamp": "2026-01-23 12:07:17"
+    },
+    {
+        "helper_model": "meta-llama/Llama-3.1-8B-Instruct",
+        "evaluator_model": "gemini-2.5-flash",
+        "status": "success",
+        "score": 31,
+        "duration_gen_sec": 273.35,
+        "duration_eval_sec": 85.84,
+        "items_processed": 60,
+        "error_message": null,
+        "timestamp": "2026-01-23 12:13:31"
+    },
+    {
+        "helper_model": "meta-llama/Llama-4-Scout-17B-16E-Instruct",
+        "evaluator_model": "gemini-2.5-flash",
+        "status": "success",
+        "score": 50,
+        "duration_gen_sec": 163.69,
+        "duration_eval_sec": 166.66,
+        "items_processed": 86,
+        "error_message": null,
+        "timestamp": "2026-01-23 12:20:35"
+    },
+    {
+        "helper_model": "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct",
+        "evaluator_model": "gemini-2.5-flash",
+        "status": "failed",
+        "score": 0,
+        "duration_gen_sec": 0,
+        "duration_eval_sec": 0,
+        "items_processed": 0,
+        "error_message": "Leere Antwort vom LLM (keine Funktionen/Klassen generiert)",
+        "timestamp": "2026-01-23 12:27:11"
+    },
+    {
+        "helper_model": "deepseek-ai/DeepSeek-R1",
+        "evaluator_model": "gemini-2.5-flash",
+        "status": "failed",
+        "score": 0,
+        "duration_gen_sec": 0,
+        "duration_eval_sec": 0,
+        "items_processed": 0,
+        "error_message": "Leere Antwort vom LLM (keine Funktionen/Klassen generiert)",
+        "timestamp": "2026-01-23 12:43:24"
+    },
+    {
+        "helper_model": "deepseek-ai/DeepSeek-V3.2-Exp",
+        "evaluator_model": "gemini-2.5-flash",
+        "status": "failed",
+        "score": 0,
+        "duration_gen_sec": 0,
+        "duration_eval_sec": 0,
+        "items_processed": 0,
+        "error_message": "Leere Antwort vom LLM (keine Funktionen/Klassen generiert)",
+        "timestamp": "2026-01-23 12:43:38"
+    },
+    {
+        "helper_model": "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+        "evaluator_model": "gemini-2.5-flash",
+        "status": "success",
+        "score": 17,
+        "duration_gen_sec": 54.68,
+        "duration_eval_sec": 166.93,
+        "items_processed": 86,
+        "error_message": null,
+        "timestamp": "2026-01-23 12:43:51"
+    },
+    {
+        "helper_model": "Qwen/Qwen2-VL-7B-Instruct",
+        "evaluator_model": "gemini-2.5-flash",
+        "status": "failed",
+        "score": 0,
+        "duration_gen_sec": 0,
+        "duration_eval_sec": 0,
+        "items_processed": 0,
+        "error_message": "Leere Antwort vom LLM (keine Funktionen/Klassen generiert)",
+        "timestamp": "2026-01-23 12:48:38"
+    },
+    {
+        "helper_model": "openGPT-X/Teuken-7B-instruct-research-v0.4",
+        "evaluator_model": "gemini-2.5-flash",
+        "status": "failed",
+        "score": 0,
+        "duration_gen_sec": 0,
+        "duration_eval_sec": 0,
+        "items_processed": 0,
+        "error_message": "Leere Antwort vom LLM (keine Funktionen/Klassen generiert)",
+        "timestamp": "2026-01-23 12:48:51"
+    },
+    {
+        "helper_model": "openai/gpt-oss-120b",
+        "evaluator_model": "gemini-2.5-flash",
+        "status": "success",
+        "score": 70,
+        "duration_gen_sec": 107.68,
+        "duration_eval_sec": 219.71,
+        "items_processed": 86,
+        "error_message": null,
+        "timestamp": "2026-01-23 12:49:05"
+    }
+]

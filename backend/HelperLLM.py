@@ -57,7 +57,7 @@ class LLMHelper:
         self._configure_batch_settings(model_name)
         CLIENT_CONFIG = {
             "max_retries": 0, 
-            "timeout": 240.0
+            "timeout": 5000.0
         }
 
 
@@ -66,7 +66,7 @@ class LLMHelper:
                 model=model_name,
                 api_key=api_key,
                 temperature=0.3,
-                request_timeout=240.0 
+                request_timeout=5000.0 
             )
         
         elif model_name.startswith("gpt-") and "openGPT" not in model_name:
@@ -116,10 +116,10 @@ class LLMHelper:
             self.batch_size = 10
 
         elif model_name == "gemini-2.5-flash":
-            self.batch_size = 10
+            self.batch_size = 1000
             
         elif model_name == "gemini-2.5-pro":
-            self.batch_size = 2
+            self.batch_size = 100
         
         elif model_name == "gemini-2.0-flash":
             self.batch_size = 15
