@@ -11,8 +11,9 @@ class FunctionSymbol:
     qualname: str
     asynchron: False
     input_params: list[str]
-    return_symb: bool
+    return_symb: str
     lineno: int
+    end_lineno: int
 
 
 @dataclass
@@ -20,6 +21,8 @@ class ClassSymbol:
     name: str
     module: str
     methods: dict[str, FunctionSymbol]
+    lineno: int
+    end_lineno: int
 
 
 @dataclass
