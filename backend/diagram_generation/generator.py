@@ -102,10 +102,9 @@ def enrich_report_with_diagrams(placeholder_doc: list[str], diagrams: dict, comp
         if "#### Function:" in line or "#### Class:" in line:
             current_name = line
         
-        if r"## [0-9\.]? Architecture" in line:
+        if "## 4. Architecture" in line:
             enriched_report.append(component_diagram)
-
-        # new logic for placeholder        
+        
     return "\n".join(enriched_report)
 
 

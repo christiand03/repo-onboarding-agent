@@ -443,7 +443,6 @@ def main_workflow(user_input, api_keys: dict, model_names: dict, status_callback
     except Exception as e:
         logging.error(f"Error during Main LLM final report generation: {e}")
         raise
-
     final_report_placeholder = generator.create_placeholders(final_report)
     
     enriched_final_report = generator.enrich_report_with_diagrams(
@@ -661,6 +660,7 @@ def notebook_workflow(input, api_keys, model, status_callback=None, check_stop=N
     }
 
 
+
 def estimate_total_tokens(llm_input_estimate: dict[str, Any]):
     """
     Schätzt die Gesamttoken-Kosten für die komplette LLM-Pipeline.
@@ -723,12 +723,9 @@ def estimate_total_tokens(llm_input_estimate: dict[str, Any]):
         ast_tokens + 
         total_helper_output 
     )
-    
-
     total_main_input = MAIN_PROMPT_TOKENS + main_input_content
     total_main_output = MAIN_OUTPUT_TOKENS
     
     total_main_tokens = total_main_input + total_main_output
 
     return total_helper_tokens + total_main_tokens
-

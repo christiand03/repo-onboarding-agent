@@ -20,7 +20,6 @@ class MermaidSequenceEmitter:
         for call in sorted(calls, key=lambda c: c.lineno):
             lines.append(self._emit_call(call))
             if call.callee:
-
                 lines.append(self._emit_response(call))
                 metadata_for_callee = f"`{call.callee.name}: {call.callee.lineno}-{call.callee.end_lineno}`"
                 if metadata_for_callee not in metadata:
