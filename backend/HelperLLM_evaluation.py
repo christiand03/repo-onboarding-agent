@@ -17,7 +17,7 @@ from schemas.types import FunctionContextInput, FunctionAnalysisInput, ClassCont
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 load_dotenv()
 
-REPO_URL_TO_TEST = "https://github.com/christiand03/repo-onboarding-agent"
+REPO_URL_TO_TEST = "https://github.com/christiand03/repo-onboarding-agent-evaluation"
 
 HELPER_MODELS_TO_TEST = [
     # #Google Gemini

@@ -21,40 +21,41 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 load_dotenv()
 
 # --- GLOBALE KONFIGURATION ---
-REPO_URL = "https://github.com/christiand03/repo-onboarding-agent"
-HELPER_MODEL = "alias-code"
-EVALUATOR_MODEL = "gemini-2.5-flash"
+REPO_URL = "https://github.com/christiand03/repo-onboarding-agent-evaluation"
+HELPER_MODEL = "gemini-2.5-flash"
+EVALUATOR_MODEL = "gemini-2.5-pro"
 
 
 MAIN_MODELS_TO_TEST = [
 
     #Google Gemini
-    "gemini-2.5-flash",
-    "gemini-2.5-flash-lite",
+    #"gemini-2.5-flash",
+    #"gemini-2.5-flash-lite",
+    "gemini-2.5-pro",
 
     #SCADS  
     #Aliases
-    "alias-reasoning",
-    "alias-ha",
-    "alias-code",
+    # "alias-reasoning",
+    # "alias-ha",
+    # "alias-code",
     
-    #Llama
-    "meta-llama/Llama-3.3-70B-Instruct",
-    "meta-llama/Llama-3.1-8B-Instruct",
-    "meta-llama/Llama-4-Scout-17B-16E-Instruct",
+    # #Llama
+    # "meta-llama/Llama-3.3-70B-Instruct",
+    # "meta-llama/Llama-3.1-8B-Instruct",
+    # "meta-llama/Llama-4-Scout-17B-16E-Instruct",
     
-    # DeepSeek
-    "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct",
-    "deepseek-ai/DeepSeek-R1",
-    "deepseek-ai/DeepSeek-V3.2-Exp",
+    # # DeepSeek
+    # "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct",
+    # "deepseek-ai/DeepSeek-R1",
+    # "deepseek-ai/DeepSeek-V3.2-Exp",
     
-    # Qwen
-    "Qwen/Qwen3-Coder-30B-A3B-Instruct",
-    "Qwen/Qwen2-VL-7B-Instruct",
+    # # Qwen
+    # "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+    # "Qwen/Qwen2-VL-7B-Instruct",
     
-    # Andere
-    "openGPT-X/Teuken-7B-instruct-research-v0.4",
-    "openai/gpt-oss-120b", 
+    # # Andere
+    # "openGPT-X/Teuken-7B-instruct-research-v0.4",
+    # "openai/gpt-oss-120b", 
 ]
 
 def get_api_keys():
@@ -228,7 +229,7 @@ def prepare_shared_input(repo_url, api_keys, input_dir):
             
     if helper_llm_class_input:
         if HELPER_MODEL.startswith("gemini-") and helper_llm_class_input:
-            time.sleep(65)
+            time.sleep(1)
         result = llm_helper.generate_for_classes(helper_llm_class_input)
         for doc in result:
             if doc: analysis_results["classes"][doc.identifier] = doc.model_dump()
