@@ -112,7 +112,6 @@ Synthesize this section by analyzing all available knowledge: README content, de
         *   Get the `identifier` from the `ast_schema`.
         *   Look up the detailed data in `analysis_results['functions'][identifier]`.
         *   If the data is found, render the Function section.
-        *   Create a Mermaid.js Sequence diagram for each standalone function, that represents their workflow.
 
 6.  **Rendering Logic:**
     *   **Signatures:** You do not have the raw signature string. Construct a pseudo-signature using the `identifier` and the `parameters` list (e.g., `def name(param1: type, param2: type)`).
