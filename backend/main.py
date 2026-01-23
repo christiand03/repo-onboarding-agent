@@ -419,8 +419,14 @@ def main_workflow(user_input, api_keys: dict, model_names: dict, status_callback
     except Exception as e:
         logging.error(f"Error during Main LLM final report generation: {e}")
         raise
-
-    enriched_final_report = enrich_report_with_diagrams(final_report, diagrams, component_diagram, class_diagrams)
+    final_report_placeholder = generator.create_placeholders(final_report)
+    
+    enriched_final_report = generator.enrich_report_with_diagrams(
+        final_report_placeholder, 
+        diagrams, 
+        component_diagram, 
+        class_diagrams
+    )
     # --- Speichern der Ergebnisse ---
     output_dir = "result"
     stats_dir = "Statistics" # Neuer Ordner
@@ -474,30 +480,6 @@ def main_workflow(user_input, api_keys: dict, model_names: dict, status_callback
         "metrics": metrics
     }
     
-
-def enrich_report_with_diagrams(final_report: str, diagrams: dict, component_diagram: str, class_diagrams: dict) -> str:
-    """Fügt Diagramme aus dem `diagrams`-Dictionary in den `final_report` ein."""
-    report_lines = final_report.splitlines()
-    enriched_report = []
-
-    for line in report_lines:
-        enriched_report.append(line)
-        if "#### Function:" in line:
-            for filename, seq_diagram in diagrams.items():
-                    if filename in line:
-                        enriched_report.append(f"   **Sequence diagram for {filename}**")
-                        enriched_report.append(seq_diagram)
-        
-        if "## 4. Architecture" in line:
-            enriched_report.append(component_diagram)
-        
-        if "#### Class:" in line:
-            for class_name, class_diagram in class_diagrams.items():
-                if re.search(rf"\b{re.escape(class_name)}\b", line):
-                    enriched_report.append(class_diagram)
-
-    return "\n".join(enriched_report)
-
 
 def notebook_workflow(input, api_keys, model, status_callback=None, check_stop=None):
     t_start = time.time()
@@ -652,11 +634,7 @@ if __name__ == "__main__":
     user_input = "https://github.com/christiand03/repo-onboarding-agent"
     #main_workflow(user_input, api_keys={"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model_names={"helper": "alias-code", "main": "alias-ha"})
 
-    #notebook_input = "https://github.com/christiand03/predicting-power-consumption-uni"
-    #notebook_input = "https://github.com/christiand03/clustering-and-classification-uni"
-    # notebook_input= "https://github.com/Schmarc4/Monarchs"
-    # notebook_workflow(notebook_input, api_keys= {"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model= "gemini-2.5-flash")
-    main_workflow(input=user_input,
+    main_workflow(user_input=user_input,
                   api_keys={
                       "scadsllm": os.getenv("SCADS_AI_KEY"), 
                       "scadsllm_base_url": os.getenv("SCADSLLM_URL")
@@ -666,7 +644,4 @@ if __name__ == "__main__":
                       "main": "openai/gpt-oss-120b"
                   }
     )
-
-    notebook_input= "https://github.com/Schmarc4/Monarchs"
-   # notebook_workflow(notebook_input, api_keys= {"gemini": os.getenv("GEMINI_API_KEY"), "scadsllm": os.getenv("SCADS_AI_KEY"), "scadsllm_base_url": os.getenv("SCADSLLM_URL")}, model= "gemini-2.5-flash")
 
