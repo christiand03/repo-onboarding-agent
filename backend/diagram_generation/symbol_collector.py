@@ -64,19 +64,14 @@ class SymbolCollector(NodeVisitor):
         parent = parts[:-node.level]
         
         for alias in node.names:
-            # Bestimme den Modul-Pfad
             if node.module is None:
                 mod = parent + [alias.name] if alias.name in self.filtered_file_stem else parent
             else:
                 mod = parent + node.module.split(".")
-                # Nur alias.name hinzufügen, wenn es selbst ein Modul ist
                 if alias.name in self.filtered_file_stem:
                     mod = mod + [alias.name]
-            
-            # Erstelle den vollständigen Import-Pfad
+
             import_path = ".".join(mod)
-            
-            # Speichere mit dem Namen, unter dem es importiert wird
             self.module.imports[alias.asname or alias.name] = import_path
             self.generic_visit(node)
 
@@ -111,7 +106,8 @@ class SymbolCollector(NodeVisitor):
             module=self.module.name,
             methods={},
             lineno=node.lineno,
-            end_lineno=node.end_lineno
+            end_lineno=node.end_lineno,
+            # inheritance=[base.id for base in node.bases]
         )
 
         self.module.classes[node.name] = cls
@@ -123,6 +119,7 @@ class SymbolCollector(NodeVisitor):
                 curr_meth = FunctionSymbol(
                     name = stmt.name,
                     module = self.module.name,
+                    cls = node.name,
                     qualname=f"{self.module.name}.{node.name}.{stmt.name}",
                     asynchron=True if isinstance(stmt, AsyncFunctionDef) else False,
                     input_params=input_parameters,
@@ -143,6 +140,7 @@ class SymbolCollector(NodeVisitor):
         curr_func = FunctionSymbol(
             name=node.name,
             module=self.module.name,
+            cls = None,
             qualname= f"{self.module.name}.{node.name}",
             asynchron=True if isinstance(node, AsyncFunctionDef) else False,
             input_params=input_paramters,
@@ -164,4 +162,3 @@ def attach_with_parents(tree: AST) -> None:
         for child in iter_child_nodes(parent):
             child.parent = parent
 
-            

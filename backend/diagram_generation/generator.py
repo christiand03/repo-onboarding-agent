@@ -11,6 +11,7 @@ from diagram_generation.callgraph import TreeVisitor
 from diagram_generation.data_types import ProjectIndex, ResolvedCall
 from diagram_generation.emitter import (
     MermaidSequenceEmitter,
+    MermaidClassEmitter,
     MermaidClassDiagramEmitter,
     MermaidOverviewEmitter
 )
@@ -66,14 +67,15 @@ def main_diagram_generation(py_files: list[str]) -> tuple:
                 call_from_same_function[caller_name] = []
             call_from_same_function[caller_name].append(res_call)
 
-    class_diagrams = MermaidClassDiagramEmitter().emit(project.modules)
+    class_diagrams = MermaidClassEmitter().emit(project.modules)
+    finished_class_diagrams = MermaidClassDiagramEmitter().emit(class_diagrams, resolved_calls)
     component_diagram = MermaidOverviewEmitter().emit(project.modules)
 
     seqs: dict[str, tuple[str, str]] = {}
     for function, calls in call_from_same_function.items():
         seq, metadata = MermaidSequenceEmitter().emit(calls)
         seqs[function] = (seq, metadata)
-    return seqs, class_diagrams, component_diagram
+    return seqs, finished_class_diagrams, component_diagram
 
 
 def enrich_report_with_diagrams(placeholder_doc: list[str], diagrams: dict, component_diagram: str, class_diagrams: dict) -> str:
@@ -83,18 +85,18 @@ def enrich_report_with_diagrams(placeholder_doc: list[str], diagrams: dict, comp
     current_name = ""
     for line in placeholder_doc:
         if "<Placeholder for Diagram>" in line: 
-            for filename, seq_diagram in diagrams.items():
+            for filename, data in diagrams.items():
+                    diagram, metadata = data
                     if filename in current_name:
                         enriched_report.append(f"*    **Sequence diagram for {filename}**")
-                        enriched_report.append(seq_diagram[0])
-                        enriched_report.append(seq_diagram[1])
+                        enriched_report.append(diagram)
+                        enriched_report.append(metadata)
                         break
             
             for class_name, class_diagram in class_diagrams.items():
                 if re.search(rf"\b{re.escape(class_name)}\b", current_name):
                     enriched_report.append(f"*    **Class visualization for {class_name}**")
-                    enriched_report.append(class_diagram[0])
-                    enriched_report.append(class_diagram[1])
+                    enriched_report.append(class_diagram)
                     break
             current_name = ""
             continue
@@ -117,7 +119,7 @@ def create_placeholders(final_doc: str) -> list[str]:
     new_doc = []
     for i in range(n):
         new_doc.append(lines_doc[i])
-        # edge cases for last diagram
+        # edge case for last diagram
         if i == n - 2:
             new_doc.append("<Placeholder for Diagram>")
             break
@@ -151,7 +153,7 @@ if __name__ == "__main__":
         
     for cd in class_diagram.values():
         with open("Flask Diagrams_class.md", "a", encoding="utf-8") as file:
-            file.write(f"{cd[0]}\n")
+            file.write(f"{cd}\n")
     
     with open("Flask Diagrams_overview.md", "a", encoding="utf-8") as file:
         file.write(component_diagram)    

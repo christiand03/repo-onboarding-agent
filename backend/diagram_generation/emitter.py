@@ -65,24 +65,20 @@ class MermaidOverviewEmitter:
         """
         lines = ["```mermaid"]
         lines.append("graph TD")
-        
-        # Extrahiere Top-Level Verzeichnisse
+
         top_level_dirs = self._extract_top_level_directories(modules)
         
         if not top_level_dirs:
             lines.append('    root["📦 root"]')
             lines.append("```")
             return "\n".join(lines)
-        
-        # Erstelle Knoten für jedes Top-Level-Verzeichnis
+
         dir_nodes = {}
         for dir_name in sorted(top_level_dirs):
             node_id = self._sanitize_id(dir_name)
             dir_nodes[dir_name] = node_id
             module_count = self._count_modules_in_directory(modules, dir_name)
             lines.append(f'    {node_id}["📦 {dir_name}<br/>({module_count} Module)"]')
-        
-        # Extrahiere Abhängigkeiten zwischen Verzeichnissen
         relationships = self._extract_directory_dependencies(modules, top_level_dirs)
         
         # Füge eindeutige Beziehungen hinzu
@@ -149,14 +145,13 @@ class MermaidOverviewEmitter:
         return name.replace("-", "_").replace(" ", "_").replace(".", "_")
         
        
-class MermaidClassDiagramEmitter:
-    def emit(self, modules: dict[str, ModuleSymbol]) -> dict[str, tuple[str, str]]:
+class MermaidClassEmitter:
+    def emit(self, modules: dict[str, ModuleSymbol]) -> dict[str, str]:
 
         class_diagrams: dict[str, str] = {}
         for module in modules.values():
             for name, cls in module.classes.items():
-                lines: list[str] = ["```mermaid"]
-                lines.append("classDiagram")
+                lines: list[str] = []
                 class_id = mermaid_id(cls.name)
                 lines.append(f"    class {class_id} {{")
 
@@ -165,15 +160,33 @@ class MermaidClassDiagramEmitter:
                         lines.append(f"        -{method.name}()")
                         continue
                     lines.append(f"        +{method.name}()")
-
                 lines.append("    }")
-                lines.append("```")
-                metadata = f"*    **Metadata for Class diagram:** `{cls.name}: {cls.lineno}-{cls.end_lineno}`"
-                class_diagrams[name] = ("\n".join(lines), metadata)
-                lines = []
+                # metadata = f"*    **Metadata for Class diagram:** `{cls.name}: {cls.lineno}-{cls.end_lineno}`"
+                class_diagrams[name] = ("\n".join(lines))#, metadata)
         return class_diagrams
 
+
+class MermaidClassDiagramEmitter:
+
+    def emit(self, class_diagrams: dict[str, str], calls: dict[str, list[ResolvedCall]]) -> dict[str, str]:
+
+        new_class_diagrams: dict[str, str] = {}
+        all_calls = [c for call in calls.values() for c in call]
+        for cls_name, diagram in class_diagrams.items():
+            lines: list[str] = ["```mermaid"]
+            lines.append("classDiagram")
+            src = mermaid_id(cls_name)
+            lines.append(diagram)
+            for call in all_calls:
+                if call.callee.name in class_diagrams and call.caller.cls == cls_name:
+                    target = mermaid_id(call.callee.name)
+                    lines.append(f"    {src} -> {target}")
+            lines.append("```")
+            new_class_diagrams[cls_name] = "\n".join(lines)
+
+        return new_class_diagrams
 
 def mermaid_id(name: str) -> str:
     """Mermaid identifier dürfen keine Punkte im Namen enthalten."""
     return name.replace(".", "/")
+
