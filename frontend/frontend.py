@@ -38,7 +38,7 @@ st.set_page_config(
 # 1. Rohdaten definieren
 RAW_MAIN_MODELS = [
     # Google Gemini
-    "gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-2.5-pro", "gemini-3-pro-preview",
+    "gemini-2.5-flash", "gemini-2.5-flash-lite",
     # Alias
     "alias-reasoning", "alias-ha", "alias-code",
     # Llama
@@ -75,6 +75,8 @@ STANDARD_MODELS = [
     "gemini-2.5-flash-lite",
     "gemini-2.5-flash",
     "gemini-3-flash-preview",
+    "gemini-2.5-pro", 
+    "gemini-3-pro-preview",
     "gpt-5.1",
     "gpt-5-mini",
 ]
