@@ -115,7 +115,7 @@ def delete_user(username: str):
 def get_decrypted_api_keys(username: str):
     user = dbusers.find_one({"_id": username})
     if not user: 
-        return None, None
+        return None, None, None, None, None
     gemini_plain = decrypt_text(user.get("gemini_api_key", ""))
     ollama_plain = user.get("ollama_base_url", "")
     gpt_plain = decrypt_text(user.get("gpt_api_key", ""))
