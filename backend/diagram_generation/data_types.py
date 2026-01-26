@@ -1,18 +1,20 @@
 from ast import expr
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
+from typing import Optional, Union
 
    
 @dataclass
 class FunctionSymbol:
     name: str
     module: str
+    cls: Optional[str]
     qualname: str
     asynchron: False
     input_params: list[str]
-    return_symb: bool
+    return_symb: str
     lineno: int
+    end_lineno: int
 
 
 @dataclass
@@ -20,6 +22,9 @@ class ClassSymbol:
     name: str
     module: str
     methods: dict[str, FunctionSymbol]
+    lineno: int
+    end_lineno: int
+    # inheritance: list[str]
 
 
 @dataclass
@@ -57,7 +62,7 @@ class CallType(Enum):
 @dataclass
 class ResolvedCall:
     caller: FunctionSymbol
-    callee: Optional[FunctionSymbol]
+    callee: Union[ClassSymbol, FunctionSymbol, None]
     call_type: CallType
     lineno: int
 

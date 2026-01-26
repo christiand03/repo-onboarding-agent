@@ -52,7 +52,9 @@ class TreeVisitor(NodeVisitor):
         if isinstance(node.func, Name):
             if node.func.id not in self.module.functions:
                 return
+
         elif isinstance(node.func, Attribute):            
+
             if node.func not in self.project.modules.values():
                 return
         self.calls.append(

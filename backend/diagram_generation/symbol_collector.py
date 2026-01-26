@@ -1,3 +1,5 @@
+import sys
+
 from ast import (
     AST,
     AsyncFunctionDef,
@@ -8,21 +10,21 @@ from ast import (
     NodeVisitor,
     Return,
     iter_child_nodes,
-    parse,
+    unparse,
     walk
     )
+from pathlib import Path
 
+sys.path.append(str(Path(__file__).parent.parent))
 from diagram_generation.data_types import (
     ModuleSymbol, 
     FunctionSymbol, 
     ClassSymbol
 )
-from diagram_generation.callgraph import TreeVisitor
 
 
 class SymbolCollector(NodeVisitor):
-
-    def __init__(self, module_name: str, packages: list[str]):
+    def __init__(self, module_name: str, packages: list[str], filtered_file_obj: list):
         self.module = ModuleSymbol(
             name=module_name,
             overlying_packages=packages,
@@ -31,16 +33,47 @@ class SymbolCollector(NodeVisitor):
             imports={}
         )
 
+        self.filtered_file_stem = self._filtered_file_stems(filtered_file_obj)
 
-    def _has_return(self, node: FunctionDef) -> bool:
+               
+    def _filtered_file_stems(self, file_objects):
+        all_last_parts = []
+        for file in file_objects:
+            last_parts = file.path.split("/")[-2:]
+            joined_parts = ".".join(last_parts).removesuffix(".py")
+            all_last_parts.append(joined_parts)
         
-        has_return = False
+        return all_last_parts
+    
+
+    def _return_value(self, node: FunctionDef) -> str:
+        """Returns the return value of a function."""
+        return_values = []
         for stmt in node.body:
             if isinstance(stmt, Return):
-                has_return = True
+                return_values.append(stmt.value)
         
-        return has_return
-    
+        if len(return_values) == 1:
+            return unparse(return_values[0]) if return_values[0] else "None"
+        return "<return values>"
+
+
+    def _resolve_import(self, node: ImportFrom):
+        """Resolve relative Imports."""
+        parts = self.module.overlying_packages
+        parent = parts[:-node.level]
+        
+        for alias in node.names:
+            if node.module is None:
+                mod = parent + [alias.name] if alias.name in self.filtered_file_stem else parent
+            else:
+                mod = parent + node.module.split(".")
+                if alias.name in self.filtered_file_stem:
+                    mod = mod + [alias.name]
+
+            import_path = ".".join(mod)
+            self.module.imports[alias.asname or alias.name] = import_path
+            self.generic_visit(node)
 
     def _declare_input_parameters(self, node: FunctionDef) -> list[str]:
         input_parameters: list[str] = []
@@ -58,13 +91,12 @@ class SymbolCollector(NodeVisitor):
 
 
     def visit_ImportFrom(self, node: ImportFrom) -> None:
-        if node.module is None:
-            # TODO: resolve relative Imports
-            return
-        
-        module_base = node.module.split(".")[-1]
-        for alias in node.names:
-            self.module.imports[alias.asname or alias.name] = f"{module_base}.{alias.name}"
+        if node.level > 0:
+            self._resolve_import(node)
+        else:
+            import_module = node.module
+            for alias in node.names:
+                self.module.imports[alias.asname or alias.name] = f"{import_module}.{alias.name}"
         self.generic_visit(node)
 
 
@@ -72,23 +104,28 @@ class SymbolCollector(NodeVisitor):
         cls = ClassSymbol(
             name=node.name,
             module=self.module.name,
-            methods={}
+            methods={},
+            lineno=node.lineno,
+            end_lineno=node.end_lineno,
+            # inheritance=[base.id for base in node.bases]
         )
 
         self.module.classes[node.name] = cls
 
         for stmt in node.body:
             if isinstance(stmt, FunctionDef):
-                has_return = self._has_return(node)
+                return_value = self._return_value(node)
                 input_parameters = self._declare_input_parameters(stmt)
                 curr_meth = FunctionSymbol(
                     name = stmt.name,
                     module = self.module.name,
+                    cls = node.name,
                     qualname=f"{self.module.name}.{node.name}.{stmt.name}",
                     asynchron=True if isinstance(stmt, AsyncFunctionDef) else False,
                     input_params=input_parameters,
-                    return_symb=has_return,
-                    lineno=stmt.lineno
+                    return_symb=return_value,
+                    lineno=stmt.lineno,
+                    end_lineno=stmt.end_lineno
                 )
                 cls.methods[stmt.name] = curr_meth
         self.generic_visit(node)
@@ -98,16 +135,18 @@ class SymbolCollector(NodeVisitor):
         if isinstance(getattr(node, "parent", None), ClassDef):
             return
         
-        has_return = self._has_return(node)
+        return_value = self._return_value(node)
         input_paramters = self._declare_input_parameters(node)
         curr_func = FunctionSymbol(
             name=node.name,
             module=self.module.name,
+            cls = None,
             qualname= f"{self.module.name}.{node.name}",
             asynchron=True if isinstance(node, AsyncFunctionDef) else False,
             input_params=input_paramters,
-            return_symb=has_return,
-            lineno=node.lineno
+            return_symb=return_value,
+            lineno=node.lineno,
+            end_lineno=node.end_lineno
 
         )
         self.module.functions[node.name] = curr_func
@@ -123,35 +162,3 @@ def attach_with_parents(tree: AST) -> None:
         for child in iter_child_nodes(parent):
             child.parent = parent
 
-
-if __name__=="__main__":
-    import sys
-    from pathlib import Path
-    sys.path.append(str(Path(__file__).parent.parent))
-    from getRepo import GitRepository
-    repo_url = "https://github.com/pallets/flask"    
-
-    with GitRepository(repo_url) as repository:
-        print(f"Repository von {repository.repo_url} erfolgreich geklont. Es liegt im Ornder {repository.temp_dir}")
-        
-        # Die Dateiliste wird jetzt am Anfang geholt, damit sie für alle Analysen verfügbar ist
-        all_file_objects = repository.get_all_files()
-    
-    filtered_file_obj = [file for file in all_file_objects if file.path.endswith(".py")]
-    for file in filtered_file_obj:
-        module_path: str = file.path
-        # if not module_path.endswith(".py"):
-        #     continue
-        module_name = module_path.replace("/", ".").removesuffix(".py")
-        tree = parse(file.content)
-        attach_with_parents(tree)
-        packages: list[str] = file.path.split("/")[:-1]
-        symbol_collector = SymbolCollector(module_name, packages)
-        symbol_collector.visit(tree)
-        module_symbol = symbol_collector.module
-
-        callgraph = TreeVisitor(module_symbol)
-        callgraph.visit(tree)
-
-        print(callgraph.calls)
-            
