@@ -21,32 +21,35 @@ REPO_URL_TO_TEST = "https://github.com/christiand03/repo-onboarding-agent-evalua
 
 HELPER_MODELS_TO_TEST = [
     # #Google Gemini
-    # "gemini-2.5-flash",
-    # "gemini-2.5-flash-lite",
+    #"gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+    #"gemini-2.0-flash",
+    #"gemini-2.0-flash-lite",
+    #"gemini-3-flash-preview"
 
     #SCADS  
     #Aliases
-    "alias-reasoning",
-    "alias-ha",
-    "alias-code",
+    # "alias-reasoning",
+    # "alias-ha",
+    # "alias-code",
     
-    #Llama
-    "meta-llama/Llama-3.3-70B-Instruct",
-    "meta-llama/Llama-3.1-8B-Instruct",
-    "meta-llama/Llama-4-Scout-17B-16E-Instruct",
+    # #Llama
+    # "meta-llama/Llama-3.3-70B-Instruct",
+    # "meta-llama/Llama-3.1-8B-Instruct",
+    # "meta-llama/Llama-4-Scout-17B-16E-Instruct",
     
-    # DeepSeek
-    "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct",
-    "deepseek-ai/DeepSeek-R1",
-    "deepseek-ai/DeepSeek-V3.2-Exp",
+    # # DeepSeek
+    # "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct",
+    # "deepseek-ai/DeepSeek-R1",
+    # "deepseek-ai/DeepSeek-V3.2-Exp",
     
-    # Qwen
-    "Qwen/Qwen3-Coder-30B-A3B-Instruct",
-    "Qwen/Qwen2-VL-7B-Instruct",
+    # # Qwen
+    # "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+    # "Qwen/Qwen2-VL-7B-Instruct",
     
-    # Andere
-    "openGPT-X/Teuken-7B-instruct-research-v0.4",
-    "openai/gpt-oss-120b", 
+    # # Andere
+    # "openGPT-X/Teuken-7B-instruct-research-v0.4",
+    # "openai/gpt-oss-120b", 
 ]
 
 EVALUATOR_MODEL = "gemini-2.5-flash"
@@ -59,6 +62,7 @@ PROMPT_EVALUATOR_HELPER = 'SystemPrompts/SystemPromptEvaluatorHelper.txt'
 def get_api_keys():
     return {
         "gemini": os.getenv("GEMINI_API_KEY"),
+        "gemini2": os.getenv("GEMINI_API_KEY2"),
         "gpt": os.getenv("OPENAI_API_KEY"),
         "scadsllm": os.getenv("SCADS_AI_KEY"),
         "scadsllm_base_url": os.getenv("SCADSLLM_URL"),
@@ -250,7 +254,11 @@ def benchmark_loop():
         safe_model_name = model.replace("/", "_").replace(":", "").replace(".", "-")
         
         helper_api_key, helper_base_url = get_keys_for_model(model, keys)
-        eval_api_key, eval_base_url = get_keys_for_model(EVALUATOR_MODEL, keys)
+        if EVALUATOR_MODEL.startswith("gemini"):
+            eval_api_key = keys["gemini2"]
+            eval_base_url = None
+        else:
+            eval_api_key, eval_base_url = get_keys_for_model(EVALUATOR_MODEL, keys)
         
         current_stat = {
             "helper_model": model,
@@ -293,7 +301,7 @@ def benchmark_loop():
                     if class_inputs:
                         if model.startswith("gemini-"):
                             logging.info("Pause für Rate-Limit (Gemini)...")
-                            time.sleep(65)
+                            time.sleep(1)
                         
                         logging.info(f"Analysiere Klassen mit {model}...")
                         res_classes = llm_helper.generate_for_classes(class_inputs)

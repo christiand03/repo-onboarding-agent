@@ -1,0 +1,50 @@
+[
+    {
+        "main_model": "gemini-2.5-flash",
+        "helper_model": "gemini-2.5-flash",
+        "evaluator_model": "gemini-2.5-flash",
+        "status": "success",
+        "error_message": null,
+        "score": 80,
+        "duration_gen_sec": 242.36,
+        "duration_eval_sec": 108.61,
+        "timestamp": "2026-01-24 16:43:34",
+        "files": {
+            "input": "input_data_16-43-34.toon",
+            "report": "Report_gemini-2-5-flash.md",
+            "evaluation": "Eval_gemini-2-5-flash.md"
+        }
+    },
+    {
+        "main_model": "gemini-2.5-flash-lite",
+        "helper_model": "gemini-2.5-flash",
+        "evaluator_model": "gemini-2.5-flash",
+        "status": "success",
+        "error_message": null,
+        "score": 69,
+        "duration_gen_sec": 74.6,
+        "duration_eval_sec": 39.35,
+        "timestamp": "2026-01-24 16:49:25",
+        "files": {
+            "input": "input_data_16-43-34.toon",
+            "report": "Report_gemini-2-5-flash-lite.md",
+            "evaluation": "Eval_gemini-2-5-flash-lite.md"
+        }
+    },
+    {
+        "main_model": "gemini-3-pro-preview",
+        "helper_model": "gemini-2.5-flash",
+        "evaluator_model": "gemini-2.5-flash",
+        "status": "success",
+        "error_message": null,
+        "score": 25,
+        "duration_gen_sec": 388.53,
+        "duration_eval_sec": 155.25,
+        "timestamp": "2026-01-24 16:51:20",
+        "files": {
+            "input": "input_data_16-43-34.toon",
+            "report": "Report_gemini-3-pro-preview.md",
+            "evaluation": "Eval_gemini-3-pro-preview.md"
+        }
+    }
+]

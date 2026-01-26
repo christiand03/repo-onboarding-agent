@@ -110,10 +110,13 @@ class LLMHelper:
     def _configure_batch_settings(self, model_name: str):
 
         if model_name == "gemini-2.0-flash-lite":
-            self.batch_size = 30
+            self.batch_size = 1000
         
         elif model_name == "gemini-flash-latest":
             self.batch_size = 10
+            
+        elif model_name == "gemini-3-flash-preview":
+            self.batch_size = 1000
 
         elif model_name == "gemini-2.5-flash":
             self.batch_size = 1000
@@ -122,10 +125,10 @@ class LLMHelper:
             self.batch_size = 100
         
         elif model_name == "gemini-2.0-flash":
-            self.batch_size = 15
+            self.batch_size = 1000
 
         elif model_name == "gemini-2.5-flash-lite":
-            self.batch_size = 15
+            self.batch_size = 1000
 
         elif model_name == "llama3":
             self.batch_size = 50

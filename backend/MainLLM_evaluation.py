@@ -14,7 +14,7 @@ from .HelperLLM import LLMHelper
 from .relationship_analyzer import ProjectAnalyzer
 from .EvaluatorLLM import EvaluatorLLM
 from schemas.types import FunctionContextInput, FunctionAnalysisInput, ClassContextInput, ClassAnalysisInput, MethodContextInput
-from toon_format import encode
+from toon_format import encode, estimate_savings
 
 # --- Konfiguration & Logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -31,31 +31,36 @@ MAIN_MODELS_TO_TEST = [
     #Google Gemini
     #"gemini-2.5-flash",
     #"gemini-2.5-flash-lite",
-    "gemini-2.5-pro",
+    #"gemini-2.5-pro",
+    #"gemini-3-pro-preview",
+    #"gemini-3-flash-preview",
+    #"gemini-2.0-flash",
+    #"gemini-2.0-flash-lite",
 
     #SCADS  
     #Aliases
-    # "alias-reasoning",
-    # "alias-ha",
-    # "alias-code",
+    "alias-reasoning",
+    "alias-ha",
+    "alias-code",
     
     # #Llama
-    # "meta-llama/Llama-3.3-70B-Instruct",
-    # "meta-llama/Llama-3.1-8B-Instruct",
-    # "meta-llama/Llama-4-Scout-17B-16E-Instruct",
+    "meta-llama/Llama-3.3-70B-Instruct",
+    "meta-llama/Llama-3.1-8B-Instruct",
+    "meta-llama/Llama-4-Scout-17B-16E-Instruct",
     
     # # DeepSeek
-    # "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct",
-    # "deepseek-ai/DeepSeek-R1",
-    # "deepseek-ai/DeepSeek-V3.2-Exp",
+    "deepseek-ai/DeepSeek-Coder-V2-Lite-Instruct",
+    "deepseek-ai/DeepSeek-R1",
+    "deepseek-ai/DeepSeek-V3.2-Exp",
     
     # # Qwen
-    # "Qwen/Qwen3-Coder-30B-A3B-Instruct",
-    # "Qwen/Qwen2-VL-7B-Instruct",
+    "Qwen/Qwen3-Coder-30B-A3B-Instruct",
+    "Qwen/Qwen2-VL-7B-Instruct",
     
     # # Andere
-    # "openGPT-X/Teuken-7B-instruct-research-v0.4",
-    # "openai/gpt-oss-120b", 
+    "openGPT-X/Teuken-7B-instruct-research-v0.4",
+    "openai/gpt-oss-120b", 
+
 ]
 
 def get_api_keys():
@@ -110,31 +115,61 @@ def prepare_shared_input(repo_url, api_keys, input_dir):
     
     # 1. Clone & Basic Extraction
     repo_files = []
-    local_path = ""
-    repo_instance = None 
-    
+    local_repo_path = "" 
+
+    try: 
+        with GitRepository(repo_url) as repo:
+            repo_files = repo.get_all_files()
+            local_repo_path = repo.temp_dir
+
+            logging.info(f"Total files retrieved: {len(repo_files)}")
+
+    except Exception as e:
+        logging.error(f"Error cloning repository: {e}")
+        raise
+        
     try:
-        repo_instance = GitRepository(repo_url)
-        repo_files = repo_instance.get_all_files()
-        local_path = repo_instance.temp_dir
-        
-        # Basic Info
         info_extractor = ProjektInfoExtractor()
-        basic_info = info_extractor.extrahiere_info(repo_files, repo_url)
+        basic_project_info = info_extractor.extrahiere_info(dateien=repo_files, repo_url=repo_url)
+        logging.info("Basic project info extracted")
+    except Exception as e:
+        logging.error(f"Error extracting basic project info: {e}")
+        basic_project_info = "Could not extract basic info."
         
-        # File Tree
-        file_tree = repo_instance.get_file_tree()
+    try:
+        repo_file_tree = repo.get_file_tree()
+        logging.info("Repository file tree constructed")
+    except Exception as e:
+        logging.error(f"Error constructing repository file tree: {e}")
+        repo_file_tree = "Could not create file tree."
         
         # 2. Analysis
-        rel_analyzer = ProjectAnalyzer(local_path)
-        rel_results = rel_analyzer.analyze()
+    try:
+        rel_analyzer = ProjectAnalyzer(project_root=local_repo_path)
+        rel_analyzer.analyze()
         
-        ast_analyzer = ASTAnalyzer()
-        ast_schema = ast_analyzer.analyze_repository(repo_files, repo_instance)
-        ast_schema = ast_analyzer.merge_relationship_data(ast_schema, rel_results)
-    finally:
-        if repo_instance:
-            repo_instance.close()
+        raw_relationships = rel_analyzer.get_raw_relationships()
+        
+        logging.info("Relationships analyzed.")
+    except Exception as e:
+        logging.error(f"Error in relationship analyzer: {e}")
+        raw_relationships = {"outgoing": {}, "incoming": {}}
+
+    try:        
+        ast_analyzer = ASTAnalyzer()   
+        ast_schema = ast_analyzer.analyze_repository(files=repo_files, repo=repo)
+        logging.info("AST schema created")
+    except Exception as e:
+        logging.error(f"Error retrieving repository files: {e}")
+        raise
+
+    try:   
+        ast_schema = ast_analyzer.merge_relationship_data(ast_schema, raw_relationships)
+        logging.info("AST schema created and enriched")
+
+    except Exception as e:
+        logging.error(f"Error processing repository: {e}")
+        raise
 
     logging.info(f"Starte HelperLLM ({HELPER_MODEL}) zur Code-Analyse...")
     
@@ -235,10 +270,10 @@ def prepare_shared_input(repo_url, api_keys, input_dir):
             if doc: analysis_results["classes"][doc.identifier] = doc.model_dump()
 
     main_llm_input = {
-        "basic_info": basic_info,
-        "file_tree": file_tree,
+        "basic_info": basic_project_info,
+        "file_tree": repo_file_tree,
         "ast_schema": ast_schema,
-        "analysis_results": analysis_results
+        "analysis_results": analysis_results,
     }
     
     input_toon = encode(main_llm_input)
@@ -260,11 +295,36 @@ def benchmark_loop():
     
     stats = []
 
+    input_filename = "input_data_versuche.toon"
+
+    source_path = os.path.join("evaluation", "MainLLM", "Input", input_filename)
+
+    logging.info(f"Versuche Input zu laden von: {source_path}")
+
     try:
-        input_toon, input_filename = prepare_shared_input(REPO_URL, keys, dirs["input"])
-    except Exception as e:
-        logging.error(f"ABBRUCH: Fehler bei der Input-Erstellung: {e}")
+
+        with open(source_path, "r", encoding="utf-8") as f:
+            input_toon = f.read()
+        
+        logging.info("Input erfolgreich geladen.")
+
+
+        destination_path = os.path.join(dirs["input"], input_filename)
+        with open(destination_path, "w", encoding="utf-8") as f:
+            f.write(input_toon)
+            
+    except FileNotFoundError:
+        logging.error(f"FEHLER: Die Input-Datei wurde nicht gefunden unter: {source_path}")
         return
+    except Exception as e:
+        logging.error(f"ABBRUCH: Fehler beim Lesen der Input-Datei: {e}")
+        return
+
+    # try:
+    #     input_toon, input_filename = prepare_shared_input(REPO_URL, keys, dirs["input"])
+    # except Exception as e:
+    #     logging.error(f"ABBRUCH: Fehler bei der Input-Erstellung: {e}")
+    #     return
 
     for model in MAIN_MODELS_TO_TEST:
         logging.info(f"Teste MainLLM: {model}")
@@ -284,6 +344,7 @@ def benchmark_loop():
             "score": 0,
             "duration_gen_sec": 0,
             "duration_eval_sec": 0,
+            "tokens_generated": 0,
             "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "files": {
                 "input": input_filename,
@@ -335,7 +396,14 @@ def benchmark_loop():
                 with open(os.path.join(dirs["reports"], report_file), "w", encoding="utf-8") as f:
                     f.write(report_content)
 
-                if EVALUATOR_MODEL.startswith("gemini-"):
+                savings_data_content = estimate_savings(report_content)
+                savings_data_input = estimate_savings(input_toon)
+                logging.info(f"JSON Tokens: {savings_data_content['json_tokens']}")
+                logging.info(f"TOON Tokens: {savings_data_content['toon_tokens']}")
+                logging.info(f"JSON Tokens: {savings_data_input['json_tokens']}")
+                logging.info(f"TOON Tokens: {savings_data_input['toon_tokens']}")
+
+                if EVALUATOR_MODEL.startswith("gemini-2.5-pro"):
                     logging.info("Warte 65s für Evaluator Rate-Limit...")
                     time.sleep(65)
 
@@ -353,6 +421,7 @@ def benchmark_loop():
                 
                 eval_file = f"Eval_{safe_model_name}.md"
                 current_stat["files"]["evaluation"] = eval_file
+                current_stat["tokens_generated"] = savings_data_content['toon_tokens']
                 
                 with open(os.path.join(dirs["evaluations"], eval_file), "w", encoding="utf-8") as f:
                     f.write(eval_result)

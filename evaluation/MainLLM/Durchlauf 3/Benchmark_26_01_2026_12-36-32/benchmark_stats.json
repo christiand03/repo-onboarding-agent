@@ -1,0 +1,19 @@
+[
+    {
+        "main_model": "gemini-2.0-flash-lite",
+        "helper_model": "gemini-2.5-flash",
+        "evaluator_model": "gemini-2.5-pro",
+        "status": "success",
+        "error_message": null,
+        "score": 53,
+        "duration_gen_sec": 23.06,
+        "duration_eval_sec": 35.62,
+        "tokens_generated": 7571,
+        "timestamp": "2026-01-26 12:36:32",
+        "files": {
+            "input": "input_data_versuche.toon",
+            "report": "Report_gemini-2-0-flash-lite.md",
+            "evaluation": "Eval_gemini-2-0-flash-lite.md"
+        }
+    }
+]

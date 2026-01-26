@@ -1,0 +1,13 @@
+[
+    {
+        "helper_model": "gemini-2.5-flash-lite",
+        "evaluator_model": "gemini-2.5-flash",
+        "status": "success",
+        "score": 0,
+        "duration_gen_sec": 23.52,
+        "duration_eval_sec": 265.86,
+        "items_processed": 86,
+        "error_message": null,
+        "timestamp": "2026-01-23 16:59:30"
+    }
+]

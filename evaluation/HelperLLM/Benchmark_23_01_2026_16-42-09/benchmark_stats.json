@@ -1,0 +1,24 @@
+[
+    {
+        "helper_model": "gemini-2.5-flash",
+        "evaluator_model": "gemini-2.5-flash",
+        "status": "success",
+        "score": 4,
+        "duration_gen_sec": 44.56,
+        "duration_eval_sec": 169.03,
+        "items_processed": 86,
+        "error_message": null,
+        "timestamp": "2026-01-23 16:42:11"
+    },
+    {
+        "helper_model": "gemini-2.5-flash-lite",
+        "evaluator_model": "gemini-2.5-flash",
+        "status": "success",
+        "score": 0,
+        "duration_gen_sec": 13.72,
+        "duration_eval_sec": 270.68,
+        "items_processed": 86,
+        "error_message": null,
+        "timestamp": "2026-01-23 16:46:49"
+    }
+]

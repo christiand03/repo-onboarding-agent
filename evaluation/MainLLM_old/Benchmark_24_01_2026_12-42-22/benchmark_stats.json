@@ -1,0 +1,50 @@
+[
+    {
+        "main_model": "gemini-2.5-flash",
+        "helper_model": "gemini-2.5-flash",
+        "evaluator_model": "gemini-2.5-pro",
+        "status": "success",
+        "error_message": null,
+        "score": 95,
+        "duration_gen_sec": 193.63,
+        "duration_eval_sec": 322.77,
+        "timestamp": "2026-01-24 12:43:13",
+        "files": {
+            "input": "input_data_12-43-13.toon",
+            "report": "Report_gemini-2-5-flash.md",
+            "evaluation": "Eval_gemini-2-5-flash.md"
+        }
+    },
+    {
+        "main_model": "gemini-2.5-flash-lite",
+        "helper_model": "gemini-2.5-flash",
+        "evaluator_model": "gemini-2.5-pro",
+        "status": "success",
+        "error_message": null,
+        "score": 0,
+        "duration_gen_sec": 90.12,
+        "duration_eval_sec": 718.81,
+        "timestamp": "2026-01-24 12:52:55",
+        "files": {
+            "input": "input_data_12-43-13.toon",
+            "report": "Report_gemini-2-5-flash-lite.md",
+            "evaluation": "Eval_gemini-2-5-flash-lite.md"
+        }
+    },
+    {
+        "main_model": "alias-reasoning",
+        "helper_model": "gemini-2.5-flash",
+        "evaluator_model": "gemini-2.5-pro",
+        "status": "failed",
+        "error_message": "Leere Antwort vom LLM",
+        "score": 0,
+        "duration_gen_sec": 0.07,
+        "duration_eval_sec": 0,
+        "timestamp": "2026-01-24 13:07:29",
+        "files": {
+            "input": "input_data_12-43-13.toon",
+            "report": null,
+            "evaluation": null
+        }
+    }
+]

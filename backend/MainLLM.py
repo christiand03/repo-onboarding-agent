@@ -39,7 +39,7 @@ class MainLLM:
         
         CLIENT_CONFIG = {
             "max_retries": 0, 
-            "timeout": 5000.0
+            "timeout": 1200.0
         }
 
         if model_name.startswith("gemini-"):
