@@ -85,18 +85,20 @@ def enrich_report_with_diagrams(placeholder_doc: list[str], diagrams: dict, comp
     current_name = ""
     for line in placeholder_doc:
         if "<Placeholder for Diagram>" in line: 
-            for filename, data in diagrams.items():
-                    diagram, metadata = data
+            for filename, function_data in diagrams.items():
+                    diagram, metadata = function_data
                     if filename in current_name:
                         enriched_report.append(f"*    **Sequence diagram for {filename}**")
                         enriched_report.append(diagram)
                         enriched_report.append(metadata)
                         break
             
-            for class_name, class_diagram in class_diagrams.items():
+            for class_name, class_data in class_diagrams.items():
+                class_diagram, class_metadata = class_data
                 if re.search(rf"\b{re.escape(class_name)}\b", current_name):
                     enriched_report.append(f"*    **Class visualization for {class_name}**")
                     enriched_report.append(class_diagram)
+                    enriched_report.append(class_metadata)
                     break
             current_name = ""
             continue
@@ -147,13 +149,12 @@ if __name__ == "__main__":
             py_files.append(file)
     diagrams_per_function, class_diagram, component_diagram = main_diagram_generation(py_files)
 
-    for d in diagrams_per_function.values():
-        with open("Flask Diagrams_seq.md", "a", encoding="utf-8") as file:
-            file.write(f"{d[0]}\n")
-        
-    for cd in class_diagram.values():
-        with open("Flask Diagrams_class.md", "a", encoding="utf-8") as file:
-            file.write(f"{cd}\n")
-    
-    with open("Flask Diagrams_overview.md", "a", encoding="utf-8") as file:
-        file.write(component_diagram)    
+
+    with open("report_03_12_2025_22-46-01_Helper_gemini-flash-latest_MainLLM_gemini-2.5-pro.md", "r") as file:
+        file_content = file.read()   
+
+    doc_with_placeholders = create_placeholders(file_content)
+    final_doc = enrich_report_with_diagrams(doc_with_placeholders, diagrams_per_function, component_diagram, class_diagram)
+
+    with open("Final_result.md", "w", encoding="utf-8") as file:
+        file.write(final_doc)

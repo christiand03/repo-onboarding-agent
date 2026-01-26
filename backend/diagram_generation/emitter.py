@@ -15,14 +15,16 @@ class MermaidSequenceEmitter:
             lines.append(f"    participant {p}")
 
         for call in calls:
-            metadata.append(f"`{call.caller.name}: {call.caller.lineno}-{call.caller.end_lineno}`")
+            metadata.append(
+                f"[`{call.caller.name}: {call.caller.lineno}-{call.caller.end_lineno}`](#function-{call.caller.name})"
+            )
             break
 
         for call in sorted(calls, key=lambda c: c.lineno):
             lines.append(self._emit_call(call))
             if call.callee:
                 lines.append(self._emit_response(call))
-                metadata_for_callee = f"`{call.callee.name}: {call.callee.lineno}-{call.callee.end_lineno}`"
+                metadata_for_callee = f"[`{call.callee.name}: {call.callee.lineno}-{call.callee.end_lineno}`](#function-{call.callee.name})"
                 if metadata_for_callee not in metadata:
                     metadata.append(metadata_for_callee)
         lines.append("```")
@@ -158,16 +160,20 @@ class MermaidClassEmitter:
                         continue
                     lines.append(f"        +{method.name}()")
                 lines.append("    }")
-                # metadata = f"*    **Metadata for Class diagram:** `{cls.name}: {cls.lineno}-{cls.end_lineno}`"
                 class_diagrams[name] = ("\n".join(lines), cls)
         return class_diagrams
 
 
 class MermaidClassDiagramEmitter:
 
-    def emit(self, class_diagrams: dict[str, tuple[str, ClassSymbol]], calls: dict[str, list[ResolvedCall]]) -> dict[str, str]:
+    def emit(
+            self, 
+            class_diagrams: dict[str, tuple[str, ClassSymbol]], 
+            calls: dict[str, list[ResolvedCall]]
+        ) -> dict[str, tuple[str, str]]:
 
         new_class_diagrams: dict[str, str] = {}
+        metadata: list[str] = ["*    **Metadata for Diagram:**"]
         all_calls = [c for call in calls.values() for c in call]
         for cls, data in class_diagrams.items():
             diagram, class_symbol = data
@@ -175,16 +181,24 @@ class MermaidClassDiagramEmitter:
             lines.append("classDiagram")
             src = mermaid_id(cls)
             lines.append(diagram)
+            metadata.append(
+                f"[`{class_symbol.name}: {class_symbol.lineno} - {class_symbol.end_lineno}`](#class-{class_symbol.name})"
+            )
+
             for call in all_calls:
                 if call.callee.name in class_diagrams and call.caller.cls == cls:
                     target = mermaid_id(call.callee.name)
                     lines.append([class_diagrams[call.callee.name]])
                     lines.append(f"    {src} -> {target}")
+                    metadata.append(
+                        f"[`{call.callee.name}: {call.lineno}-{call.callee.end_lineno}`](#class-{call.callee.name})"
+                    )
+
             if class_symbol.inheritance is not None:
                 for cls_name in class_symbol.inheritance:
                     lines.append(f"    {cls_name} <|-- {src}")
             lines.append("```")
-            new_class_diagrams[cls] = "\n".join(lines)
+            new_class_diagrams[cls] = "\n".join(lines), " ".join(metadata)
 
         return new_class_diagrams
 
