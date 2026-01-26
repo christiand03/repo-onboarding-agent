@@ -1,6 +1,7 @@
 from diagram_generation.data_types import (
     ModuleSymbol,
-    ResolvedCall
+    ResolvedCall,
+    ClassSymbol
 )
 
 
@@ -126,15 +127,11 @@ class MermaidOverviewEmitter:
         relationships = set()
         
         for module in modules.values():
-            # Bestimme den obersten Ordner des aktuellen Moduls
             source_top_dir = module.overlying_packages[0] if module.overlying_packages else "root"
-            
-            # Gehe durch alle Imports dieses Moduls
+
             for import_path in module.imports.values():
-                # Extrahiere den ersten Segment des Import-Pfads
                 first_segment = import_path.split(".")[0]
-                
-                # Prüfe, ob dieser erste Segment ein bekannter Top-Level-Dir ist
+
                 if first_segment in top_level_dirs and first_segment != source_top_dir:
                     relationships.add((source_top_dir, first_segment))
         
@@ -146,7 +143,7 @@ class MermaidOverviewEmitter:
         
        
 class MermaidClassEmitter:
-    def emit(self, modules: dict[str, ModuleSymbol]) -> dict[str, str]:
+    def emit(self, modules: dict[str, ModuleSymbol]) -> dict:
 
         class_diagrams: dict[str, str] = {}
         for module in modules.values():
@@ -162,27 +159,32 @@ class MermaidClassEmitter:
                     lines.append(f"        +{method.name}()")
                 lines.append("    }")
                 # metadata = f"*    **Metadata for Class diagram:** `{cls.name}: {cls.lineno}-{cls.end_lineno}`"
-                class_diagrams[name] = ("\n".join(lines))#, metadata)
+                class_diagrams[name] = ("\n".join(lines), cls)
         return class_diagrams
 
 
 class MermaidClassDiagramEmitter:
 
-    def emit(self, class_diagrams: dict[str, str], calls: dict[str, list[ResolvedCall]]) -> dict[str, str]:
+    def emit(self, class_diagrams: dict[str, tuple[str, ClassSymbol]], calls: dict[str, list[ResolvedCall]]) -> dict[str, str]:
 
         new_class_diagrams: dict[str, str] = {}
         all_calls = [c for call in calls.values() for c in call]
-        for cls_name, diagram in class_diagrams.items():
+        for cls, data in class_diagrams.items():
+            diagram, class_symbol = data
             lines: list[str] = ["```mermaid"]
             lines.append("classDiagram")
-            src = mermaid_id(cls_name)
+            src = mermaid_id(cls)
             lines.append(diagram)
             for call in all_calls:
-                if call.callee.name in class_diagrams and call.caller.cls == cls_name:
+                if call.callee.name in class_diagrams and call.caller.cls == cls:
                     target = mermaid_id(call.callee.name)
+                    lines.append([class_diagrams[call.callee.name]])
                     lines.append(f"    {src} -> {target}")
+            if class_symbol.inheritance is not None:
+                for cls_name in class_symbol.inheritance:
+                    lines.append(f"    {cls_name} <|-- {src}")
             lines.append("```")
-            new_class_diagrams[cls_name] = "\n".join(lines)
+            new_class_diagrams[cls] = "\n".join(lines)
 
         return new_class_diagrams
 

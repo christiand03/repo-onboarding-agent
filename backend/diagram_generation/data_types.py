@@ -24,7 +24,7 @@ class ClassSymbol:
     methods: dict[str, FunctionSymbol]
     lineno: int
     end_lineno: int
-    # inheritance: list[str]
+    inheritance: list[str]
 
 
 @dataclass

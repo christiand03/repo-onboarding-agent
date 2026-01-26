@@ -107,7 +107,7 @@ class SymbolCollector(NodeVisitor):
             methods={},
             lineno=node.lineno,
             end_lineno=node.end_lineno,
-            # inheritance=[base.id for base in node.bases]
+            inheritance=[unparse(base) for base in node.bases]
         )
 
         self.module.classes[node.name] = cls
