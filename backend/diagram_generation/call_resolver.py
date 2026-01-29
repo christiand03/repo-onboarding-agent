@@ -61,6 +61,15 @@ class CallResolver:
                 )
             ]
         
+        if name in module.classes:
+            return [
+                ResolvedCall(
+                    caller=call.caller,
+                    callee = module.classes[name],
+                    call_type = CallType.DIRECT,
+                    lineno=call.lineno
+                )
+            ]
         if name in module.imports:
             target = module.imports[name]
             mod_name, _, attr = target.rpartition(".")
